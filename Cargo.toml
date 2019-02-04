@@ -1,0 +1,18 @@
+[package]
+name = "bluetooth-rs"
+version = "0.1.0"
+authors = ["Ibiyemi Abiodun <ibiyemi@intulon.com>"]
+edition = "2018"
+
+[build-dependencies]
+bindgen = "0.47.1"
+
+[dependencies]
+libc = "0.2.48"
+failure = "0.1.5"
+errno = "0.2.4"
+
+[[bin]]
+name = "bin"
+path = "src/main.rs"
+doc = false
