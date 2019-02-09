@@ -3,7 +3,6 @@ use std::fmt::{Display, Formatter};
 use num_traits::{FromPrimitive, ToPrimitive};
 
 use crate::Address;
-use crate::bt;
 use crate::mgmt::ManagementError;
 use crate::util::*;
 

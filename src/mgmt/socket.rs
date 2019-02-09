@@ -1,9 +1,32 @@
 use std::io;
+use std::os::raw::c_ushort;
 use std::os::unix::io::RawFd;
 
-use crate::bt;
-
 use super::interface::{ManagementRequest, ManagementResponse};
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+struct sockaddr_hci {
+    pub hci_family: c_ushort,
+    pub hci_dev: c_ushort,
+    pub hci_channel: c_ushort,
+}
+
+const BTPROTO_L2CAP: c_ushort = 0;
+const BTPROTO_HCI: c_ushort = 1;
+const BTPROTO_SCO: c_ushort = 2;
+const BTPROTO_RFCOMM: c_ushort = 3;
+const BTPROTO_BNEP: c_ushort = 4;
+const BTPROTO_CMTP: c_ushort = 5;
+const BTPROTO_HIDP: c_ushort = 6;
+const BTPROTO_AVDTP: c_ushort = 7;
+
+const HCI_DEV_NONE: c_ushort = 65535;
+const HCI_CHANNEL_RAW: c_ushort = 0;
+const HCI_CHANNEL_USER: c_ushort = 1;
+const HCI_CHANNEL_MONITOR: c_ushort = 2;
+const HCI_CHANNEL_CONTROL: c_ushort = 3;
+const HCI_CHANNEL_LOGGING: c_ushort = 4;
 
 #[derive(Debug)]
 pub struct ManagementSocket {
@@ -18,7 +41,7 @@ impl ManagementSocket {
             libc::socket(
                 libc::PF_BLUETOOTH,
                 libc::SOCK_RAW | libc::SOCK_CLOEXEC | libc::SOCK_NONBLOCK,
-                bt::BTPROTO_HCI as libc::c_int,
+                BTPROTO_HCI as libc::c_int,
             )
         };
 
@@ -34,10 +57,10 @@ impl ManagementSocket {
     }
 
     pub fn open(&mut self) -> Result<(), io::Error> {
-        let addr = bt::sockaddr_hci {
+        let addr = sockaddr_hci {
             hci_family: libc::AF_BLUETOOTH as u16,
-            hci_dev: bt::HCI_DEV_NONE as u16,
-            hci_channel: bt::HCI_CHANNEL_CONTROL as u16,
+            hci_dev: HCI_DEV_NONE,
+            hci_channel: HCI_CHANNEL_CONTROL,
         };
 
         // do not open twice
@@ -48,8 +71,8 @@ impl ManagementSocket {
         if unsafe {
             libc::bind(
                 self.fd,
-                &addr as *const bt::sockaddr_hci as *const libc::sockaddr,
-                core::mem::size_of::<bt::sockaddr_hci>() as u32,
+                &addr as *const sockaddr_hci as *const libc::sockaddr,
+                core::mem::size_of::<sockaddr_hci>() as u32,
             )
         } < 0
         {

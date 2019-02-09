@@ -7,7 +7,6 @@ extern crate num_derive;
 
 use std::fmt::{Display, Formatter};
 
-mod bt;
 mod util;
 pub mod mgmt;
 
@@ -19,16 +18,6 @@ pub struct Address
 
 impl Address
 {
-    fn from_bdaddr(addr: *const bt::bdaddr_t) -> Address
-    {
-        Address::from(unsafe { (*addr).b })
-    }
-
-    fn to_bdaddr(&self) -> bt::bdaddr_t
-    {
-        bt::bdaddr_t { b: self.bytes }
-    }
-
     pub fn from_slice(bytes: &[u8]) -> Address {
         if bytes.len() != 6 {
             panic!("bluetooth address is 6 bytes");
@@ -46,20 +35,6 @@ impl From<[u8; 6]> for Address
 {
     fn from(bytes: [u8; 6]) -> Self {
         return Address { bytes };
-    }
-}
-
-impl From<bt::bdaddr_t> for Address
-{
-    fn from(addr: bt::bdaddr_t) -> Self {
-        return Address { bytes: addr.b };
-    }
-}
-
-impl Into<bt::bdaddr_t> for Address
-{
-    fn into(self) -> bt::bdaddr_t {
-        return bt::bdaddr_t { b: self.bytes };
     }
 }
 
