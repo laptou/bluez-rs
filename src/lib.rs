@@ -1,11 +1,15 @@
 #[macro_use]
+extern crate bitflags;
+#[macro_use]
 extern crate failure;
+#[macro_use]
+extern crate num_derive;
 
 use std::fmt::{Display, Formatter};
 
 mod bt;
-pub mod hci;
-
+mod util;
+pub mod mgmt;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Address
@@ -23,6 +27,18 @@ impl Address
     fn to_bdaddr(&self) -> bt::bdaddr_t
     {
         bt::bdaddr_t { b: self.bytes }
+    }
+
+    pub fn from_slice(bytes: &[u8]) -> Address {
+        if bytes.len() != 6 {
+            panic!("bluetooth address is 6 bytes");
+        }
+
+        let mut arr = [0u8; 6];
+        arr.copy_from_slice(bytes);
+        Address {
+            bytes: arr
+        }
     }
 }
 

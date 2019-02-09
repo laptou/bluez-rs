@@ -4,6 +4,7 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="RustProjectSettings">
-    <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
+    <option name="explicitPathToStdlib" value="$USER_HOME$/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/src" />
+    <option name="toolchainHomeDirectory" value="$USER_HOME$/.multirust/toolchains/stable-x86_64-unknown-linux-gnu/bin" />
   </component>
 </project>

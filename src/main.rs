@@ -1,20 +1,39 @@
 extern crate bluetooth_rs;
 
-use bluetooth_rs::hci::device::{Device, Socket};
-use bluetooth_rs::hci::inquiry;
+use bluetooth_rs::mgmt;
 
 pub fn main() -> Result<(), failure::Error> {
+    let mut socket = mgmt::socket::ManagementSocket::new()?;
+    socket.open()?;
     // Rust version of https://people.csail.mit.edu/albert/bluez-intro/c404.html#bzi-choosing
-    let device = Device::default()?;
-    let socket = device.open()?;
-    let nearby = inquiry::inquire(&device, 10, 255, true)?;
+    let version = mgmt::interface::get_version(&socket, 5000)?;
 
-    for (i, nearby) in nearby.iter().enumerate() {
-        let name = socket.get_friendly_name(nearby.address, 5000)?;
-        println!(
-            "#{}:\tname: {} address: {} service classes: {:?} device class: {:?}",
-            i, name, nearby.address, nearby.service_classes, nearby.device_class
-        );
+    println!("version {}.{}", version.version, version.revision);
+
+    let controllers = mgmt::interface::get_controllers(&socket, 5000)?;
+
+    for controller in controllers {
+        println!("found controller: {:x}", controller);
+
+        let info = mgmt::interface::get_controller_info(&socket, controller, 5000)?;
+
+        println!("\taddress: {}", info.address);
+
+        if let Some(short_name) = info.short_name {
+            println!("\tshort name: {}", short_name);
+        } else {
+            println!("\tshort name: (none)");
+        }
+
+        if let Some(name) = info.name {
+            println!("\tname: {}", name);
+        } else {
+            println!("\tname: (none)");
+        }
+
+        println!("\tsupported settings: {}", info.supported_settings);
+        println!("\tcurrent settings: {}", info.current_settings);
+        println!();
     }
 
     Ok(())

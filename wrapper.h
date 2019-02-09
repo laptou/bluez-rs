@@ -3,4 +3,5 @@
 //
 
 #include <bluetooth/bluetooth.h>
-#include <bluetooth/mgmt.h>
+#include "header/hci_sock.h"
+#include "header/mgmt.h"
