@@ -18,6 +18,8 @@ pub enum ManagementError {
     UnknownCommand { cmd: u16 },
     #[fail(display = "Unknown command status: {:x}.", status)]
     UnknownStatus { status: u8 },
+    #[fail(display = "Timed out.")]
+    TimedOut,
     #[fail(
     display = "The name {} is too long; the maximum length is {} bytes.",
     name, maxlen

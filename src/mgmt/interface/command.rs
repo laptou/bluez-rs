@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 
 use crate::Address;
 use crate::mgmt::ManagementError;
@@ -357,9 +357,8 @@ pub fn get_version(
 
     match response.event {
         ManagementEvent::CommandComplete {
-            status: _,
             param,
-            opcode,
+            ..
         } => Ok(VersionResponse {
             version: param[0],
             revision: read_u16_le(&param, 1),
@@ -384,9 +383,8 @@ pub fn get_controllers(
 
     match response.event {
         ManagementEvent::CommandComplete {
-            status: _,
             param,
-            opcode,
+            ..
         } => {
             let num_controllers = read_u16_le(&param, 0) as usize;
             let mut vec = vec![];
@@ -430,9 +428,8 @@ pub fn get_controller_info(
 
     match response.event {
         ManagementEvent::CommandComplete {
-            status,
             param,
-            opcode,
+            ..
         } => {
             let address = Address::from_slice(&param[0..6]);
             let bluetooth_version = param[6];
@@ -1001,8 +998,8 @@ pub fn disconnect(
     match response.event {
         ManagementEvent::CommandComplete { param, .. } => {
             let addr = Address::from_slice(&param[0..6]);
-            let addr_type: AddressType =
-                FromPrimitive::from_u8(param[6]).ok_or(ManagementError::Unknown.into())?;
+            let addr_type: AddressType = FromPrimitive::from_u8(param[6])
+                .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
             Ok((addr, addr_type))
         }
         ManagementEvent::CommandStatus { status, opcode } => {
@@ -1017,8 +1014,6 @@ pub fn get_connections(
     controller: Controller,
     timeout: i32,
 ) -> Result<Vec<(Address, AddressType)>, failure::Error> {
-    ;
-
     let response = wait_request(
         sock,
         ManagementRequest {
@@ -1037,8 +1032,8 @@ pub fn get_connections(
             for i in 0..count {
                 let offset = 2 + i * 7;
                 let addr = Address::from_slice(&param[offset..offset + 6]);
-                let addr_type: AddressType =
-                    FromPrimitive::from_u8(param[offset + 6]).ok_or(ManagementError::Unknown.into())?;
+                let addr_type: AddressType = FromPrimitive::from_u8(param[offset + 6])
+                    .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
                 addrs.push((addr, addr_type));
             }
 
@@ -1050,4 +1045,3 @@ pub fn get_connections(
         _ => Err(ManagementError::Unknown.into()),
     }
 }
-

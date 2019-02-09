@@ -2,6 +2,8 @@ use std::io;
 use std::os::raw::c_ushort;
 use std::os::unix::io::RawFd;
 
+use crate::mgmt::ManagementError;
+
 use super::interface::{ManagementRequest, ManagementResponse};
 
 #[repr(C)]
@@ -12,21 +14,18 @@ struct sockaddr_hci {
     pub hci_channel: c_ushort,
 }
 
+#[allow(unused)]
 const BTPROTO_L2CAP: c_ushort = 0;
 const BTPROTO_HCI: c_ushort = 1;
-const BTPROTO_SCO: c_ushort = 2;
+#[allow(unused)]
 const BTPROTO_RFCOMM: c_ushort = 3;
-const BTPROTO_BNEP: c_ushort = 4;
-const BTPROTO_CMTP: c_ushort = 5;
-const BTPROTO_HIDP: c_ushort = 6;
+#[allow(unused)]
 const BTPROTO_AVDTP: c_ushort = 7;
 
 const HCI_DEV_NONE: c_ushort = 65535;
+#[allow(unused)]
 const HCI_CHANNEL_RAW: c_ushort = 0;
-const HCI_CHANNEL_USER: c_ushort = 1;
-const HCI_CHANNEL_MONITOR: c_ushort = 2;
 const HCI_CHANNEL_CONTROL: c_ushort = 3;
-const HCI_CHANNEL_LOGGING: c_ushort = 4;
 
 #[derive(Debug)]
 pub struct ManagementSocket {
@@ -129,24 +128,27 @@ impl ManagementSocket {
         let mut buf: Vec<u8> = vec![0; BUF_SIZE];
         let mut bytes_read = 0;
 
-        loop {
-            if timeout != 0 {
-                let mut events: [epoll::Event; 1] = unsafe { ::std::mem::uninitialized() };
-                let event_count = epoll::wait(self.epoll_fd, timeout, &mut events[..]);
+        if timeout != 0 {
+            let mut events: [epoll::Event; 1] = unsafe { ::std::mem::uninitialized() };
+            let event_count = epoll::wait(self.epoll_fd, timeout, &mut events[..]);
 
+            match event_count {
+                Err(e) => return Err(e.into()),
+                Ok(count) => {
+                    if count == 0 {
+                        return Err(ManagementError::TimedOut.into());
+                    }
 
-                match event_count {
-                    Err(e) => return Err(e.into()),
-                    Ok(count) => {
-                        let event = &events[0];
-                        if event.events as i32 & libc::EPOLLIN != libc::EPOLLIN {
-                            // TODO: handle fd being closed unexpectedly
-                            continue
-                        }
-                    },
-                }
+                    let event = &events[0];
+                    if event.events as i32 & libc::EPOLLIN != libc::EPOLLIN {
+                        // TODO: handle fd being closed unexpectedly
+                        return Err(ManagementError::Unknown.into());
+                    }
+                },
             }
+        }
 
+        loop {
             let result = unsafe {
                 libc::read(
                     self.fd,

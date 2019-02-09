@@ -1,9 +1,5 @@
 use std::ffi::CStr;
 
-pub unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
-}
-
 #[inline]
 pub fn read_u16_le(buf: &Vec<u8>, offset: usize) -> u16 {
     let mut c = [0u8; 2];

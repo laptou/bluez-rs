@@ -31,7 +31,7 @@ impl ManagementResponse {
                             status: buf[HEADER + 2],
                         },
                     )?,
-                    param: Box::new(buf[HEADER + 3..].to_vec()),
+                    param: Box::new(buf[HEADER + 3..HEADER + 3 + param_size].to_vec()),
                 },
                 0x0002 => ManagementEvent::CommandStatus {
                     opcode: FromPrimitive::from_u16(read_u16_le(buf, HEADER)).ok_or(

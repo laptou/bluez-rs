@@ -313,8 +313,8 @@ pub fn to_u16(class: DeviceClass) -> u16 {
                 _ => (),
             }
         }
-        DeviceClass::AccessPoint(level) => {
-            bits |= 0b00011 << 8;
+        DeviceClass::AccessPoint(..) => {
+            // bits |= 0b00011 << 8;
             unimplemented!()
         }
         DeviceClass::AudioVideo(minor) => {
