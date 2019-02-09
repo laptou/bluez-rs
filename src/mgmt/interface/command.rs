@@ -1,28 +1,35 @@
 use std::fmt::{Display, Formatter};
 
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 
 use crate::Address;
 use crate::bt;
 use crate::mgmt::ManagementError;
 use crate::util::*;
 
+use super::class::{DeviceClass, ServiceClass};
 use super::request::ManagementRequest;
+use super::response::ManagementResponse;
 use super::super::socket::ManagementSocket;
 
 bitflags! {
     pub struct ControllerSettings: u32 {
-        const Powered = 1 << 1;
-        const Connectable = 1 << 2;
-        const FastConnectable = 1 << 3;
-        const Discoverable = 1 << 4;
-        const Pairable = 1 << 5;
-        const LinkLevelSecurity = 1 << 6;
-        const SecureSimplePairing = 1 << 7;
-        const BREDR = 1 << 8;
-        const HighSpeed = 1 << 9;
-        const LE = 1 << 10;
-        const Advertising = 1 << 11;
+        const Powered = 1 << 0;
+        const Connectable = 1 << 1;
+        const FastConnectable = 1 << 2;
+        const Discoverable = 1 << 3;
+        const Pairable = 1 << 4;
+        const LinkLevelSecurity = 1 << 5;
+        const SecureSimplePairing = 1 << 6;
+        const BREDR = 1 << 7;
+        const HighSpeed = 1 << 8;
+        const LE = 1 << 9;
+        const Advertising = 1 << 10;
+        const SecureConnection = 1 << 11;
+        const DebugKeys = 1 << 12;
+        const Privacy = 1 << 13;
+        const Configuration = 1 << 14;
+        const StaticAddress = 1 << 15;
     }
 }
 
@@ -70,12 +77,32 @@ impl Display for ControllerSettings {
             tags.push("low-energy");
         }
 
+        if self.contains(ControllerSettings::Advertising) {
+            tags.push("advertising");
+        }
+
+        if self.contains(ControllerSettings::SecureConnection) {
+            tags.push("secure-connection");
+        }
+
+        if self.contains(ControllerSettings::DebugKeys) {
+            tags.push("debug-keys");
+        }
+
+        if self.contains(ControllerSettings::Privacy) {
+            tags.push("privacy");
+        }
+
+        if self.contains(ControllerSettings::StaticAddress) {
+            tags.push("static-address");
+        }
+
         write!(f, "{}", tags.join(" "))
     }
 }
 
 #[repr(u16)]
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
 pub enum ManagementCommand {
     ReadVersionInfo = 0x0001,
     ReadSupportedCommands,
@@ -123,6 +150,15 @@ pub enum ManagementCommand {
     SetScanParameters,
 }
 
+#[repr(u8)]
+#[derive(Debug, Eq, PartialEq, FromPrimitive)]
+pub enum AddressType {
+    BrEdr = 0,
+    LEPublic = 1,
+    LERandom = 2,
+}
+
+#[derive(Debug)]
 pub enum ManagementEvent {
     CommandComplete {
         opcode: ManagementCommand,
@@ -151,7 +187,7 @@ pub enum ManagementEvent {
     NewLinkKey {
         store_hint: u8,
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
         key_type: u8,
         value: [u8; 16],
         pin_length: u8,
@@ -159,7 +195,7 @@ pub enum ManagementEvent {
     NewLongTermKey {
         store_hint: u8,
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
         authenticated: bool,
         master: u8,
         encryption_size: u8,
@@ -169,75 +205,75 @@ pub enum ManagementEvent {
     },
     DeviceConnected {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
         flags: u32,
         eir_data_length: u16,
         eir_data: Box<Vec<u8>>,
     },
     DeviceDisconnected {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
         reason: u8,
     },
     ConnectFailed {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
         status: u8,
     },
     PinCodeRequest {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
         secure: bool,
     },
     UserConfirmationRequest {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
         confirm_hint: bool,
         value: u32,
     },
     UserPasskeyRequest {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
     },
     AuthenticationFailed {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
         status: u8,
     },
     DeviceFound {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
         rssi: u8,
         flags: u32,
         eir_data_length: u16,
         eir_data: Box<Vec<u8>>,
     },
     Discovering {
-        address_type: u8,
+        address_type: AddressType,
         discovering: bool,
     },
     DeviceBlocked {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
     },
     DeviceUnblocked {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
     },
     DeviceUnpaired {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
     },
     PasskeyNotify {
         address: Address,
-        address_type: u8,
+        address_type: AddressType,
         passkey: u32,
         entered: u8,
     },
 }
 
 #[repr(u8)]
-#[derive(FromPrimitive, ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
 pub enum ManagementCommandStatus {
     Success = 0x00,
     UnknownCommand = 0x01,
@@ -256,7 +292,16 @@ pub enum ManagementCommandStatus {
     Disconnected = 0x0E,
     NotPowered = 0x0F,
     Cancelled = 0x10,
-    InvalidIndex = 0x011,
+    InvalidIndex = 0x11,
+    RFKilled = 0x12,
+    AlreadyPaired = 0x13,
+    PermissionDenied = 0x14,
+}
+
+impl ::std::fmt::LowerHex for ManagementCommandStatus {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), ::std::fmt::Error> {
+        write!(f, "{:x}", *self as u8)
+    }
 }
 
 #[repr(C)]
@@ -265,22 +310,55 @@ pub struct VersionResponse {
     pub revision: u16,
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct Controller(u16);
+
+impl Display for Controller {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), ::std::fmt::Error> {
+        write!(f, "hci{}", self.0)
+    }
+}
+
+fn wait_request(
+    socket: &ManagementSocket,
+    request: ManagementRequest,
+    timeout: i32,
+) -> Result<ManagementResponse, failure::Error> {
+    socket.send(request)?;
+    socket.receive(timeout)
+}
+
+fn response_controller_settings(
+    response: ManagementResponse,
+) -> Result<ControllerSettings, failure::Error> {
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => Ok(
+            ControllerSettings::from_bits_truncate(read_u32_le(&param, 0)),
+        ),
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
 pub fn get_version(
     sock: &ManagementSocket,
     timeout: i32,
 ) -> Result<VersionResponse, failure::Error> {
-    let request = ManagementRequest {
-        opcode: bt::MGMT_OP_READ_VERSION as u16,
-        param: Box::new(vec![]),
-        controller: 0xFFFF,
-    };
-
-    sock.send(request)?;
-    let response = sock.receive(timeout)?;
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::ReadVersionInfo,
+            param: Box::new(vec![]),
+            controller: 0xFFFF,
+        },
+        timeout,
+    )?;
 
     match response.event {
         ManagementEvent::CommandComplete {
-            status,
+            status: _,
             param,
             opcode,
         } => Ok(VersionResponse {
@@ -291,28 +369,35 @@ pub fn get_version(
     }
 }
 
-pub fn get_controllers(sock: &ManagementSocket, timeout: i32) -> Result<Vec<u16>, failure::Error> {
-    let request = ManagementRequest {
-        opcode: bt::MGMT_OP_READ_INDEX_LIST as u16,
-        param: Box::new(vec![]),
-        controller: 0xFFFF,
-    };
-
-    sock.send(request)?;
-    let response = sock.receive(timeout)?;
+pub fn get_controllers(
+    sock: &ManagementSocket,
+    timeout: i32,
+) -> Result<Vec<Controller>, failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::ReadControllerIndexList,
+            param: Box::new(vec![]),
+            controller: 0xFFFF,
+        },
+        timeout,
+    )?;
 
     match response.event {
         ManagementEvent::CommandComplete {
-            status,
+            status: _,
             param,
             opcode,
         } => {
             let num_controllers = read_u16_le(&param, 0) as usize;
             let mut vec = vec![];
             for i in 0..num_controllers {
-                vec.push(read_u16_le(&param, 2 + i * 2));
+                vec.push(Controller(read_u16_le(&param, 2 + i * 2)));
             }
             Ok(vec)
+        }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
         }
         _ => Err(ManagementError::Unknown.into()),
     }
@@ -331,17 +416,18 @@ pub struct ControllerInfo {
 
 pub fn get_controller_info(
     sock: &ManagementSocket,
-    controller: u16,
+    controller: Controller,
     timeout: i32,
 ) -> Result<ControllerInfo, failure::Error> {
-    let request = ManagementRequest {
-        opcode: bt::MGMT_OP_READ_INFO as u16,
-        param: Box::new(vec![]),
-        controller,
-    };
-
-    sock.send(request)?;
-    let response = sock.receive(timeout)?;
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::ReadControllerInfo,
+            param: Box::new(vec![]),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
 
     match response.event {
         ManagementEvent::CommandComplete {
@@ -353,8 +439,7 @@ pub fn get_controller_info(
             let bluetooth_version = param[6];
             let mut manufacturer = [0u8; 2];
             manufacturer.copy_from_slice(&param[7..9]);
-            let supported_settings =
-                ControllerSettings::from_bits_truncate(read_u32_le(&param, 9));
+            let supported_settings = ControllerSettings::from_bits_truncate(read_u32_le(&param, 9));
             let current_settings = ControllerSettings::from_bits_truncate(read_u32_le(&param, 13));
             let mut class_of_device = [0u8; 3];
             class_of_device.copy_from_slice(&param[17..20]);
@@ -371,8 +456,34 @@ pub fn get_controller_info(
                 short_name,
             })
         }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
         _ => Err(ManagementError::Unknown.into()),
     }
+}
+
+/// Power on or off a controller.
+/// If the discoverable setting is activated with a timeout, then
+///	switching the controller off will disable discoverability
+/// and discard the timeout.
+pub fn set_powered(
+    sock: &ManagementSocket,
+    controller: Controller,
+    powered: bool,
+    timeout: i32,
+) -> Result<ControllerSettings, failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetPowered,
+            param: Box::new(vec![powered as u8]),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    response_controller_settings(response)
 }
 
 #[repr(u8)]
@@ -382,7 +493,562 @@ pub enum Discoverability {
     Limited = 0x2,
 }
 
-#[repr(C)]
-pub struct DiscoverableResponse {
-    current: u32,
+/// Timeout is specified in seconds.
+/// Set timeout to 0 to disable it.
+/// For limited discoverability, the timeout is required.
+/// Enabling discoverability while connectability is disabled
+/// will error with Rejected.
+/// This setting can be used when the controller is not powered,
+/// unless a timeout is used, in which case it  will error with
+/// Not Powered.
+pub fn set_discoverable(
+    sock: &ManagementSocket,
+    controller: Controller,
+    discoverable: Discoverability,
+    discoverable_timeout: u16,
+    timeout: i32,
+) -> Result<ControllerSettings, failure::Error> {
+    let mut param = vec![discoverable as u8];
+    param.extend_from_slice(&u16::to_le_bytes(discoverable_timeout));
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetDiscoverable,
+            param: Box::new(param),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    response_controller_settings(response)
 }
+
+/// This command is available for BR/EDR, LE-only and also dual
+///	mode controllers. For BR/EDR is changes the page scan setting
+///	and for LE controllers it changes the advertising type. For
+///	dual mode controllers it affects both settings.
+///
+///	For LE capable controllers the connectable setting takes effect
+///	when advertising is enabled (peripheral) or when directed
+///	advertising events are received (central).
+///
+///	This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+///
+///	When switching connectable off, it will also switch off the
+///	discoverable setting. Switching connectable back on will not
+///	restore a previous discoverable. It will stay off and needs
+///	to be manually switched back on.
+///
+///	When switching connectable off, it will expire a discoverable
+///	setting with a timeout.
+///
+///	This setting does not affect known devices from Add Device
+///	command. These devices are always allowed to connect.
+pub fn set_connectable(
+    sock: &ManagementSocket,
+    controller: Controller,
+    connectable: bool,
+    timeout: i32,
+) -> Result<ControllerSettings, failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetConnectable,
+            param: Box::new(vec![connectable as u8]),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    response_controller_settings(response)
+}
+
+/// This command is used to set the controller into a connectable
+///	state where the page scan parameters have been set in a way to
+///	favor faster connect times with the expense of higher power
+///	consumption.
+///
+/// This command is only available for BR/EDR capable controllers
+///	(e.g. not for single-mode LE ones). It will return Not Supported
+///	otherwise.
+///
+///	This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+///
+///	The setting will be remembered during power down/up toggles.
+pub fn set_fast_connectable(
+    sock: &ManagementSocket,
+    controller: Controller,
+    fast_connectable: bool,
+    timeout: i32,
+) -> Result<ControllerSettings, failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetFastConnectable,
+            param: Box::new(vec![fast_connectable as u8]),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    response_controller_settings(response)
+}
+
+/// This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+///
+///	Turning pairable on will not automatically switch the controller
+///	into connectable mode. That needs to be done separately.
+///
+///	The setting will be remembered during power down/up toggles.
+pub fn set_pairable(
+    sock: &ManagementSocket,
+    controller: Controller,
+    pairable: bool,
+    timeout: i32,
+) -> Result<ControllerSettings, failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetPairable,
+            param: Box::new(vec![pairable as u8]),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    response_controller_settings(response)
+}
+
+///	Enable or disable link-level security, also known as Security Mode 3.
+/// When this is enabled, the connection is encrypted and pairing is required
+/// in order to communicate with a device.
+///
+/// This command is only available for BR/EDR capable controllers
+///	(e.g. not for single-mode LE ones). It will return Not Supported
+///	otherwise.
+///
+///	This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+pub fn set_sm3(
+    sock: &ManagementSocket,
+    controller: Controller,
+    enabled: bool,
+    timeout: i32,
+) -> Result<ControllerSettings, failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetLinkSecurity,
+            param: Box::new(vec![enabled as u8]),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    response_controller_settings(response)
+}
+
+/// This command is only available for BR/EDR capable controllers
+///	supporting the core specification version 2.1 or greater
+///	(e.g. not for single-mode LE controllers or pre-2.1 ones).
+///
+///	This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+pub fn set_ssp(
+    sock: &ManagementSocket,
+    controller: Controller,
+    enabled: bool,
+    timeout: i32,
+) -> Result<ControllerSettings, failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetSecureSimplePairing,
+            param: Box::new(vec![enabled as u8]),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    response_controller_settings(response)
+}
+
+/// This command is only available for BR/EDR capable controllers
+///	(e.g. not for single-mode LE ones).
+///
+///	This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+///
+///	To enable High Speed support, it is required that Secure Simple
+///	Pairing support is enabled first. High Speed support is not
+///	possible for connections without Secure Simple Pairing.
+///
+///	When switching Secure Simple Pairing off, the support for High
+///	Speed will be switched off as well. Switching Secure Simple
+///	Pairing back on, will not re-enable High Speed support. That
+///	needs to be done manually.
+pub fn set_high_speed(
+    sock: &ManagementSocket,
+    controller: Controller,
+    enabled: bool,
+    timeout: i32,
+) -> Result<ControllerSettings, failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetHighSpeed,
+            param: Box::new(vec![enabled as u8]),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    response_controller_settings(response)
+}
+
+/// This command is only available for LE capable controllers and
+///	will yield in a Not Supported error otherwise.
+///
+///	This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+///
+///	In case the kernel subsystem does not support Low Energy or the
+///	controller does not either, the command will fail regardless.
+///
+///	Disabling LE support will permanently disable and remove all
+///	advertising instances configured with the Add Advertising
+///	command. Advertising Removed events will be issued accordingly.
+pub fn set_low_energy(
+    sock: &ManagementSocket,
+    controller: Controller,
+    enabled: bool,
+    timeout: i32,
+) -> Result<ControllerSettings, failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetLowEnergy,
+            param: Box::new(vec![enabled as u8]),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    response_controller_settings(response)
+}
+
+/// This command is used to set the major and minor device class for
+///	BR/EDR capable controllers.
+///
+///	This command will also implicitly disable caching of pending CoD
+///	and EIR updates.
+///
+///	This command is only available for BR/EDR capable controllers
+///	(e.g. not for single-mode LE ones).
+///
+///	This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+///
+///	In case the controller is powered off, Unknown will be returned
+///	for the class of device parameter. And after power on the new
+///	value will be announced via class of device changed event.
+pub fn set_device_class(
+    sock: &ManagementSocket,
+    controller: Controller,
+    class: DeviceClass,
+    timeout: i32,
+) -> Result<(DeviceClass, Vec<ServiceClass>), failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetDeviceClass,
+            param: Box::new(super::class::to_u16(class).to_le_bytes().to_vec()),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => {
+            let mut cod = [0u8; 3];
+            cod.copy_from_slice(&param);
+            Ok(super::class::from_bytes(cod))
+        }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
+#[derive(Debug)]
+pub struct Name {
+    pub name: String,
+    pub short_name: Option<String>,
+}
+
+/// This command is used to set the local name of a controller. The
+///	command parameters also include a short name which will be used
+///	in case the full name doesn't fit within EIR/AD data.
+///
+///	The name parameters need to always end with a null byte (failure
+///	to do so will cause the command to fail).
+///
+///	This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+///
+///	The values of name and short name will be remembered when
+///	switching the controller off and back on again. So the name
+///	and short name only have to be set once when a new controller
+///	is found and will stay until removed.
+pub fn set_name(
+    sock: &ManagementSocket,
+    controller: Controller,
+    name: &str,
+    short_name: Option<&str>,
+    timeout: i32,
+) -> Result<Name, failure::Error> {
+    let name_bytes = name.as_bytes();
+    let short_name_bytes = match short_name {
+        Some(s) => s.as_bytes(),
+        None => &[],
+    };
+
+    if name_bytes.len() > 248 {
+        return Err(ManagementError::NameTooLong {
+            name: unsafe { String::from_utf8_unchecked(name_bytes.to_vec()) },
+            maxlen: 248,
+        }
+            .into());
+    }
+
+    if short_name_bytes.len() > 10 {
+        return Err(ManagementError::NameTooLong {
+            name: unsafe { String::from_utf8_unchecked(short_name_bytes.to_vec()) }, // unwrap is safe b/c obviously short name is not None
+            maxlen: 10,
+        }
+            .into());
+    }
+
+    let mut param = vec![0; 260];
+    param.splice(0..name_bytes.len(), name_bytes.iter().cloned());
+    param.splice(
+        249..249 + short_name_bytes.len(),
+        short_name_bytes.iter().cloned(),
+    );
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetLocalName,
+            param: Box::new(param),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => {
+            let name = read_str(&param, 0, 249).unwrap_or("".to_owned());
+            let short_name = read_str(&param, 249, 11);
+            Ok(Name { name, short_name })
+        }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct Uuid([u8; 16]);
+
+impl Display for Uuid {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), ::std::fmt::Error> {
+        write!(
+            f,
+            "{:x}{:x}{:x}{:x}-{:x}{:x}-{:x}{:x}-{:x}{:x}-{:x}{:x}{:x}{:x}{:x}{:x}",
+            self.0[0],
+            self.0[1],
+            self.0[2],
+            self.0[3],
+            self.0[4],
+            self.0[5],
+            self.0[6],
+            self.0[7],
+            self.0[8],
+            self.0[9],
+            self.0[10],
+            self.0[11],
+            self.0[12],
+            self.0[13],
+            self.0[14],
+            self.0[15],
+        )
+    }
+}
+
+/// This command is used to add a UUID to be published in EIR data.
+///	The accompanied SVC_Hint parameter is used to tell the kernel
+///	whether the service class bits of the Class of Device value need
+///	modifying due to this UUID.
+///
+///	This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+///
+///	In case the controller is powered off, 0x000000 will be returned
+///	for the class of device parameter. And after power on the new
+///	value will be announced via class of device changed event.
+pub fn add_uuid(
+    sock: &ManagementSocket,
+    controller: Controller,
+    uuid: Uuid,
+    service_hint: u8,
+    timeout: i32,
+) -> Result<(DeviceClass, Vec<ServiceClass>), failure::Error> {
+    let mut param = vec![];
+    param.extend_from_slice(&uuid.0);
+    param.push(service_hint);
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::AddUUID,
+            param: Box::new(param),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => {
+            let mut cod = [0u8; 3];
+            cod.copy_from_slice(&param);
+            Ok(super::class::from_bytes(cod))
+        }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
+/// This command is used to remove a UUID previously added using the
+///	Add UUID command.
+///
+///	When the UUID parameter is an empty UUID (16 x 0x00), then all
+///	previously loaded UUIDs will be removed.
+///
+///	This command can be used when the controller is not powered and
+///	all settings will be programmed once powered.
+///
+///	In case the controller is powered off, 0x000000 will be returned
+///	for the class of device parameter. And after power on the new
+///	value will be announced via class of device changed event.
+pub fn remove_uuid(
+    sock: &ManagementSocket,
+    controller: Controller,
+    uuid: Uuid,
+    timeout: i32,
+) -> Result<(DeviceClass, Vec<ServiceClass>), failure::Error> {
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::RemoveUUID,
+            param: Box::new(uuid.0.to_vec()),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => {
+            let mut cod = [0u8; 3];
+            cod.copy_from_slice(&param);
+            Ok(super::class::from_bytes(cod))
+        }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
+pub fn disconnect(
+    sock: &ManagementSocket,
+    controller: Controller,
+    address: Address,
+    address_type: AddressType,
+    timeout: i32,
+) -> Result<(Address, AddressType), failure::Error> {
+    let mut param = vec![];
+    param.extend_from_slice(&address.bytes);
+    param.push(address_type as u8);
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::Disconnect,
+            param: Box::new(param),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => {
+            let addr = Address::from_slice(&param[0..6]);
+            let addr_type: AddressType =
+                FromPrimitive::from_u8(param[6]).ok_or(ManagementError::Unknown.into())?;
+            Ok((addr, addr_type))
+        }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
+pub fn get_connections(
+    sock: &ManagementSocket,
+    controller: Controller,
+    timeout: i32,
+) -> Result<Vec<(Address, AddressType)>, failure::Error> {
+    ;
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::Disconnect,
+            param: Box::new(vec![]),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => {
+            let count = read_u16_le(&param, 0) as usize;
+            let mut addrs = vec![];
+
+            for i in 0..count {
+                let offset = 2 + i * 7;
+                let addr = Address::from_slice(&param[offset..offset + 6]);
+                let addr_type: AddressType =
+                    FromPrimitive::from_u8(param[offset + 6]).ok_or(ManagementError::Unknown.into())?;
+                addrs.push((addr, addr_type));
+            }
+
+            Ok(addrs)
+        }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+

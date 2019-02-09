@@ -102,21 +102,28 @@ impl ManagementSocket {
     }
 
     pub fn receive(&self, timeout: i32) -> Result<ManagementResponse, failure::Error> {
-        let mut events: [epoll::Event; 10] = unsafe { ::std::mem::uninitialized() };
-        let event_count = epoll::wait(self.epoll_fd, timeout, &mut events[..]);
-
-        // TODO: handle fd being closed unexpectedly
-
-        match event_count {
-            Err(e) => panic!(format!("{}", e)),
-            Ok(_) => (),
-        }
-
         const BUF_SIZE: usize = 1024;
         let mut buf: Vec<u8> = vec![0; BUF_SIZE];
         let mut bytes_read = 0;
 
         loop {
+            if timeout != 0 {
+                let mut events: [epoll::Event; 1] = unsafe { ::std::mem::uninitialized() };
+                let event_count = epoll::wait(self.epoll_fd, timeout, &mut events[..]);
+
+
+                match event_count {
+                    Err(e) => return Err(e.into()),
+                    Ok(count) => {
+                        let event = &events[0];
+                        if event.events as i32 & libc::EPOLLIN != libc::EPOLLIN {
+                            // TODO: handle fd being closed unexpectedly
+                            continue
+                        }
+                    },
+                }
+            }
+
             let result = unsafe {
                 libc::read(
                     self.fd,
