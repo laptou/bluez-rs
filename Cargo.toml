@@ -1,6 +1,6 @@
 [package]
-name = "bluetooth-rs"
-version = "0.1.0"
+name = "bluez-rs"
+version = "0.0.1"
 authors = ["Ibiyemi Abiodun <ibiyemi@intulon.com>"]
 edition = "2018"
 
