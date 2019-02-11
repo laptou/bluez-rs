@@ -32,7 +32,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "bluez"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "bitflags 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "epoll 4.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
