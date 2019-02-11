@@ -1,7 +1,7 @@
-extern crate bluetooth_rs;
+extern crate bluez;
 
-use bluetooth_rs::mgmt;
-use bluetooth_rs::mgmt::interface;
+use bluez::mgmt;
+use bluez::mgmt::interface;
 
 pub fn main() -> Result<(), failure::Error> {
     let mut socket = mgmt::socket::ManagementSocket::new()?;

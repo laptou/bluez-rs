@@ -1,5 +1,5 @@
 [package]
-name = "bluez-rs"
+name = "bluez"
 version = "0.0.1"
 authors = ["Ibiyemi Abiodun <ibiyemi@intulon.com>"]
 edition = "2018"
