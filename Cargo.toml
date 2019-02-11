@@ -4,7 +4,7 @@ version = "0.0.1"
 authors = ["Ibiyemi Abiodun <ibiyemi@intulon.com>"]
 edition = "2018"
 description = "Control Bluetooth on Linux."
-license-file = "LICENSE"
+license = "CC-BY-NC-SA-4.0"
 
 [dependencies]
 libc = "0.2.48"
