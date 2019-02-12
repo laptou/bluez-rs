@@ -2,14 +2,14 @@ use std::fmt::{Display, Formatter};
 
 use num_traits::FromPrimitive;
 
-use crate::Address;
 use crate::mgmt::ManagementError;
 use crate::util::*;
+use crate::Address;
 
+use super::super::socket::ManagementSocket;
 use super::class::{DeviceClass, ServiceClass};
 use super::request::ManagementRequest;
 use super::response::ManagementResponse;
-use super::super::socket::ManagementSocket;
 
 bitflags! {
     pub struct ControllerSettings: u32 {
@@ -303,12 +303,6 @@ impl ::std::fmt::LowerHex for ManagementCommandStatus {
     }
 }
 
-#[repr(C)]
-pub struct VersionResponse {
-    pub version: u8,
-    pub revision: u16,
-}
-
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Controller(u16);
 
@@ -318,55 +312,68 @@ impl Display for Controller {
     }
 }
 
-fn wait_request(
-    socket: &ManagementSocket,
-    request: ManagementRequest,
-    timeout: i32,
-) -> Result<ManagementResponse, failure::Error> {
-    socket.send(request)?;
-    socket.receive(timeout)
+macro_rules! req_wait {
+    ($socket: expr, $opcode: expr, $param: expr, $controller: expr, $timeout: exp) => ({
+        $socket.send(ManagementRequest {
+            opcode: $opcode,
+            param: Box::new($param),
+            controller: $controller,
+        })?;
+        $socket.receive($timeout)
+    })
+}
+
+macro_rules! res_match {
+    ($response: expr, $complete: expr) => (
+         match $response.event {
+            ManagementEvent::CommandComplete {
+                param,
+                status,
+                opcode,
+            } => $complete,
+            ManagementEvent::CommandStatus { status, opcode } => {
+                Err(ManagementError::CommandError { status, opcode }.into())
+            }
+            _ => Err(ManagementError::Unknown.into()),
+        }
+    )
 }
 
 fn response_controller_settings(
     response: ManagementResponse,
 ) -> Result<ControllerSettings, failure::Error> {
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => Ok(
-            ControllerSettings::from_bits_truncate(read_u32_le(&param, 0)),
-        ),
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+    res_match!(response, {
+        Ok(ControllerSettings::from_bits_truncate(read_u32_le(
+            &param, 0,
+        )))
+    })
 }
 
-pub fn get_version(
-    sock: &ManagementSocket,
-    timeout: i32,
-) -> Result<VersionResponse, failure::Error> {
-    let response = wait_request(
+/// Used to represent the version of the BlueZ management
+/// interface that is in use.
+pub struct Version {
+    pub version: u8,
+    pub revision: u16,
+}
+
+/// Gets the version of the BlueZ management interface
+/// that is in use.
+pub fn get_version(sock: &ManagementSocket, timeout: i32) -> Result<Version, failure::Error> {
+    let response = req_wait!(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::ReadVersionInfo,
-            param: Box::new(vec![]),
-            controller: 0xFFFF,
-        },
+        ManagementCommand::ReadVersionInfo,
+        vec![]
+        0xFFFF,
         timeout,
     )?;
 
-    match response.event {
-        ManagementEvent::CommandComplete {
-            param,
-            ..
-        } => Ok(VersionResponse {
-            version: param[0],
-            revision: read_u16_le(&param, 1),
-        }),
-        _ => Err(ManagementError::Unknown.into()),
-    }
+    res_match!(response, {
+        Ok(Version { version: param[0], revision: read_u16_le(param, 1) })
+    })
 }
 
+/// Gets all of the controllers available on the current
+/// device.
 pub fn get_controllers(
     sock: &ManagementSocket,
     timeout: i32,
@@ -382,10 +389,7 @@ pub fn get_controllers(
     )?;
 
     match response.event {
-        ManagementEvent::CommandComplete {
-            param,
-            ..
-        } => {
+        ManagementEvent::CommandComplete { param, .. } => {
             let num_controllers = read_u16_le(&param, 0) as usize;
             let mut vec = vec![];
             for i in 0..num_controllers {
@@ -411,6 +415,7 @@ pub struct ControllerInfo {
     pub short_name: Option<String>,
 }
 
+/// Gets information about a specified controller.
 pub fn get_controller_info(
     sock: &ManagementSocket,
     controller: Controller,
@@ -427,10 +432,7 @@ pub fn get_controller_info(
     )?;
 
     match response.event {
-        ManagementEvent::CommandComplete {
-            param,
-            ..
-        } => {
+        ManagementEvent::CommandComplete { param, .. } => {
             let address = Address::from_slice(&param[0..6]);
             let bluetooth_version = param[6];
             let mut manufacturer = [0u8; 2];
@@ -819,7 +821,7 @@ pub fn set_name(
             name: unsafe { String::from_utf8_unchecked(name_bytes.to_vec()) },
             maxlen: 248,
         }
-            .into());
+        .into());
     }
 
     if short_name_bytes.len() > 10 {
@@ -827,7 +829,7 @@ pub fn set_name(
             name: unsafe { String::from_utf8_unchecked(short_name_bytes.to_vec()) }, // unwrap is safe b/c obviously short name is not None
             maxlen: 10,
         }
-            .into());
+        .into());
     }
 
     let mut param = vec![0; 260];
@@ -974,6 +976,121 @@ pub fn remove_uuid(
     }
 }
 
+#[repr(u8)]
+pub enum LinkKeyType {
+    Combination = 0x00,
+    LocalUnit,
+    RemoteUnit,
+    DebugCombination,
+    UnauthenticatedCombinationP192,
+    AuthenticatedCombinationP192,
+    ChangedCombination,
+    UnauthenticatedCombinationP256,
+    AuthenticatedCombinationP256,
+}
+
+pub struct LinkKey {
+    address: Address,
+    address_type: AddressType,
+    key_type: LinkKeyType,
+    value: [u8; 16],
+    pin_length: u8,
+}
+
+pub fn load_link_keys(
+    sock: &ManagementSocket,
+    controller: Controller,
+    keys: Vec<LinkKey>,
+    debug: bool,
+    timeout: i32,
+) -> Result<(), failure::Error> {
+    let mut param = vec![];
+    param.push(debug as u8);
+    param.extend_from_slice(&(keys.len() as u16).to_le_bytes());
+
+    for key in keys {
+        param.extend_from_slice(&key.address.bytes);
+        param.push(key.address_type as u8);
+        param.push(key.key_type as u8);
+        param.extend_from_slice(&key.value);
+        param.push(key.pin_length);
+    }
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::LoadLinkKeys,
+            param: Box::new(param),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => Ok(()),
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
+#[repr(u8)]
+pub enum LongTermKeyType {
+    Unauthenticated = 0,
+    Authenticated,
+}
+
+pub struct LongTermKey {
+    address: Address,
+    address_type: AddressType,
+    key_type: LongTermKeyType,
+    master: u8,
+    encryption_size: u8,
+    encryption_diversifier: [u8; 2],
+    random_number: u64,
+    value: [u8; 16],
+}
+
+pub fn load_long_term_keys(
+    sock: &ManagementSocket,
+    controller: Controller,
+    keys: Vec<LongTermKey>,
+    timeout: i32,
+) -> Result<(), failure::Error> {
+    let mut param = vec![];
+    param.extend_from_slice(&(keys.len() as u16).to_le_bytes());
+
+    for key in keys {
+        param.extend_from_slice(&key.address.bytes);
+        param.push(key.address_type as u8);
+        param.push(key.key_type as u8);
+        param.push(key.master);
+        param.push(key.encryption_size);
+        param.extend_from_slice(&key.encryption_diversifier);
+        param.extend_from_slice(&key.random_number.to_le_bytes());
+        param.extend_from_slice(&key.value);
+    }
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::LoadLinkKeys,
+            param: Box::new(param),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => Ok(()),
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
 pub fn disconnect(
     sock: &ManagementSocket,
     controller: Controller,
@@ -996,14 +1113,19 @@ pub fn disconnect(
     )?;
 
     match response.event {
-        ManagementEvent::CommandComplete { param, .. } => {
+        ManagementEvent::CommandComplete {
+            status,
+            param,
+            opcode,
+        } => {
+            if status != ManagementCommandStatus::Success {
+                return Err(ManagementError::CommandError { status, opcode }.into());
+            }
+
             let addr = Address::from_slice(&param[0..6]);
             let addr_type: AddressType = FromPrimitive::from_u8(param[6])
                 .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
             Ok((addr, addr_type))
-        }
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
         }
         _ => Err(ManagementError::Unknown.into()),
     }
@@ -1017,7 +1139,7 @@ pub fn get_connections(
     let response = wait_request(
         sock,
         ManagementRequest {
-            opcode: ManagementCommand::Disconnect,
+            opcode: ManagementCommand::GetConnections,
             param: Box::new(vec![]),
             controller: controller.0,
         },
@@ -1032,13 +1154,158 @@ pub fn get_connections(
             for i in 0..count {
                 let offset = 2 + i * 7;
                 let addr = Address::from_slice(&param[offset..offset + 6]);
-                let addr_type: AddressType = FromPrimitive::from_u8(param[offset + 6])
-                    .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
+                let addr_type: AddressType =
+                    FromPrimitive::from_u8(param[offset + 6])
+                        .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
                 addrs.push((addr, addr_type));
             }
 
             Ok(addrs)
         }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
+pub fn pin_code_reply(
+    sock: &ManagementSocket,
+    controller: Controller,
+    address: Address,
+    address_type: AddressType,
+    pin: Vec<u8>,
+    timeout: i32,
+) -> Result<(Address, AddressType), failure::Error> {
+    if pin.len() > 16 {
+        return Err(ManagementError::PinCodeTooLong { maxlen: 16 }.into());
+    }
+
+    let mut param = vec![];
+    param.extend_from_slice(&address.bytes);
+    param.push(address_type as u8);
+    param.push(pin.len() as u8);
+    param.extend_from_slice(&pin.to_le_bytes());
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::PinCodeReply,
+            param: Box::new(param),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => {
+            let addr = Address::from_slice(&param[0..6]);
+            let addr_type: AddressType = FromPrimitive::from_u8(param[6])
+                .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
+            Ok((addr, addr_type))
+        }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
+pub fn pin_code_negative_reply(
+    sock: &ManagementSocket,
+    controller: Controller,
+    address_type: AddressType,
+    timeout: i32,
+) -> Result<(Address, AddressType), failure::Error> {
+    let mut param = vec![];
+
+    param.extend_from_slice(&address.bytes);
+    param.push(address_type as u8);
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::PinCodeNegativeReply,
+            param: Box::new(param),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => {
+            let addr = Address::from_slice(&param[0..6]);
+            let addr_type: AddressType = FromPrimitive::from_u8(param[6])
+                .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
+            Ok((addr, addr_type))
+        }
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
+#[repr(u8)]
+pub enum IoCapability {
+    DisplayOnly = 0,
+    DisplayYesNo,
+    KeyboardOnly,
+    NoInputNoOutput,
+    KeyboardDisplay,
+}
+
+pub fn set_io_capability(
+    sock: &ManagementSocket,
+    controller: Controller,
+    io_capability: IoCapability,
+    timeout: i32,
+) -> Result<(), failure::Error> {
+    let mut param = vec![];
+
+    param.push(io_capability as u8);
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetIOCapability,
+            param: Box::new(param),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { param, .. } => Ok(()),
+        ManagementEvent::CommandStatus { status, opcode } => {
+            Err(ManagementError::CommandError { status, opcode }.into())
+        }
+        _ => Err(ManagementError::Unknown.into()),
+    }
+}
+
+pub fn pair_device(
+    sock: &ManagementSocket,
+    controller: Controller,
+    io_capability: IoCapability,
+    timeout: i32,
+) -> Result<(), failure::Error> {
+    let mut param = vec![];
+
+    param.push(io_capability as u8);
+
+    let response = wait_request(
+        sock,
+        ManagementRequest {
+            opcode: ManagementCommand::SetIOCapability,
+            param: Box::new(param),
+            controller: controller.0,
+        },
+        timeout,
+    )?;
+
+    match response.event {
+        ManagementEvent::CommandComplete { status, param, .. } => Ok(()),
         ManagementEvent::CommandStatus { status, opcode } => {
             Err(ManagementError::CommandError { status, opcode }.into())
         }

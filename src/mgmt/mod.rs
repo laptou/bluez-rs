@@ -25,4 +25,9 @@ pub enum ManagementError {
     name, maxlen
     )]
     NameTooLong { name: String, maxlen: u32 },
+    #[fail(
+    display = "The pin code is too long; the maximum length is {} bytes.",
+    maxlen
+    )]
+    PinCodeTooLong { maxlen: u32 },
 }

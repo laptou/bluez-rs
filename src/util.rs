@@ -68,6 +68,38 @@ impl LE<[u8; 4]> for u32 {
     }
 }
 
+impl LE<[u8; 8]> for u64 {
+    fn to_le_bytes(self) -> [u8; 8] {
+        unsafe { ::std::mem::transmute(self.to_le()) }
+    }
+
+    fn from_le_bytes(bytes: [u8; 8]) -> Self {
+        let n: u64 = unsafe { ::std::mem::transmute(bytes) };
+
+        if cfg!(target_endian = "big") {
+            n.to_le() // flip endianness
+        } else {
+            n
+        }
+    }
+}
+
+impl LE<[u8; 16]> for u128 {
+    fn to_le_bytes(self) -> [u8; 8] {
+        unsafe { ::std::mem::transmute(self.to_le()) }
+    }
+
+    fn from_le_bytes(bytes: [u8; 8]) -> Self {
+        let n: u128 = unsafe { ::std::mem::transmute(bytes) };
+
+        if cfg!(target_endian = "big") {
+            n.to_le() // flip endianness
+        } else {
+            n
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::LE;
