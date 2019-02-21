@@ -2,14 +2,14 @@ use std::fmt::{Display, Formatter};
 
 use num_traits::FromPrimitive;
 
+use crate::Address;
 use crate::mgmt::ManagementError;
 use crate::util::*;
-use crate::Address;
 
-use super::super::socket::ManagementSocket;
 use super::class::{DeviceClass, ServiceClass};
 use super::request::ManagementRequest;
 use super::response::ManagementResponse;
+use super::super::socket::ManagementSocket;
 
 bitflags! {
     pub struct ControllerSettings: u32 {
@@ -312,41 +312,67 @@ impl Display for Controller {
     }
 }
 
-macro_rules! req_wait {
-    ($socket: expr, $opcode: expr, $param: expr, $controller: expr, $timeout: exp) => ({
-        $socket.send(ManagementRequest {
-            opcode: $opcode,
-            param: Box::new($param),
-            controller: $controller,
-        })?;
-        $socket.receive($timeout)
-    })
+trait ResponseExt {
+    fn map_success<
+        T,
+        R: ::std::convert::From<ManagementError>,
+        F: Fn(Box<Vec<u8>>, ManagementCommandStatus, ManagementCommand) -> Result<T, R>,
+    >(
+        self,
+        complete: F,
+    ) -> Result<T, R>;
 }
 
-macro_rules! res_match {
-    ($response: expr, $complete: expr) => (
-         match $response.event {
+impl ResponseExt for ManagementResponse {
+    fn map_success<
+        T,
+        R: ::std::convert::From<ManagementError>,
+        F: Fn(Box<Vec<u8>>, ManagementCommandStatus, ManagementCommand) -> Result<T, R>,
+    >(
+        self,
+        complete: F,
+    ) -> Result<T, R> {
+        match self.event {
             ManagementEvent::CommandComplete {
                 param,
                 status,
                 opcode,
-            } => $complete,
+            } => match status {
+                ManagementCommandStatus::Success => complete(param, status, opcode),
+                _ => Err(ManagementError::CommandError { status, opcode }.into()),
+            },
             ManagementEvent::CommandStatus { status, opcode } => {
                 Err(ManagementError::CommandError { status, opcode }.into())
             }
             _ => Err(ManagementError::Unknown.into()),
         }
-    )
+    }
 }
 
-fn response_controller_settings(
-    response: ManagementResponse,
+#[inline(always)]
+fn await_request(
+    socket: &ManagementSocket,
+    opcode: ManagementCommand,
+    param: Vec<u8>,
+    controller: Controller,
+    timeout: i32,
+) -> Result<ManagementResponse, ::failure::Error> {
+    socket.send(ManagementRequest {
+        opcode: opcode,
+        param: Box::new(param),
+        controller: controller.0,
+    })?;
+    socket.receive(timeout)
+}
+
+fn map_controller_settings(
+    param: Box<Vec<u8>>,
+    _status: ManagementCommandStatus,
+    _command: ManagementCommand,
 ) -> Result<ControllerSettings, failure::Error> {
-    res_match!(response, {
-        Ok(ControllerSettings::from_bits_truncate(read_u32_le(
-            &param, 0,
-        )))
-    })
+    Ok(ControllerSettings::from_bits_truncate(read_u32_le(
+        &param, 0,
+    )))
 }
 
 /// Used to represent the version of the BlueZ management
@@ -359,16 +385,20 @@ pub struct Version {
 /// Gets the version of the BlueZ management interface
 /// that is in use.
 pub fn get_version(sock: &ManagementSocket, timeout: i32) -> Result<Version, failure::Error> {
-    let response = req_wait!(
+    let param = vec![];
+
+    await_request(
         sock,
         ManagementCommand::ReadVersionInfo,
-        vec![]
-        0xFFFF,
+        param,
+        Controller(0xFFFF),
         timeout,
-    )?;
-
-    res_match!(response, {
-        Ok(Version { version: param[0], revision: read_u16_le(param, 1) })
+    )?
+        .map_success(|param, _, _| {
+            Ok(Version {
+                version: param[0],
+                revision: read_u16_le(&param, 1),
+            })
     })
 }
 
@@ -378,30 +408,21 @@ pub fn get_controllers(
     sock: &ManagementSocket,
     timeout: i32,
 ) -> Result<Vec<Controller>, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::ReadControllerIndexList,
-            param: Box::new(vec![]),
-            controller: 0xFFFF,
-        },
+        ManagementCommand::ReadControllerIndexList,
+        vec![],
+        Controller(0xFFFF),
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => {
+    )?
+        .map_success(|param, _, _| {
             let num_controllers = read_u16_le(&param, 0) as usize;
             let mut vec = vec![];
             for i in 0..num_controllers {
                 vec.push(Controller(read_u16_le(&param, 2 + i * 2)));
             }
             Ok(vec)
-        }
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+        })
 }
 
 pub struct ControllerInfo {
@@ -421,18 +442,14 @@ pub fn get_controller_info(
     controller: Controller,
     timeout: i32,
 ) -> Result<ControllerInfo, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::ReadControllerInfo,
-            param: Box::new(vec![]),
-            controller: controller.0,
-        },
+        ManagementCommand::ReadControllerInfo,
+        vec![],
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => {
+    )?
+        .map_success(|param, _, _| {
             let address = Address::from_slice(&param[0..6]);
             let bluetooth_version = param[6];
             let mut manufacturer = [0u8; 2];
@@ -453,12 +470,7 @@ pub fn get_controller_info(
                 name,
                 short_name,
             })
-        }
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+        })
 }
 
 /// Power on or off a controller.
@@ -471,17 +483,14 @@ pub fn set_powered(
     powered: bool,
     timeout: i32,
 ) -> Result<ControllerSettings, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetPowered,
-            param: Box::new(vec![powered as u8]),
-            controller: controller.0,
-        },
+        ManagementCommand::SetPowered,
+        vec![powered as u8],
+        controller,
         timeout,
-    )?;
-
-    response_controller_settings(response)
+    )?
+        .map_success(map_controller_settings)
 }
 
 #[repr(u8)]
@@ -509,17 +518,14 @@ pub fn set_discoverable(
     let mut param = vec![discoverable as u8];
     param.extend_from_slice(&u16::to_le_bytes(discoverable_timeout));
 
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetDiscoverable,
-            param: Box::new(param),
-            controller: controller.0,
-        },
+        ManagementCommand::SetDiscoverable,
+        param,
+        controller,
         timeout,
-    )?;
-
-    response_controller_settings(response)
+    )?
+        .map_success(map_controller_settings)
 }
 
 /// This command is available for BR/EDR, LE-only and also dual
@@ -550,17 +556,14 @@ pub fn set_connectable(
     connectable: bool,
     timeout: i32,
 ) -> Result<ControllerSettings, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetConnectable,
-            param: Box::new(vec![connectable as u8]),
-            controller: controller.0,
-        },
+        ManagementCommand::SetConnectable,
+        vec![connectable as u8],
+        controller,
         timeout,
-    )?;
-
-    response_controller_settings(response)
+    )?
+        .map_success(map_controller_settings)
 }
 
 /// This command is used to set the controller into a connectable
@@ -582,17 +585,14 @@ pub fn set_fast_connectable(
     fast_connectable: bool,
     timeout: i32,
 ) -> Result<ControllerSettings, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetFastConnectable,
-            param: Box::new(vec![fast_connectable as u8]),
-            controller: controller.0,
-        },
+        ManagementCommand::SetFastConnectable,
+        vec![fast_connectable as u8],
+        controller,
         timeout,
-    )?;
-
-    response_controller_settings(response)
+    )?
+        .map_success(map_controller_settings)
 }
 
 /// This command can be used when the controller is not powered and
@@ -608,17 +608,14 @@ pub fn set_pairable(
     pairable: bool,
     timeout: i32,
 ) -> Result<ControllerSettings, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetPairable,
-            param: Box::new(vec![pairable as u8]),
-            controller: controller.0,
-        },
+        ManagementCommand::SetPairable,
+        vec![pairable as u8],
+        controller,
         timeout,
-    )?;
-
-    response_controller_settings(response)
+    )?
+        .map_success(map_controller_settings)
 }
 
 ///	Enable or disable link-level security, also known as Security Mode 3.
@@ -637,17 +634,14 @@ pub fn set_sm3(
     enabled: bool,
     timeout: i32,
 ) -> Result<ControllerSettings, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetLinkSecurity,
-            param: Box::new(vec![enabled as u8]),
-            controller: controller.0,
-        },
+        ManagementCommand::SetLinkSecurity,
+        vec![enabled as u8],
+        controller,
         timeout,
-    )?;
-
-    response_controller_settings(response)
+    )?
+        .map_success(map_controller_settings)
 }
 
 /// This command is only available for BR/EDR capable controllers
@@ -662,17 +656,14 @@ pub fn set_ssp(
     enabled: bool,
     timeout: i32,
 ) -> Result<ControllerSettings, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetSecureSimplePairing,
-            param: Box::new(vec![enabled as u8]),
-            controller: controller.0,
-        },
+        ManagementCommand::SetSecureSimplePairing,
+        vec![enabled as u8],
+        controller,
         timeout,
-    )?;
-
-    response_controller_settings(response)
+    )?
+        .map_success(map_controller_settings)
 }
 
 /// This command is only available for BR/EDR capable controllers
@@ -695,17 +686,14 @@ pub fn set_high_speed(
     enabled: bool,
     timeout: i32,
 ) -> Result<ControllerSettings, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetHighSpeed,
-            param: Box::new(vec![enabled as u8]),
-            controller: controller.0,
-        },
+        ManagementCommand::SetHighSpeed,
+        vec![enabled as u8],
+        controller,
         timeout,
-    )?;
-
-    response_controller_settings(response)
+    )?
+        .map_success(map_controller_settings)
 }
 
 /// This command is only available for LE capable controllers and
@@ -726,17 +714,14 @@ pub fn set_low_energy(
     enabled: bool,
     timeout: i32,
 ) -> Result<ControllerSettings, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetLowEnergy,
-            param: Box::new(vec![enabled as u8]),
-            controller: controller.0,
-        },
+        ManagementCommand::SetLowEnergy,
+        vec![enabled as u8],
+        controller,
         timeout,
-    )?;
-
-    response_controller_settings(response)
+    )?
+        .map_success(map_controller_settings)
 }
 
 /// This command is used to set the major and minor device class for
@@ -760,27 +745,18 @@ pub fn set_device_class(
     class: DeviceClass,
     timeout: i32,
 ) -> Result<(DeviceClass, Vec<ServiceClass>), failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetDeviceClass,
-            param: Box::new(super::class::to_u16(class).to_le_bytes().to_vec()),
-            controller: controller.0,
-        },
+        ManagementCommand::SetDeviceClass,
+        super::class::to_u16(class).to_le_bytes().to_vec(),
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => {
+    )?
+        .map_success(|param, _, _| {
             let mut cod = [0u8; 3];
             cod.copy_from_slice(&param);
             Ok(super::class::from_bytes(cod))
-        }
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+        })
 }
 
 #[derive(Debug)]
@@ -839,27 +815,18 @@ pub fn set_name(
         short_name_bytes.iter().cloned(),
     );
 
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetLocalName,
-            param: Box::new(param),
-            controller: controller.0,
-        },
+        ManagementCommand::SetLocalName,
+        param,
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => {
+    )?
+        .map_success(|param, _, _| {
             let name = read_str(&param, 0, 249).unwrap_or("".to_owned());
             let short_name = read_str(&param, 249, 11);
             Ok(Name { name, short_name })
-        }
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+        })
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -912,27 +879,13 @@ pub fn add_uuid(
     param.extend_from_slice(&uuid.0);
     param.push(service_hint);
 
-    let response = wait_request(
-        sock,
-        ManagementRequest {
-            opcode: ManagementCommand::AddUUID,
-            param: Box::new(param),
-            controller: controller.0,
-        },
-        timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => {
+    await_request(sock, ManagementCommand::AddUUID, param, controller, timeout)?.map_success(
+        |param, _, _| {
             let mut cod = [0u8; 3];
             cod.copy_from_slice(&param);
             Ok(super::class::from_bytes(cod))
-        }
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+        },
+    )
 }
 
 /// This command is used to remove a UUID previously added using the
@@ -953,27 +906,18 @@ pub fn remove_uuid(
     uuid: Uuid,
     timeout: i32,
 ) -> Result<(DeviceClass, Vec<ServiceClass>), failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::RemoveUUID,
-            param: Box::new(uuid.0.to_vec()),
-            controller: controller.0,
-        },
+        ManagementCommand::RemoveUUID,
+        uuid.0.to_vec(),
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => {
+    )?
+        .map_success(|param, _, _| {
             let mut cod = [0u8; 3];
             cod.copy_from_slice(&param);
             Ok(super::class::from_bytes(cod))
-        }
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+        })
 }
 
 #[repr(u8)]
@@ -1016,23 +960,14 @@ pub fn load_link_keys(
         param.push(key.pin_length);
     }
 
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::LoadLinkKeys,
-            param: Box::new(param),
-            controller: controller.0,
-        },
+        ManagementCommand::LoadLinkKeys,
+        param,
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => Ok(()),
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+    )?
+        .map_success(|_, _, _| Ok(()))
 }
 
 #[repr(u8)]
@@ -1072,23 +1007,14 @@ pub fn load_long_term_keys(
         param.extend_from_slice(&key.value);
     }
 
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::LoadLinkKeys,
-            param: Box::new(param),
-            controller: controller.0,
-        },
+        ManagementCommand::LoadLinkKeys,
+        param,
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => Ok(()),
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+    )?
+        .map_success(|_, _, _| Ok(()))
 }
 
 pub fn disconnect(
@@ -1102,33 +1028,19 @@ pub fn disconnect(
     param.extend_from_slice(&address.bytes);
     param.push(address_type as u8);
 
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::Disconnect,
-            param: Box::new(param),
-            controller: controller.0,
-        },
+        ManagementCommand::Disconnect,
+        param,
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete {
-            status,
-            param,
-            opcode,
-        } => {
-            if status != ManagementCommandStatus::Success {
-                return Err(ManagementError::CommandError { status, opcode }.into());
-            }
-
+    )?
+        .map_success(|param, _, _| {
             let addr = Address::from_slice(&param[0..6]);
             let addr_type: AddressType = FromPrimitive::from_u8(param[6])
                 .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
             Ok((addr, addr_type))
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+        })
 }
 
 pub fn get_connections(
@@ -1136,37 +1048,27 @@ pub fn get_connections(
     controller: Controller,
     timeout: i32,
 ) -> Result<Vec<(Address, AddressType)>, failure::Error> {
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::GetConnections,
-            param: Box::new(vec![]),
-            controller: controller.0,
-        },
+        ManagementCommand::GetConnections,
+        vec![],
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => {
+    )?
+        .map_success(|param, _, _| {
             let count = read_u16_le(&param, 0) as usize;
             let mut addrs = vec![];
 
             for i in 0..count {
                 let offset = 2 + i * 7;
                 let addr = Address::from_slice(&param[offset..offset + 6]);
-                let addr_type: AddressType =
-                    FromPrimitive::from_u8(param[offset + 6])
-                        .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
+                let addr_type: AddressType = FromPrimitive::from_u8(param[offset + 6])
+                    .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
                 addrs.push((addr, addr_type));
             }
 
             Ok(addrs)
-        }
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+        })
 }
 
 pub fn pin_code_reply(
@@ -1185,35 +1087,27 @@ pub fn pin_code_reply(
     param.extend_from_slice(&address.bytes);
     param.push(address_type as u8);
     param.push(pin.len() as u8);
-    param.extend_from_slice(&pin.to_le_bytes());
+    param.extend(pin);
 
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::PinCodeReply,
-            param: Box::new(param),
-            controller: controller.0,
-        },
+        ManagementCommand::PinCodeReply,
+        param,
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => {
+    )?
+        .map_success(|param, _, _| {
             let addr = Address::from_slice(&param[0..6]);
             let addr_type: AddressType = FromPrimitive::from_u8(param[6])
                 .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
             Ok((addr, addr_type))
-        }
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+        })
 }
 
 pub fn pin_code_negative_reply(
     sock: &ManagementSocket,
     controller: Controller,
+    address: Address,
     address_type: AddressType,
     timeout: i32,
 ) -> Result<(Address, AddressType), failure::Error> {
@@ -1222,28 +1116,19 @@ pub fn pin_code_negative_reply(
     param.extend_from_slice(&address.bytes);
     param.push(address_type as u8);
 
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::PinCodeNegativeReply,
-            param: Box::new(param),
-            controller: controller.0,
-        },
+        ManagementCommand::PinCodeNegativeReply,
+        param,
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => {
+    )?
+        .map_success(|param, _, _| {
             let addr = Address::from_slice(&param[0..6]);
             let addr_type: AddressType = FromPrimitive::from_u8(param[6])
                 .ok_or::<failure::Error>(ManagementError::Unknown.into())?;
             Ok((addr, addr_type))
-        }
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+        })
 }
 
 #[repr(u8)]
@@ -1265,23 +1150,14 @@ pub fn set_io_capability(
 
     param.push(io_capability as u8);
 
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetIOCapability,
-            param: Box::new(param),
-            controller: controller.0,
-        },
+        ManagementCommand::SetIOCapability,
+        param,
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { param, .. } => Ok(()),
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+    )?
+        .map_success(|_, _, _| Ok(()))
 }
 
 pub fn pair_device(
@@ -1294,21 +1170,12 @@ pub fn pair_device(
 
     param.push(io_capability as u8);
 
-    let response = wait_request(
+    await_request(
         sock,
-        ManagementRequest {
-            opcode: ManagementCommand::SetIOCapability,
-            param: Box::new(param),
-            controller: controller.0,
-        },
+        ManagementCommand::SetIOCapability,
+        param,
+        controller,
         timeout,
-    )?;
-
-    match response.event {
-        ManagementEvent::CommandComplete { status, param, .. } => Ok(()),
-        ManagementEvent::CommandStatus { status, opcode } => {
-            Err(ManagementError::CommandError { status, opcode }.into())
-        }
-        _ => Err(ManagementError::Unknown.into()),
-    }
+    )?
+        .map_success(|_, _, _| Ok(()))
 }
