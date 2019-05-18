@@ -13,22 +13,22 @@ use super::super::socket::ManagementSocket;
 
 bitflags! {
     pub struct ControllerSettings: u32 {
-        const Powered = 1 << 0;
-        const Connectable = 1 << 1;
-        const FastConnectable = 1 << 2;
-        const Discoverable = 1 << 3;
-        const Pairable = 1 << 4;
-        const LinkLevelSecurity = 1 << 5;
-        const SecureSimplePairing = 1 << 6;
-        const BREDR = 1 << 7;
-        const HighSpeed = 1 << 8;
-        const LE = 1 << 9;
-        const Advertising = 1 << 10;
-        const SecureConnection = 1 << 11;
-        const DebugKeys = 1 << 12;
-        const Privacy = 1 << 13;
-        const Configuration = 1 << 14;
-        const StaticAddress = 1 << 15;
+        #[allow(non_upper_case_globals)] const Powered = 1 << 0;
+        #[allow(non_upper_case_globals)] const Connectable = 1 << 1;
+        #[allow(non_upper_case_globals)] const FastConnectable = 1 << 2;
+        #[allow(non_upper_case_globals)] const Discoverable = 1 << 3;
+        #[allow(non_upper_case_globals)] const Pairable = 1 << 4;
+        #[allow(non_upper_case_globals)] const LinkLevelSecurity = 1 << 5;
+        #[allow(non_upper_case_globals)] const SecureSimplePairing = 1 << 6;
+        #[allow(non_upper_case_globals)] const BREDR = 1 << 7;
+        #[allow(non_upper_case_globals)] const HighSpeed = 1 << 8;
+        #[allow(non_upper_case_globals)] const LE = 1 << 9;
+        #[allow(non_upper_case_globals)] const Advertising = 1 << 10;
+        #[allow(non_upper_case_globals)] const SecureConnection = 1 << 11;
+        #[allow(non_upper_case_globals)] const DebugKeys = 1 << 12;
+        #[allow(non_upper_case_globals)] const Privacy = 1 << 13;
+        #[allow(non_upper_case_globals)] const Configuration = 1 << 14;
+        #[allow(non_upper_case_globals)] const StaticAddress = 1 << 15;
     }
 }
 
