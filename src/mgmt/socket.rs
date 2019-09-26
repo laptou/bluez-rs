@@ -1,6 +1,8 @@
 use std::io;
 use std::os::raw::c_ushort;
-use std::os::unix::io::RawFd;
+use std::os::unix::io::{RawFd, UnixStream};
+
+use bytes::BytesMut;
 
 use crate::mgmt::ManagementError;
 
@@ -8,59 +10,78 @@ use super::interface::{ManagementRequest, ManagementResponse};
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-struct sockaddr_hci {
+struct SockAddrHci {
     pub hci_family: c_ushort,
     pub hci_dev: c_ushort,
-    pub hci_channel: c_ushort,
+    pub hci_channel: HciChannel,
 }
 
-#[allow(unused)]
-const BTPROTO_L2CAP: c_ushort = 0;
-const BTPROTO_HCI: c_ushort = 1;
-#[allow(unused)]
-const BTPROTO_RFCOMM: c_ushort = 3;
-#[allow(unused)]
-const BTPROTO_AVDTP: c_ushort = 7;
+#[repr(u16)]
+enum BtProto {
+    L2CAP = 0,
+    HCI = 1,
+    RFCOMM = 3,
+    AVDTP = 7,
+}
+
+#[repr(u16)]
+enum HciChannel {
+    Raw = 0,
+    Control = 3,
+}
 
 const HCI_DEV_NONE: c_ushort = 65535;
-#[allow(unused)]
-const HCI_CHANNEL_RAW: c_ushort = 0;
-const HCI_CHANNEL_CONTROL: c_ushort = 3;
 
+/// A wrapper over the raw libc socket
+/// We can't use Rust's UnixSocket because it only accepts paths
+/// and we can't connect to BlueZ using a normal path
 #[derive(Debug)]
 pub struct ManagementSocket {
-    fd: RawFd,
-    epoll_fd: RawFd,
-    is_open: bool,
+    socket: UnixStream
 }
 
 impl ManagementSocket {
-    pub fn new() -> Result<Self, io::Error> {
-        let fd = unsafe {
+    pub fn open() -> Result<Self, io::Error> {
+        let fd: RawFd = unsafe {
             libc::socket(
                 libc::PF_BLUETOOTH,
                 libc::SOCK_RAW | libc::SOCK_CLOEXEC | libc::SOCK_NONBLOCK,
-                BTPROTO_HCI as libc::c_int,
+                BtProto::HCI as libc::c_int,
             )
         };
 
         if fd < 0 {
-            Err(io::Error::last_os_error())
-        } else {
-            Ok(ManagementSocket {
-                fd,
-                epoll_fd: epoll::create(true)?,
-                is_open: false,
-            })
+            return Err(io::Error::last_os_error());
         }
+
+        if unsafe {
+            libc::bind(
+                self.socket_fd,
+                &addr as *const SockAddrHci as *const libc::sockaddr,
+                core::mem::size_of::<SockAddrHci>() as u32,
+            )
+        } < 0
+        {
+            let err = Err(io::Error::last_os_error());
+
+            unsafe { libc::close(fd); }
+
+            err
+        }
+
+        let addr = SockAddrHci {
+            hci_family: libc::AF_BLUETOOTH as u16,
+            hci_dev: HCI_DEV_NONE,
+            hci_channel: HciChannel::Control,
+        };
+
+            Ok(ManagementSocket {
+                socket: fd.into()
+            })
     }
 
     pub fn open(&mut self) -> Result<(), io::Error> {
-        let addr = sockaddr_hci {
-            hci_family: libc::AF_BLUETOOTH as u16,
-            hci_dev: HCI_DEV_NONE,
-            hci_channel: HCI_CHANNEL_CONTROL,
-        };
+
 
         // do not open twice
         if self.is_open {
@@ -69,89 +90,68 @@ impl ManagementSocket {
 
         if unsafe {
             libc::bind(
-                self.fd,
-                &addr as *const sockaddr_hci as *const libc::sockaddr,
-                core::mem::size_of::<sockaddr_hci>() as u32,
+                self.socket_fd,
+                &addr as *const SockAddrHci as *const libc::sockaddr,
+                core::mem::size_of::<SockAddrHci>() as u32,
             )
         } < 0
         {
             let err = Err(io::Error::last_os_error());
 
             unsafe {
-                libc::close(self.fd);
+                libc::close(self.socket_fd);
             }
 
             err
         } else {
             self.is_open = true;
 
+            // create epoll listener
             epoll::ctl(
                 self.epoll_fd,
                 epoll::ControlOptions::EPOLL_CTL_ADD,
-                self.fd,
+                self.socket_fd,
                 epoll::Event {
                     events: (libc::EPOLLIN | libc::EPOLLRDHUP | libc::EPOLLERR | libc::EPOLLHUP)
                         as u32,
                     data: 0,
-                },
-            )
+                })
         }
     }
 
     pub fn close(&mut self) {
         unsafe {
-            libc::close(self.fd);
+            libc::close(self.socket_fd);
             libc::close(self.epoll_fd);
         };
+
         self.is_open = false;
     }
 
-    pub(crate) fn send(&self, request: ManagementRequest) -> Result<(), failure::Error> {
-        let buf = unsafe { request.get_buf() };
+    pub async fn send(&self, request: ManagementRequest) -> Result<(), io::Error> {
+        let buf = request.into();
 
         if unsafe {
             libc::write(
-                self.fd,
-                buf.as_slice() as *const [u8] as *const ::std::os::raw::c_void,
+                self.socket_fd,
+                buf.as_ptr() as *const ::std::os::raw::c_void,
                 buf.len(),
             )
-        } < 0
-        {
-            Err(io::Error::last_os_error().into())
+        } < 0 {
+            Err(io::Error::last_os_error())
         } else {
             Ok(())
         }
     }
 
-    pub fn receive(&self, timeout: i32) -> Result<ManagementResponse, failure::Error> {
-        const BUF_SIZE: usize = 1024;
-        let mut buf: Vec<u8> = vec![0; BUF_SIZE];
+    pub async fn receive(&self, timeout: i32) -> Result<ManagementResponse, io::Error> {
+        let mut buf = BytesMut::new();
         let mut bytes_read = 0;
-
-        if timeout != 0 {
-            let mut events: [epoll::Event; 1] = unsafe { ::std::mem::uninitialized() };
-            let event_count = epoll::wait(self.epoll_fd, timeout, &mut events[..]);
-
-            match event_count {
-                Err(e) => return Err(e.into()),
-                Ok(count) => {
-                    if count == 0 {
-                        return Err(ManagementError::TimedOut.into());
-                    }
-
-                    let event = &events[0];
-                    if event.events as i32 & libc::EPOLLIN != libc::EPOLLIN {
-                        // TODO: handle fd being closed unexpectedly
-                        return Err(ManagementError::Unknown.into());
-                    }
-                },
-            }
-        }
 
         loop {
             let result = unsafe {
                 libc::read(
-                    self.fd,
+                    self.socket_fd,
                     buf.as_mut_ptr() as *mut ::std::os::raw::c_void,
                     BUF_SIZE,
                 )

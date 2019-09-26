@@ -1,25 +1,23 @@
+use bytes::{BufMut, Bytes, BytesMut};
+
 use crate::mgmt::interface::command::ManagementCommand;
+use crate::mgmt::interface::controller::Controller;
 
 pub struct ManagementRequest {
     pub opcode: ManagementCommand,
-    pub controller: u16,
-    pub param: Box<Vec<u8>>,
+    pub controller: Controller,
+    pub param: Bytes,
 }
 
-impl ManagementRequest {
-    pub unsafe fn get_buf(&self) -> Vec<u8> {
-        let mut buf: Vec<u8> = Vec::new();
+impl Into<Bytes> for ManagementRequest {
+    fn into(self) -> Bytes {
+        let mut buf = BytesMut::with_capacity(6 + self.param.len());
 
-        buf.resize(6 + self.param.len(), 0);
+        buf.put_u16_le(self.opcode as u16);
+        buf.put_u16_le(self.controller.into());
+        buf.put_u16_le(self.param.len() as u16);
+        buf.put(self.param);
 
-        buf.splice(0..2, (self.opcode as u16).to_le_bytes().iter().cloned());
-        buf.splice(2..4, self.controller.to_le_bytes().iter().cloned());
-        buf.splice(
-            4..6,
-            (self.param.len() as u16).to_le_bytes().iter().cloned(),
-        );
-        buf.splice(6.., { &self }.param.iter().cloned());
-
-        buf
+        buf.freeze()
     }
 }

@@ -1,3 +1,4 @@
+use bytes::{Bytes, IntoBuf};
 use num_traits::FromPrimitive;
 
 use crate::mgmt::interface::command::ManagementEvent;
@@ -10,10 +11,11 @@ pub struct ManagementResponse {
 }
 
 impl ManagementResponse {
-    pub unsafe fn from_buf(buf: &Vec<u8>) -> Result<ManagementResponse, failure::Error> {
-        let evt_code = read_u16_le(buf, 0);
-        let controller = read_u16_le(buf, 2);
-        let param_size = read_u16_le(buf, 4) as usize;
+    pub unsafe fn from_buf(buf: Bytes) -> Result<ManagementResponse, failure::Error> {
+        let cursor = buf.into_buf();
+        let evt_code = cursor.get_u16_le();
+        let controller = cursor.get_u16_le();
+        let param_size = cursor.get_u16_le() as usize;
 
         const HEADER: usize = 6; // header size is 6 bytes
 

@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 
+use bytes::Bytes;
 use num_traits::FromPrimitive;
 
 use crate::Address;
@@ -11,93 +12,30 @@ use super::request::ManagementRequest;
 use super::response::ManagementResponse;
 use super::super::socket::ManagementSocket;
 
-bitflags! {
-    pub struct ControllerSettings: u32 {
-        #[allow(non_upper_case_globals)] const Powered = 1 << 0;
-        #[allow(non_upper_case_globals)] const Connectable = 1 << 1;
-        #[allow(non_upper_case_globals)] const FastConnectable = 1 << 2;
-        #[allow(non_upper_case_globals)] const Discoverable = 1 << 3;
-        #[allow(non_upper_case_globals)] const Pairable = 1 << 4;
-        #[allow(non_upper_case_globals)] const LinkLevelSecurity = 1 << 5;
-        #[allow(non_upper_case_globals)] const SecureSimplePairing = 1 << 6;
-        #[allow(non_upper_case_globals)] const BREDR = 1 << 7;
-        #[allow(non_upper_case_globals)] const HighSpeed = 1 << 8;
-        #[allow(non_upper_case_globals)] const LE = 1 << 9;
-        #[allow(non_upper_case_globals)] const Advertising = 1 << 10;
-        #[allow(non_upper_case_globals)] const SecureConnection = 1 << 11;
-        #[allow(non_upper_case_globals)] const DebugKeys = 1 << 12;
-        #[allow(non_upper_case_globals)] const Privacy = 1 << 13;
-        #[allow(non_upper_case_globals)] const Configuration = 1 << 14;
-        #[allow(non_upper_case_globals)] const StaticAddress = 1 << 15;
-    }
-}
-
-impl Display for ControllerSettings {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), ::std::fmt::Error> {
-        let mut tags = vec![];
-
-        if self.contains(ControllerSettings::Powered) {
-            tags.push("powered");
-        }
-
-        if self.contains(ControllerSettings::Connectable) {
-            tags.push("connectable");
-        }
-
-        if self.contains(ControllerSettings::FastConnectable) {
-            tags.push("fast-connectable");
-        }
-
-        if self.contains(ControllerSettings::Discoverable) {
-            tags.push("discoverable");
-        }
-
-        if self.contains(ControllerSettings::Pairable) {
-            tags.push("pairable");
-        }
-
-        if self.contains(ControllerSettings::LinkLevelSecurity) {
-            tags.push("link-level-security");
-        }
-
-        if self.contains(ControllerSettings::SecureSimplePairing) {
-            tags.push("secure-simple-pairing");
-        }
-
-        if self.contains(ControllerSettings::BREDR) {
-            tags.push("br/edr");
-        }
-
-        if self.contains(ControllerSettings::HighSpeed) {
-            tags.push("high-speed");
-        }
-
-        if self.contains(ControllerSettings::LE) {
-            tags.push("low-energy");
-        }
-
-        if self.contains(ControllerSettings::Advertising) {
-            tags.push("advertising");
-        }
-
-        if self.contains(ControllerSettings::SecureConnection) {
-            tags.push("secure-connection");
-        }
-
-        if self.contains(ControllerSettings::DebugKeys) {
-            tags.push("debug-keys");
-        }
-
-        if self.contains(ControllerSettings::Privacy) {
-            tags.push("privacy");
-        }
-
-        if self.contains(ControllerSettings::StaticAddress) {
-            tags.push("static-address");
-        }
-
-        write!(f, "{}", tags.join(" "))
-    }
+#[repr(u8)]
+#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
+pub enum ManagementCommandStatus {
+    Success = 0x00,
+    UnknownCommand = 0x01,
+    NotConnected = 0x02,
+    Failed = 0x03,
+    ConnectFailed = 0x04,
+    AuthenticationFailed = 0x05,
+    NotPaired = 0x06,
+    NoResources = 0x07,
+    Timeout = 0x08,
+    AlreadyConnected = 0x09,
+    Busy = 0x0A,
+    Rejected = 0x0B,
+    NotSupported = 0x0C,
+    InvalidParams = 0x0D,
+    Disconnected = 0x0E,
+    NotPowered = 0x0F,
+    Cancelled = 0x10,
+    InvalidIndex = 0x11,
+    RFKilled = 0x12,
+    AlreadyPaired = 0x13,
+    PermissionDenied = 0x14,
 }
 
 #[repr(u16)]
@@ -149,6 +87,12 @@ pub enum ManagementCommand {
     SetScanParameters,
 }
 
+impl ::std::fmt::LowerHex for ManagementCommandStatus {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), ::std::fmt::Error> {
+        write!(f, "{:x}", *self as u8)
+    }
+}
+
 #[repr(u8)]
 #[derive(Debug, Eq, PartialEq, FromPrimitive)]
 pub enum AddressType {
@@ -162,7 +106,7 @@ pub enum ManagementEvent {
     CommandComplete {
         opcode: ManagementCommand,
         status: ManagementCommandStatus,
-        param: Box<Vec<u8>>,
+        param: Bytes,
     },
     CommandStatus {
         opcode: ManagementCommand,
@@ -269,47 +213,6 @@ pub enum ManagementEvent {
         passkey: u32,
         entered: u8,
     },
-}
-
-#[repr(u8)]
-#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
-pub enum ManagementCommandStatus {
-    Success = 0x00,
-    UnknownCommand = 0x01,
-    NotConnected = 0x02,
-    Failed = 0x03,
-    ConnectFailed = 0x04,
-    AuthenticationFailed = 0x05,
-    NotPaired = 0x06,
-    NoResources = 0x07,
-    Timeout = 0x08,
-    AlreadyConnected = 0x09,
-    Busy = 0x0A,
-    Rejected = 0x0B,
-    NotSupported = 0x0C,
-    InvalidParams = 0x0D,
-    Disconnected = 0x0E,
-    NotPowered = 0x0F,
-    Cancelled = 0x10,
-    InvalidIndex = 0x11,
-    RFKilled = 0x12,
-    AlreadyPaired = 0x13,
-    PermissionDenied = 0x14,
-}
-
-impl ::std::fmt::LowerHex for ManagementCommandStatus {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), ::std::fmt::Error> {
-        write!(f, "{:x}", *self as u8)
-    }
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct Controller(u16);
-
-impl Display for Controller {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), ::std::fmt::Error> {
-        write!(f, "hci{}", self.0)
-    }
 }
 
 trait ResponseExt {
