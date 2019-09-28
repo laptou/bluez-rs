@@ -15,6 +15,12 @@ impl Into<u16> for Controller {
     }
 }
 
+impl Controller {
+    pub fn none() -> Controller {
+        Controller(0xFFFF)
+    }
+}
+
 bitflags! {
     pub struct ControllerSettings: u32 {
         #[allow(non_upper_case_globals)] const Powered = 1 << 0;
