@@ -1,25 +1,29 @@
-use std::future::Future;
-
-use bitflags::_core::time::Duration;
 use bytes::{Buf, Bytes, IntoBuf};
 
-use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus, ManagementRequest, Version};
+use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus, ManagementRequest, ManagementResponse, Version};
 use crate::mgmt::interface::controller::Controller;
 use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
 use crate::mgmt::socket::ManagementSocket;
 
-pub struct BluezClient {
+pub struct BlueZClient {
     socket: ManagementSocket,
-    timeout: i32,
+    events: Vec<ManagementResponse>,
 }
 
-impl BluezClient {
+impl BlueZClient {
     pub fn new() -> Self {
         // todo: fix that unwrap()
-        BluezClient {
+        BlueZClient {
             socket: ManagementSocket::open().unwrap(),
-            timeout: 5000,
+            events: vec![],
+        }
+    }
+
+    pub async fn event_loop(&mut self) {
+        loop {
+            let result = self.socket.receive().await.unwrap();
+            self.events.push(result);
         }
     }
 
@@ -30,7 +34,7 @@ impl BluezClient {
             param: Bytes::default(),
         }).await?;
 
-        let response = self.socket.receive(self.timeout).await?;
+        let response = self.socket.receive().await?;
 
         match response.event {
             ManagementEvent::CommandComplete { status, param, opcode } => {

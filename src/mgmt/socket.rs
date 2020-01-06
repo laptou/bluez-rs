@@ -1,12 +1,11 @@
 use std::ffi::CStr;
-use std::io::{self, Read, Write};
 use std::os::raw::c_ushort;
-use std::os::unix::io::{FromRawFd, RawFd};
-use std::os::unix::net::UnixStream;
-use std::u16;
 
-use bitflags::_core::ffi::c_void;
+use async_std::io::{self, Read, Write};
+use async_std::os::unix::io::{FromRawFd, RawFd};
+use async_std::os::unix::net::UnixStream;
 use bytes::{Buf, Bytes, BytesMut, IntoBuf};
+use futures::{AsyncReadExt, AsyncWriteExt};
 use libc;
 use num_traits::FromPrimitive;
 
@@ -47,7 +46,7 @@ const HCI_DEV_NONE: c_ushort = 65535;
 /// and we can't connect to BlueZ using a normal path
 #[derive(Debug)]
 pub struct ManagementSocket {
-    fd: RawFd
+    stream: UnixStream
 }
 
 impl ManagementSocket {
@@ -85,30 +84,23 @@ impl ManagementSocket {
             return Err(err);
         }
 
+        let stream = unsafe { UnixStream::from_raw_fd(fd) };
+
         Ok(ManagementSocket {
-            fd
+            stream
         })
     }
 
-    pub async fn send(&mut self, request: ManagementRequest) -> Result<(), io::Error> {
+    /// Returns either an error or the number of bytes that were sent.
+    pub async fn send(&mut self, request: ManagementRequest) -> Result<usize, io::Error> {
         let buf: Bytes = request.into();
-
-        if unsafe { libc::send(self.fd, buf.as_ptr() as *const c_void, buf.len(), 0) } < 0 {
-            Err(io::Error::last_os_error())
-        } else {
-            Ok(())
-        }
+        self.stream.write(&buf).await
     }
 
-    pub async fn receive(&mut self, timeout: i32) -> Result<ManagementResponse, ManagementError> {
+    pub async fn receive(&mut self) -> Result<ManagementResponse, ManagementError> {
         let mut header = [0u8; 6];
 
-        // need MSG_PEEK otherwise recv() clears the socket and we get EAGAIN when
-        // we try to read the socket again; this is the main reason for using a raw
-        // fd instead of a UnixStream
-        if unsafe { libc::recv(self.fd, header.as_mut_ptr() as *mut c_void, 6, libc::MSG_PEEK) } < 0 {
-            return Err(io::Error::last_os_error().into());
-        }
+        self.stream.read(&mut header).await?;
 
         let mut cursor = header.into_buf();
 
@@ -116,11 +108,9 @@ impl ManagementSocket {
         let controller = cursor.get_u16_le();
         let param_size = cursor.get_u16_le() as usize;
 
-        let mut param = vec![0u8; param_size + 6];
+        let mut param = vec![0u8; param_size];
 
-        if unsafe { libc::recv(self.fd, param.as_mut_ptr() as *mut c_void, param.len(), 0) } < 0 {
-            return Err(io::Error::last_os_error().into());
-        }
+        self.stream.read(&mut param).await?;
 
         let mut cursor = param.into_buf();
 
@@ -184,9 +174,5 @@ impl ManagementSocket {
                 _ => unreachable!(),
             },
         });
-    }
-
-    pub fn close(&mut self) {
-        unsafe { libc::close(self.fd); }
     }
 }

@@ -1,3 +1,6 @@
+use bitvec::prelude as bv;
+use bitvec::prelude::{BitField, Bits};
+
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum ServiceClass {
     Positioning,
@@ -144,36 +147,24 @@ pub fn from_bytes(class: [u8; 3]) -> (DeviceClass, Vec<ServiceClass>) {
 }
 
 pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
+    let mut service_classes: Vec<ServiceClass> = vec![];
+    let class_bits = class.bits::<bv::BigEndian>();
+
+    if class_bits[16] { service_classes.push(ServiceClass::Positioning); }
+    if class_bits[17] { service_classes.push(ServiceClass::Networking); }
+    if class_bits[18] { service_classes.push(ServiceClass::Rendering); }
+    if class_bits[19] { service_classes.push(ServiceClass::Capturing); }
+    if class_bits[20] { service_classes.push(ServiceClass::ObjectTransfer); }
+    if class_bits[21] { service_classes.push(ServiceClass::Audio); }
+    if class_bits[22] { service_classes.push(ServiceClass::Telephony); }
+    if class_bits[23] { service_classes.push(ServiceClass::Information); }
+
     let device_class: DeviceClass;
-    let mut service_classes: Vec<ServiceClass> = Vec::new();
 
-    if class & (1 << 16) == (1 << 16) {
-        service_classes.push(ServiceClass::Positioning);
-    }
-    if class & (1 << 17) == (1 << 17) {
-        service_classes.push(ServiceClass::Networking);
-    }
-    if class & (1 << 18) == (1 << 18) {
-        service_classes.push(ServiceClass::Rendering);
-    }
-    if class & (1 << 19) == (1 << 19) {
-        service_classes.push(ServiceClass::Capturing);
-    }
-    if class & (1 << 20) == (1 << 20) {
-        service_classes.push(ServiceClass::ObjectTransfer);
-    }
-    if class & (1 << 21) == (1 << 21) {
-        service_classes.push(ServiceClass::Audio);
-    }
-    if class & (1 << 22) == (1 << 22) {
-        service_classes.push(ServiceClass::Telephony);
-    }
-    if class & (1 << 23) == (1 << 23) {
-        service_classes.push(ServiceClass::Information);
-    }
-
-    device_class = match (class & (0b11111 << 8)) >> 8 {
-        0b00001 => DeviceClass::Computer(match (class & (0b111111 << 2)) >> 2 {
+    // major device class encoded in bits 8-12
+    device_class = match class_bits[7..12].load::<u8>().unwrap() {
+        // minor device class in bits 2-7
+        0b00001 => DeviceClass::Computer(match class_bits[1..7].load::<u8>().unwrap() {
             0b000000 => ComputerDeviceClass::Uncategorized,
             0b000001 => ComputerDeviceClass::Desktop,
             0b000010 => ComputerDeviceClass::Server,
@@ -184,7 +175,7 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             0b000111 => ComputerDeviceClass::Tablet,
             _ => ComputerDeviceClass::Unknown,
         }),
-        0b00010 => DeviceClass::Phone(match (class & (0b111111 << 2)) >> 2 {
+        0b00010 => DeviceClass::Phone(match class_bits[1..7].load::<u8>().unwrap() {
             0b000000 => PhoneDeviceClass::Uncategorized,
             0b000001 => PhoneDeviceClass::Cellular,
             0b000010 => PhoneDeviceClass::Cordless,
@@ -194,7 +185,7 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             _ => PhoneDeviceClass::Unknown,
         }),
         0b00011 => DeviceClass::AccessPoint(0.),
-        0b00100 => DeviceClass::AudioVideo(match (class & (0b111111 << 2)) >> 2 {
+        0b00100 => DeviceClass::AudioVideo(match class_bits[1..7].load::<u8>().unwrap() {
             0b000001 => AudioVideoDeviceClass::Headset,
             0b000010 => AudioVideoDeviceClass::HandsFree,
             0b000011 => AudioVideoDeviceClass::Unknown,
@@ -216,9 +207,9 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             _ => AudioVideoDeviceClass::Unknown,
         }),
         0b00101 => DeviceClass::Peripheral {
-            keyboard: class & (1 << 6) == (1 << 6),
-            pointer: class & (1 << 7) == (1 << 7),
-            class: match (class & (0b1111 << 2)) >> 2 {
+            keyboard: class_bits[5],
+            pointer: class_bits[6],
+            class: match class_bits[1..5].load::<u8>().unwrap() {
                 0b0000 => PeripheralDeviceClass::Uncategorized,
                 0b0001 => PeripheralDeviceClass::Joystick,
                 0b0010 => PeripheralDeviceClass::Gamepad,
@@ -233,12 +224,12 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             },
         },
         0b00110 => DeviceClass::Imaging {
-            display: class & (1 << 4) == (1 << 4),
-            camera: class & (1 << 5) == (1 << 5),
-            scanner: class & (1 << 6) == (1 << 6),
-            printer: class & (1 << 7) == (1 << 7),
+            display: class_bits[3],
+            camera: class_bits[4],
+            scanner: class_bits[5],
+            printer: class_bits[6],
         },
-        0b00111 => DeviceClass::Wearable(match (class & (0b111111 << 2)) >> 2 {
+        0b00111 => DeviceClass::Wearable(match class_bits[1..7].load::<u8>().unwrap() {
             0b0001 => WearableDeviceClass::Wristwatch,
             0b0010 => WearableDeviceClass::Pager,
             0b0011 => WearableDeviceClass::Jacket,
@@ -246,7 +237,7 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             0b0101 => WearableDeviceClass::Glasses,
             _ => WearableDeviceClass::Unknown,
         }),
-        0b01000 => DeviceClass::Toy(match (class & (0b111111 << 2)) >> 2 {
+        0b01000 => DeviceClass::Toy(match class_bits[1..7].load::<u8>().unwrap() {
             0b0001 => ToyDeviceClass::Robot,
             0b0010 => ToyDeviceClass::Vehicle,
             0b0011 => ToyDeviceClass::Doll,
@@ -254,7 +245,7 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             0b0101 => ToyDeviceClass::Game,
             _ => ToyDeviceClass::Unknown,
         }),
-        0b01001 => DeviceClass::Health(match (class & (0b111111 << 2)) >> 2 {
+        0b01001 => DeviceClass::Health(match class_bits[1..7].load::<u8>().unwrap() {
             0b000001 => HealthDeviceClass::BloodPressureMeter,
             0b000010 => HealthDeviceClass::Thermometer,
             0b000011 => HealthDeviceClass::WeightScale,

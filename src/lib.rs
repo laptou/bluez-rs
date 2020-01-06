@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate bitflags;
 #[macro_use]
-extern crate failure;
-#[macro_use]
 extern crate num_derive;
+#[macro_use]
+extern crate thiserror;
 
 use std::fmt::{Display, Formatter};
 

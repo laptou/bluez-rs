@@ -1,16 +1,18 @@
 extern crate bluez;
-extern crate thin_main_loop as tml;
+
+use std::error::Error;
+
+use async_std::task;
 
 use bluez::mgmt;
 use bluez::mgmt::interface;
 
-pub fn main() -> Result<(), failure::Error> {
-    let mut ex = tml::future::Executor::new().unwrap();
-    ex.block_on(main_async()).unwrap()
+pub fn main() -> Result<(), Box<dyn Error>> {
+    task::block_on(main_async())
 }
 
-pub async fn main_async() -> Result<(), failure::Error> {
-    let mut client = mgmt::client::BluezClient::new();
+pub async fn main_async() -> Result<(), Box<dyn Error>> {
+    let mut client = mgmt::client::BlueZClient::new();
     // Rust version of https://people.csail.mit.edu/albert/bluez-intro/c404.html#bzi-choosing
     let version = client.version().await?;
 
