@@ -20,7 +20,6 @@ pub type ServiceClasses = BitFlags<ServiceClass>;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum DeviceClass {
-    Miscellaneous,
     Computer(ComputerDeviceClass),
     Phone(PhoneDeviceClass),
 
@@ -265,7 +264,6 @@ pub fn from_u32(class: u32) -> (DeviceClass, ServiceClasses) {
             _ => HealthDeviceClass::Unknown,
         }),
         0b11111 => DeviceClass::Uncategorized,
-        0b00000 => DeviceClass::Miscellaneous,
         _ => DeviceClass::Unknown,
     };
 
@@ -277,7 +275,6 @@ impl Into<u16> for DeviceClass {
         let mut bits = 0u16;
 
         match self {
-            DeviceClass::Miscellaneous => (),
             DeviceClass::Computer(minor) => {
                 bits |= 0b00001 << 8;
                 match minor {

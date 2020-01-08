@@ -23,6 +23,18 @@ impl From<[u8; 6]> for Address {
     }
 }
 
+impl Into<[u8; 6]> for Address {
+    fn into(self) -> [u8; 6] {
+        self.bytes
+    }
+}
+
+impl AsRef<[u8]> for Address {
+    fn as_ref(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
 impl Display for Address {
     fn fmt(&self, f: &mut Formatter) -> Result<(), std::fmt::Error> {
         write!(
