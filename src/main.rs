@@ -12,7 +12,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 }
 
 pub async fn main_async() -> Result<(), Box<dyn Error>> {
-    let mut client = mgmt::client::BlueZClient::new();
+    let mut client = mgmt::client::ManagementClient::new();
+
     // Rust version of https://people.csail.mit.edu/albert/bluez-intro/c404.html#bzi-choosing
     let version = client.version().await?;
 

@@ -1,11 +1,12 @@
 use std::ffi::CStr;
 use std::os::raw::c_ushort;
 
-use async_std::io::{self, Read, Write};
+use async_std::io::{self, BufReader, Read, Write};
 use async_std::os::unix::io::{FromRawFd, RawFd};
 use async_std::os::unix::net::UnixStream;
 use bytes::{Buf, Bytes, BytesMut, IntoBuf};
 use futures::{AsyncReadExt, AsyncWriteExt};
+use futures::io::{ReadHalf, WriteHalf};
 use libc;
 use num_traits::FromPrimitive;
 
@@ -46,7 +47,8 @@ const HCI_DEV_NONE: c_ushort = 65535;
 /// and we can't connect to BlueZ using a normal path
 #[derive(Debug)]
 pub struct ManagementSocket {
-    stream: UnixStream
+    reader: BufReader<ReadHalf<UnixStream>>,
+    writer: WriteHalf<UnixStream>,
 }
 
 impl ManagementSocket {
@@ -84,23 +86,25 @@ impl ManagementSocket {
             return Err(err);
         }
 
-        let stream = unsafe { UnixStream::from_raw_fd(fd) };
+        let stream: UnixStream = unsafe { UnixStream::from_raw_fd(fd) };
+        let (read_stream, write_stream) = stream.split();
 
         Ok(ManagementSocket {
-            stream
+            reader: BufReader::new(read_stream),
+            writer: write_stream,
         })
     }
 
     /// Returns either an error or the number of bytes that were sent.
     pub async fn send(&mut self, request: ManagementRequest) -> Result<usize, io::Error> {
         let buf: Bytes = request.into();
-        self.stream.write(&buf).await
+        self.writer.write(&buf).await
     }
 
     pub async fn receive(&mut self) -> Result<ManagementResponse, ManagementError> {
         let mut header = [0u8; 6];
 
-        self.stream.read(&mut header).await?;
+        self.reader.read(&mut header).await?;
 
         let mut cursor = header.into_buf();
 
@@ -110,11 +114,9 @@ impl ManagementSocket {
 
         let mut param = vec![0u8; param_size];
 
-        self.stream.read(&mut param).await?;
+        self.reader.read(&mut param).await?;
 
         let mut cursor = param.into_buf();
-
-        cursor.advance(6);
 
         return Ok(ManagementResponse {
             controller,

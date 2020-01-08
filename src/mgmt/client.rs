@@ -6,24 +6,27 @@ use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
 use crate::mgmt::socket::ManagementSocket;
 
-pub struct BlueZClient {
+pub struct ManagementClient {
     socket: ManagementSocket,
-    events: Vec<ManagementResponse>,
+    handler: Option<Box<dyn ManagementHandler>>,
 }
 
-impl BlueZClient {
+pub trait ManagementHandler {}
+
+impl ManagementClient {
     pub fn new() -> Self {
         // todo: fix that unwrap()
-        BlueZClient {
+        ManagementClient {
             socket: ManagementSocket::open().unwrap(),
-            events: vec![],
+            handler: None,
         }
     }
 
-    pub async fn event_loop(&mut self) {
-        loop {
-            let result = self.socket.receive().await.unwrap();
-            self.events.push(result);
+    pub fn new_with_handler(handler: Box<dyn ManagementHandler>) -> Self {
+        // todo: fix that unwrap()
+        ManagementClient {
+            socket: ManagementSocket::open().unwrap(),
+            handler: Some(handler),
         }
     }
 

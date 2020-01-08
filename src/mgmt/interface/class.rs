@@ -162,9 +162,9 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
     let device_class: DeviceClass;
 
     // major device class encoded in bits 8-12
-    device_class = match class_bits[7..12].load::<u8>().unwrap() {
+    device_class = match class_bits[8..13].load::<u8>().unwrap() {
         // minor device class in bits 2-7
-        0b00001 => DeviceClass::Computer(match class_bits[1..7].load::<u8>().unwrap() {
+        0b00001 => DeviceClass::Computer(match class_bits[2..8].load::<u8>().unwrap() {
             0b000000 => ComputerDeviceClass::Uncategorized,
             0b000001 => ComputerDeviceClass::Desktop,
             0b000010 => ComputerDeviceClass::Server,
@@ -175,7 +175,7 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             0b000111 => ComputerDeviceClass::Tablet,
             _ => ComputerDeviceClass::Unknown,
         }),
-        0b00010 => DeviceClass::Phone(match class_bits[1..7].load::<u8>().unwrap() {
+        0b00010 => DeviceClass::Phone(match class_bits[2..8].load::<u8>().unwrap() {
             0b000000 => PhoneDeviceClass::Uncategorized,
             0b000001 => PhoneDeviceClass::Cellular,
             0b000010 => PhoneDeviceClass::Cordless,
@@ -185,7 +185,7 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             _ => PhoneDeviceClass::Unknown,
         }),
         0b00011 => DeviceClass::AccessPoint(0.),
-        0b00100 => DeviceClass::AudioVideo(match class_bits[1..7].load::<u8>().unwrap() {
+        0b00100 => DeviceClass::AudioVideo(match class_bits[2..8].load::<u8>().unwrap() {
             0b000001 => AudioVideoDeviceClass::Headset,
             0b000010 => AudioVideoDeviceClass::HandsFree,
             0b000011 => AudioVideoDeviceClass::Unknown,
@@ -207,9 +207,9 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             _ => AudioVideoDeviceClass::Unknown,
         }),
         0b00101 => DeviceClass::Peripheral {
-            keyboard: class_bits[5],
-            pointer: class_bits[6],
-            class: match class_bits[1..5].load::<u8>().unwrap() {
+            keyboard: class_bits[6],
+            pointer: class_bits[7],
+            class: match class_bits[2..6].load::<u8>().unwrap() {
                 0b0000 => PeripheralDeviceClass::Uncategorized,
                 0b0001 => PeripheralDeviceClass::Joystick,
                 0b0010 => PeripheralDeviceClass::Gamepad,
@@ -224,12 +224,12 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             },
         },
         0b00110 => DeviceClass::Imaging {
-            display: class_bits[3],
-            camera: class_bits[4],
-            scanner: class_bits[5],
-            printer: class_bits[6],
+            display: class_bits[4],
+            camera: class_bits[5],
+            scanner: class_bits[6],
+            printer: class_bits[7],
         },
-        0b00111 => DeviceClass::Wearable(match class_bits[1..7].load::<u8>().unwrap() {
+        0b00111 => DeviceClass::Wearable(match class_bits[2..8].load::<u8>().unwrap() {
             0b0001 => WearableDeviceClass::Wristwatch,
             0b0010 => WearableDeviceClass::Pager,
             0b0011 => WearableDeviceClass::Jacket,
@@ -237,7 +237,7 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             0b0101 => WearableDeviceClass::Glasses,
             _ => WearableDeviceClass::Unknown,
         }),
-        0b01000 => DeviceClass::Toy(match class_bits[1..7].load::<u8>().unwrap() {
+        0b01000 => DeviceClass::Toy(match class_bits[2..8].load::<u8>().unwrap() {
             0b0001 => ToyDeviceClass::Robot,
             0b0010 => ToyDeviceClass::Vehicle,
             0b0011 => ToyDeviceClass::Doll,
@@ -245,7 +245,7 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
             0b0101 => ToyDeviceClass::Game,
             _ => ToyDeviceClass::Unknown,
         }),
-        0b01001 => DeviceClass::Health(match class_bits[1..7].load::<u8>().unwrap() {
+        0b01001 => DeviceClass::Health(match class_bits[2..8].load::<u8>().unwrap() {
             0b000001 => HealthDeviceClass::BloodPressureMeter,
             0b000010 => HealthDeviceClass::Thermometer,
             0b000011 => HealthDeviceClass::WeightScale,
