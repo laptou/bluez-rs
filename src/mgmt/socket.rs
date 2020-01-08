@@ -1,10 +1,12 @@
+use std::convert::{TryFrom, TryInto};
 use std::ffi::CStr;
 use std::os::raw::c_ushort;
+use std::u16;
 
 use async_std::io::{self, BufReader, Read, Write};
 use async_std::os::unix::io::{FromRawFd, RawFd};
 use async_std::os::unix::net::UnixStream;
-use bytes::{Buf, Bytes, BytesMut, IntoBuf};
+use bytes::{Buf, buf::{FromBuf, IntoBuf}, Bytes, BytesMut};
 use futures::{AsyncReadExt, AsyncWriteExt};
 use futures::io::{ReadHalf, WriteHalf};
 use libc;
@@ -37,14 +39,13 @@ enum BtProto {
 #[derive(Debug, Copy, Clone)]
 enum HciChannel {
     Raw = 0,
+    User = 1,
+    Monitor = 2,
     Control = 3,
 }
 
 const HCI_DEV_NONE: c_ushort = 65535;
 
-/// A wrapper over the raw libc socket
-/// We can't use Rust's UnixSocket because it only accepts paths
-/// and we can't connect to BlueZ using a normal path
 #[derive(Debug)]
 pub struct ManagementSocket {
     reader: BufReader<ReadHalf<UnixStream>>,
@@ -104,77 +105,17 @@ impl ManagementSocket {
     pub async fn receive(&mut self) -> Result<ManagementResponse, ManagementError> {
         let mut header = [0u8; 6];
 
-        self.reader.read(&mut header).await?;
+        self.reader.read_exact(&mut header).await?;
 
-        let mut cursor = header.into_buf();
+        let param_size = u16::from_le_bytes(&header[4..6].into());
 
-        let evt_code = cursor.get_u16_le();
-        let controller = cursor.get_u16_le();
-        let param_size = cursor.get_u16_le() as usize;
+        let mut buf = Vec::from(&header);
 
-        let mut param = vec![0u8; param_size];
+        buf.resize(6 + param_size, 0);
 
-        self.reader.read(&mut param).await?;
+        self.reader.read_exact(buf.as_mut()).await?;
 
-        let mut cursor = param.into_buf();
-
-        return Ok(ManagementResponse {
-            controller,
-            event: match evt_code {
-                0x0001 | 0x0002 => {
-                    let opcode = cursor.get_u16_le();
-                    let opcode = FromPrimitive::from_u16(opcode)
-                        .ok_or(ManagementError::UnknownOpcode { opcode })?;
-
-                    let status = cursor.get_u8();
-                    let status = FromPrimitive::from_u8(status)
-                        .ok_or(ManagementError::UnknownStatus { status })?;
-
-                    if evt_code == 0x0001 {
-                        ManagementEvent::CommandComplete {
-                            opcode,
-                            status,
-                            param: cursor.collect(),
-                        }
-                    } else {
-                        ManagementEvent::CommandStatus {
-                            opcode,
-                            status,
-                        }
-                    }
-                }
-                0x0003 => ManagementEvent::ControllerError { code: cursor.get_u8() },
-                0x0004 => ManagementEvent::IndexAdded,
-                0x0005 => ManagementEvent::IndexRemoved,
-                0x0006 => ManagementEvent::NewSettings {
-                    settings: unimplemented!(),
-                },
-                0x0007 => ManagementEvent::ClassOfDeviceChanged {
-                    class: unimplemented!(),
-                },
-                0x0008 => {
-                    let name = get_string(&mut cursor, 249);
-                    let short_name = get_string(&mut cursor, 11);
-
-                    ManagementEvent::LocalNameChanged { name, short_name }
-                }
-                0x0009 => unimplemented!(),
-                0x000A => unimplemented!(),
-                0x000B => unimplemented!(),
-                0x000C => unimplemented!(),
-                0x000D => unimplemented!(),
-                0x000E => unimplemented!(),
-                0x000F => unimplemented!(),
-                0x0010 => unimplemented!(),
-                0x0011 => unimplemented!(),
-                0x0012 => unimplemented!(),
-                0x0013 => unimplemented!(),
-                0x0014 => unimplemented!(),
-                0x0015 => unimplemented!(),
-                0x0016 => unimplemented!(),
-                0x0017 => unimplemented!(),
-                _ => unreachable!(),
-            },
-        });
+        // calls ManagementResponse::try_from()
+        buf.try_into()
     }
 }

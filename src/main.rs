@@ -15,7 +15,7 @@ pub async fn main_async() -> Result<(), Box<dyn Error>> {
     let mut client = mgmt::client::ManagementClient::new();
 
     // Rust version of https://people.csail.mit.edu/albert/bluez-intro/c404.html#bzi-choosing
-    let version = client.version().await?;
+    let version = client.get_mgmt_version().await?;
 
     println!("version {}.{}", version.version, version.revision);
 //

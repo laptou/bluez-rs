@@ -30,7 +30,7 @@ impl ManagementClient {
         }
     }
 
-    pub async fn version(&mut self) -> Result<Version, ManagementError> {
+    pub async fn get_mgmt_version(&mut self) -> Result<Version, ManagementError> {
         self.socket.send(ManagementRequest {
             opcode: ManagementCommand::ReadVersionInfo,
             controller: Controller::none(),
