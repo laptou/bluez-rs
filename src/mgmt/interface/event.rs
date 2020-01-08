@@ -1,3 +1,5 @@
+use std::ffi::OsString;
+
 use bytes::Bytes;
 
 use crate::Address;
@@ -27,8 +29,8 @@ pub enum ManagementEvent {
         class: [u8; 3],
     },
     LocalNameChanged {
-        name: Option<String>,
-        short_name: Option<String>,
+        name: OsString,
+        short_name: OsString,
     },
     NewLinkKey {
         store_hint: u8,

@@ -1,7 +1,9 @@
 use std::convert::TryFrom;
-use std::ffi::{CStr, CString};
+use std::ffi::OsString;
+use std::os::unix::ffi::OsStringExt;
 
 use bytes::*;
+use bytes::buf::BufExt;
 use num_traits::FromPrimitive;
 
 use crate::Address;
@@ -9,7 +11,6 @@ use crate::mgmt::interface::{AddressType, ManagementCommand, ManagementCommandSt
 use crate::mgmt::interface::controller::Controller;
 use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
-use crate::util::*;
 
 pub struct ManagementResponse {
     pub event: ManagementEvent,
@@ -54,8 +55,9 @@ impl ManagementResponse {
                     class: unimplemented!(),
                 },
                 0x0008 => {
-                    let name = get_string(&mut buf, 249);
-                    let short_name = get_string(&mut buf, 11);
+                    let mut buf = buf.to_bytes();
+                    let name = OsString::from_vec(buf.split_to(249).to_vec());
+                    let short_name = OsString::from_vec(buf.to_vec());
 
                     ManagementEvent::LocalNameChanged { name, short_name }
                 }

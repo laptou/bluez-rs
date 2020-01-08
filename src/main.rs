@@ -5,8 +5,6 @@ use std::error::Error;
 use async_std::task;
 
 use bluez::mgmt;
-use bluez::mgmt::interface;
-use bluez::mgmt::interface::ManagementCommand::PinCodeReply;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     task::block_on(main_async())
@@ -15,9 +13,11 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 pub async fn main_async() -> Result<(), Box<dyn Error>> {
     let mut client = mgmt::client::ManagementClient::new();
 
-    // Rust version of https://people.csail.mit.edu/albert/bluez-intro/c404.html#bzi-choosing
     let version = client.get_mgmt_version().await?;
-    println!("management version: {}.{}", version.version, version.revision);
+    println!(
+        "management version: {}.{}",
+        version.version, version.revision
+    );
 
     let controllers = client.get_controller_list().await?;
     println!();

@@ -6,7 +6,6 @@ use num_traits::FromPrimitive;
 use crate::Address;
 use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
-use crate::util::*;
 
 use super::class::{DeviceClass, ServiceClass};
 use super::request::ManagementRequest;

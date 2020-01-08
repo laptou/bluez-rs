@@ -6,12 +6,13 @@ use std::os::unix::ffi::OsStringExt;
 use bytes::*;
 
 use crate::Address;
+use crate::mgmt::{ManagementError, Result};
 use crate::mgmt::interface::{
-    ManagementCommand, ManagementCommandStatus, ManagementRequest, ManagementResponse, ManagementVersion,
+    ManagementCommand, ManagementCommandStatus, ManagementRequest, ManagementResponse,
+    ManagementVersion,
 };
 use crate::mgmt::interface::controller::{Controller, ControllerInfo, ControllerSettings};
 use crate::mgmt::interface::event::ManagementEvent;
-use crate::mgmt::ManagementError;
 use crate::mgmt::socket::ManagementSocket;
 
 pub struct ManagementClient {
@@ -27,13 +28,13 @@ impl ManagementClient {
     }
 
     #[inline]
-    async fn exec_command<F: FnOnce(Controller, Option<Bytes>) -> Result<T, ManagementError>, T>(
+    async fn exec_command<F: FnOnce(Controller, Option<Bytes>) -> Result<T>, T>(
         &mut self,
         opcode: ManagementCommand,
         controller: Controller,
         param: Option<Bytes>,
         callback: F,
-    ) -> Result<T, ManagementError> {
+    ) -> Result<T> {
         let param = param.unwrap_or(Bytes::new());
 
         // send request
@@ -84,7 +85,7 @@ impl ManagementClient {
     //	Besides, being informational the information can be used to
     //	determine whether certain behavior has changed or bugs fixed
     //	when interacting with the kernel.
-    pub async fn get_mgmt_version(&mut self) -> Result<ManagementVersion, ManagementError> {
+    pub async fn get_mgmt_version(&mut self) -> Result<ManagementVersion> {
         self.exec_command(
             ManagementCommand::ReadVersionInfo,
             Controller::none(),
@@ -103,7 +104,7 @@ impl ManagementClient {
     /// This command returns the list of currently known controllers.
     //	Controllers added or removed after calling this command can be
     //	monitored using the Index Added and Index Removed events.
-    pub async fn get_controller_list(&mut self) -> Result<Vec<Controller>, ManagementError> {
+    pub async fn get_controller_list(&mut self) -> Result<Vec<Controller>> {
         self.exec_command(
             ManagementCommand::ReadControllerIndexList,
             Controller::none(),
@@ -143,30 +144,46 @@ impl ManagementClient {
     //	the static address is used when set and public address otherwise.
     //
     //	If no short name is set the Short_Name parameter will be all zeroes.
-    pub async fn get_controller_info(&mut self, controller: Controller) -> Result<ControllerInfo, ManagementError> {
-        self.exec_command(ManagementCommand::ReadControllerInfo, controller, None, |_, param| {
-            let mut param = param.unwrap();
+    pub async fn get_controller_info(&mut self, controller: Controller) -> Result<ControllerInfo> {
+        self.exec_command(
+            ManagementCommand::ReadControllerInfo,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.unwrap();
 
-            let address = Address::from_slice(param.split_to(6).as_ref());
-            let bluetooth_version = param.get_u8();
-            let manufacturer: [u8; 2] = param.split_to(2).as_ref().try_into().unwrap();
-            let supported_settings = ControllerSettings::from_bits_truncate(param.get_u32_le());
-            let current_settings = ControllerSettings::from_bits_truncate(param.get_u32_le());
-            let class_of_device: [u8; 3] = param.split_to(3).as_ref().try_into().unwrap();
-            let name = OsString::from_vec(param.split_to(249).to_vec());
-            let short_name = OsString::from_vec(param.to_vec());
+                Ok(ControllerInfo {
+                    address: Address::from_slice(param.split_to(6).as_ref()),
+                    bluetooth_version: param.get_u8(),
+                    manufacturer: param.split_to(2).as_ref().try_into().unwrap(),
+                    supported_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
+                    current_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
+                    class_of_device: param.split_to(3).as_ref().try_into().unwrap(),
+                    name: OsString::from_vec(param.split_to(249).to_vec()),
+                    short_name: OsString::from_vec(param.to_vec()),
+                })
+            },
+        )
+            .await
+    }
 
-            Ok(ControllerInfo {
-                address,
-                bluetooth_version,
-                manufacturer,
-                supported_settings,
-                current_settings,
-                class_of_device,
-                name,
-                short_name,
-            })
-        }, )
+    pub async fn set_powered(
+        &mut self,
+        controller: Controller,
+        powered: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(powered as u8);
+
+        self.exec_command(
+            ManagementCommand::SetPowered,
+            controller,
+            Some(param.to_bytes()),
+            |_, param| {
+                let mut param = param.unwrap();
+                Ok(ControllerSettings::from_bits_truncate(param.get_u32_le()))
+            },
+        )
             .await
     }
 }

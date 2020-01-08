@@ -13,11 +13,9 @@ use futures::io::{ReadHalf, WriteHalf};
 use libc;
 use num_traits::FromPrimitive;
 
+use crate::mgmt::interface::{ManagementRequest, ManagementResponse};
 use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
-use crate::util::get_string;
-
-use super::interface::{ManagementRequest, ManagementResponse};
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
