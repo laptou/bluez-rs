@@ -1,17 +1,22 @@
 use bitvec::prelude as bv;
 use bitvec::prelude::{BitField, Bits};
+use bytes::Bytes;
+use enumflags2::BitFlags;
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[repr(u32)]
 pub enum ServiceClass {
-    Positioning,
-    Networking,
-    Rendering,
-    Capturing,
-    ObjectTransfer,
-    Audio,
-    Telephony,
-    Information,
+    Positioning = 1 << 16,
+    Networking = 1 << 17,
+    Rendering = 1 << 18,
+    Capturing = 1 << 19,
+    ObjectTransfer = 1 << 20,
+    Audio = 1 << 21,
+    Telephony = 1 << 22,
+    Information = 1 << 23,
 }
+
+pub type ServiceClasses = BitFlags<ServiceClass>;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum DeviceClass {
@@ -141,40 +146,20 @@ pub enum HealthDeviceClass {
     Unknown,
 }
 
-pub fn from_bytes(class: [u8; 3]) -> (DeviceClass, Vec<ServiceClass>) {
+pub fn from_bytes(class: Bytes) -> (DeviceClass, ServiceClasses) {
     let bits = class[0] as u32 | ((class[1] as u32) << 8) | ((class[2] as u32) << 16);
     from_u32(bits)
 }
 
-pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
-    let mut service_classes: Vec<ServiceClass> = vec![];
+pub fn from_array(class: [u8; 3]) -> (DeviceClass, ServiceClasses) {
+    let bits = class[0] as u32 | ((class[1] as u32) << 8) | ((class[2] as u32) << 16);
+    from_u32(bits)
+}
+
+pub fn from_u32(class: u32) -> (DeviceClass, ServiceClasses) {
+    let service_classes = ServiceClasses::from_bits_truncate(class);
+
     let class_bits = class.bits::<bv::BigEndian>();
-
-    if class_bits[16] {
-        service_classes.push(ServiceClass::Positioning);
-    }
-    if class_bits[17] {
-        service_classes.push(ServiceClass::Networking);
-    }
-    if class_bits[18] {
-        service_classes.push(ServiceClass::Rendering);
-    }
-    if class_bits[19] {
-        service_classes.push(ServiceClass::Capturing);
-    }
-    if class_bits[20] {
-        service_classes.push(ServiceClass::ObjectTransfer);
-    }
-    if class_bits[21] {
-        service_classes.push(ServiceClass::Audio);
-    }
-    if class_bits[22] {
-        service_classes.push(ServiceClass::Telephony);
-    }
-    if class_bits[23] {
-        service_classes.push(ServiceClass::Information);
-    }
-
     let device_class: DeviceClass;
 
     // major device class encoded in bits 8-12
@@ -287,167 +272,165 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
     (device_class, service_classes)
 }
 
-pub fn to_u32(class: DeviceClass) -> u32 {
-    to_u16(class) as u32
-}
+impl Into<u16> for DeviceClass {
+    fn into(self) -> u16 {
+        let mut bits = 0u16;
 
-pub fn to_u16(class: DeviceClass) -> u16 {
-    let mut bits = 0u16;
+        match self {
+            DeviceClass::Miscellaneous => (),
+            DeviceClass::Computer(minor) => {
+                bits |= 0b00001 << 8;
+                match minor {
+                    ComputerDeviceClass::Desktop => bits |= 0b000001 << 2,
+                    ComputerDeviceClass::Server => bits |= 0b000010 << 2,
+                    ComputerDeviceClass::Laptop => bits |= 0b000011 << 2,
+                    ComputerDeviceClass::HandheldPDA => bits |= 0b000100 << 2,
+                    ComputerDeviceClass::PalmPDA => bits |= 0b000101 << 2,
+                    ComputerDeviceClass::Wearable => bits |= 0b000110 << 2,
+                    ComputerDeviceClass::Tablet => bits |= 0b000111 << 2,
+                    _ => (),
+                }
+            }
+            DeviceClass::Phone(minor) => {
+                bits |= 0b00010 << 8;
+                match minor {
+                    PhoneDeviceClass::Cellular => bits |= 0b000001 << 2,
+                    PhoneDeviceClass::Cordless => bits |= 0b000010 << 2,
+                    PhoneDeviceClass::Smartphone => bits |= 0b000011 << 2,
+                    PhoneDeviceClass::Modem => bits |= 0b000100 << 2,
+                    PhoneDeviceClass::ISDN => bits |= 0b000101 << 2,
+                    _ => (),
+                }
+            }
+            DeviceClass::AccessPoint(..) => {
+                // bits |= 0b00011 << 8;
+                unimplemented!()
+            }
+            DeviceClass::AudioVideo(minor) => {
+                bits |= 0b00100 << 8;
+                match minor {
+                    AudioVideoDeviceClass::Headset => bits |= 0b000001 << 2,
+                    AudioVideoDeviceClass::HandsFree => bits |= 0b000010 << 2,
+                    // 000011 is reserved
+                    AudioVideoDeviceClass::Microphone => bits |= 0b000100 << 2,
+                    AudioVideoDeviceClass::Loudspeaker => bits |= 0b000101 << 2,
+                    AudioVideoDeviceClass::Headphones => bits |= 0b000110 << 2,
+                    AudioVideoDeviceClass::Portable => bits |= 0b000111 << 2,
+                    AudioVideoDeviceClass::Car => bits |= 0b001000 << 2,
+                    AudioVideoDeviceClass::SetTop => bits |= 0b001001 << 2,
+                    AudioVideoDeviceClass::HiFi => bits |= 0b001010 << 2,
+                    AudioVideoDeviceClass::VCR => bits |= 0b001011 << 2,
+                    AudioVideoDeviceClass::VideoCamera => bits |= 0b001100 << 2,
+                    AudioVideoDeviceClass::Camcorder => bits |= 0b001101 << 2,
+                    AudioVideoDeviceClass::VideoMonitor => bits |= 0b001110 << 2,
+                    AudioVideoDeviceClass::VideoDisplayLoudspeaker => bits |= 0b001111 << 2,
+                    AudioVideoDeviceClass::VideoConferencing => bits |= 0b010000 << 2,
+                    // 010001 is reserved
+                    AudioVideoDeviceClass::Gaming => bits |= 0b010010 << 2,
+                    _ => (),
+                }
+            }
+            DeviceClass::Peripheral {
+                keyboard,
+                pointer,
+                class,
+            } => {
+                bits |= 0b00101 << 8;
+                if keyboard {
+                    bits |= 1 << 6
+                }
+                if pointer {
+                    bits |= 1 << 7
+                }
 
-    match class {
-        DeviceClass::Miscellaneous => (),
-        DeviceClass::Computer(minor) => {
-            bits |= 0b00001 << 8;
-            match minor {
-                ComputerDeviceClass::Desktop => bits |= 0b000001 << 2,
-                ComputerDeviceClass::Server => bits |= 0b000010 << 2,
-                ComputerDeviceClass::Laptop => bits |= 0b000011 << 2,
-                ComputerDeviceClass::HandheldPDA => bits |= 0b000100 << 2,
-                ComputerDeviceClass::PalmPDA => bits |= 0b000101 << 2,
-                ComputerDeviceClass::Wearable => bits |= 0b000110 << 2,
-                ComputerDeviceClass::Tablet => bits |= 0b000111 << 2,
-                _ => (),
+                match class {
+                    PeripheralDeviceClass::Joystick => bits |= 0b0001 << 2,
+                    PeripheralDeviceClass::Gamepad => bits |= 0b0010 << 2,
+                    PeripheralDeviceClass::Remote => bits |= 0b0011 << 2,
+                    PeripheralDeviceClass::Sensor => bits |= 0b0100 << 2,
+                    PeripheralDeviceClass::Digitizer => bits |= 0b0101 << 2,
+                    PeripheralDeviceClass::CardReader => bits |= 0b0110 << 2,
+                    PeripheralDeviceClass::Pen => bits |= 0b0111 << 2,
+                    PeripheralDeviceClass::Scanner => bits |= 0b1000 << 2,
+                    PeripheralDeviceClass::Wand => bits |= 0b1001 << 2,
+                    _ => (),
+                }
             }
-        }
-        DeviceClass::Phone(minor) => {
-            bits |= 0b00010 << 8;
-            match minor {
-                PhoneDeviceClass::Cellular => bits |= 0b000001 << 2,
-                PhoneDeviceClass::Cordless => bits |= 0b000010 << 2,
-                PhoneDeviceClass::Smartphone => bits |= 0b000011 << 2,
-                PhoneDeviceClass::Modem => bits |= 0b000100 << 2,
-                PhoneDeviceClass::ISDN => bits |= 0b000101 << 2,
-                _ => (),
-            }
-        }
-        DeviceClass::AccessPoint(..) => {
-            // bits |= 0b00011 << 8;
-            unimplemented!()
-        }
-        DeviceClass::AudioVideo(minor) => {
-            bits |= 0b00100 << 8;
-            match minor {
-                AudioVideoDeviceClass::Headset => bits |= 0b000001 << 2,
-                AudioVideoDeviceClass::HandsFree => bits |= 0b000010 << 2,
-                // 000011 is reserved
-                AudioVideoDeviceClass::Microphone => bits |= 0b000100 << 2,
-                AudioVideoDeviceClass::Loudspeaker => bits |= 0b000101 << 2,
-                AudioVideoDeviceClass::Headphones => bits |= 0b000110 << 2,
-                AudioVideoDeviceClass::Portable => bits |= 0b000111 << 2,
-                AudioVideoDeviceClass::Car => bits |= 0b001000 << 2,
-                AudioVideoDeviceClass::SetTop => bits |= 0b001001 << 2,
-                AudioVideoDeviceClass::HiFi => bits |= 0b001010 << 2,
-                AudioVideoDeviceClass::VCR => bits |= 0b001011 << 2,
-                AudioVideoDeviceClass::VideoCamera => bits |= 0b001100 << 2,
-                AudioVideoDeviceClass::Camcorder => bits |= 0b001101 << 2,
-                AudioVideoDeviceClass::VideoMonitor => bits |= 0b001110 << 2,
-                AudioVideoDeviceClass::VideoDisplayLoudspeaker => bits |= 0b001111 << 2,
-                AudioVideoDeviceClass::VideoConferencing => bits |= 0b010000 << 2,
-                // 010001 is reserved
-                AudioVideoDeviceClass::Gaming => bits |= 0b010010 << 2,
-                _ => (),
-            }
-        }
-        DeviceClass::Peripheral {
-            keyboard,
-            pointer,
-            class,
-        } => {
-            bits |= 0b00101 << 8;
-            if keyboard {
-                bits |= 1 << 6
-            }
-            if pointer {
-                bits |= 1 << 7
-            }
+            DeviceClass::Imaging {
+                display,
+                camera,
+                scanner,
+                printer,
+            } => {
+                bits |= 0b00110 << 8;
 
-            match class {
-                PeripheralDeviceClass::Joystick => bits |= 0b0001 << 2,
-                PeripheralDeviceClass::Gamepad => bits |= 0b0010 << 2,
-                PeripheralDeviceClass::Remote => bits |= 0b0011 << 2,
-                PeripheralDeviceClass::Sensor => bits |= 0b0100 << 2,
-                PeripheralDeviceClass::Digitizer => bits |= 0b0101 << 2,
-                PeripheralDeviceClass::CardReader => bits |= 0b0110 << 2,
-                PeripheralDeviceClass::Pen => bits |= 0b0111 << 2,
-                PeripheralDeviceClass::Scanner => bits |= 0b1000 << 2,
-                PeripheralDeviceClass::Wand => bits |= 0b1001 << 2,
-                _ => (),
+                if display {
+                    bits |= 1 << 4
+                }
+                if camera {
+                    bits |= 1 << 5
+                }
+                if scanner {
+                    bits |= 1 << 6
+                }
+                if printer {
+                    bits |= 1 << 7
+                }
             }
-        }
-        DeviceClass::Imaging {
-            display,
-            camera,
-            scanner,
-            printer,
-        } => {
-            bits |= 0b00110 << 8;
+            DeviceClass::Wearable(minor) => {
+                bits |= 0b00111 << 8;
 
-            if display {
-                bits |= 1 << 4
+                match minor {
+                    WearableDeviceClass::Wristwatch => bits |= 0b000001 << 2,
+                    WearableDeviceClass::Pager => bits |= 0b000010 << 2,
+                    WearableDeviceClass::Jacket => bits |= 0b000011 << 2,
+                    WearableDeviceClass::Helmet => bits |= 0b000100 << 2,
+                    WearableDeviceClass::Glasses => bits |= 0b000101 << 2,
+                    _ => (),
+                }
             }
-            if camera {
-                bits |= 1 << 5
-            }
-            if scanner {
-                bits |= 1 << 6
-            }
-            if printer {
-                bits |= 1 << 7
-            }
-        }
-        DeviceClass::Wearable(minor) => {
-            bits |= 0b00111 << 8;
+            DeviceClass::Toy(minor) => {
+                bits |= 0b01000 << 8;
 
-            match minor {
-                WearableDeviceClass::Wristwatch => bits |= 0b000001 << 2,
-                WearableDeviceClass::Pager => bits |= 0b000010 << 2,
-                WearableDeviceClass::Jacket => bits |= 0b000011 << 2,
-                WearableDeviceClass::Helmet => bits |= 0b000100 << 2,
-                WearableDeviceClass::Glasses => bits |= 0b000101 << 2,
-                _ => (),
+                match minor {
+                    ToyDeviceClass::Robot => bits |= 0b000001 << 2,
+                    ToyDeviceClass::Vehicle => bits |= 0b000010 << 2,
+                    ToyDeviceClass::Doll => bits |= 0b000011 << 2,
+                    ToyDeviceClass::Controller => bits |= 0b000100 << 2,
+                    ToyDeviceClass::Game => bits |= 0b000101 << 2,
+                    _ => (),
+                }
             }
-        }
-        DeviceClass::Toy(minor) => {
-            bits |= 0b01000 << 8;
+            DeviceClass::Health(minor) => {
+                bits |= 0b01001 << 8;
 
-            match minor {
-                ToyDeviceClass::Robot => bits |= 0b000001 << 2,
-                ToyDeviceClass::Vehicle => bits |= 0b000010 << 2,
-                ToyDeviceClass::Doll => bits |= 0b000011 << 2,
-                ToyDeviceClass::Controller => bits |= 0b000100 << 2,
-                ToyDeviceClass::Game => bits |= 0b000101 << 2,
-                _ => (),
+                match minor {
+                    HealthDeviceClass::BloodPressureMeter => bits |= 0b000001 << 2,
+                    HealthDeviceClass::Thermometer => bits |= 0b000010 << 2,
+                    HealthDeviceClass::WeightScale => bits |= 0b000011 << 2,
+                    HealthDeviceClass::GlucoseMeter => bits |= 0b000100 << 2,
+                    HealthDeviceClass::PulseOximeter => bits |= 0b000101 << 2,
+                    HealthDeviceClass::HeartRateMonitor => bits |= 0b000110 << 2,
+                    HealthDeviceClass::HealthDataDisplay => bits |= 0b000111 << 2,
+                    HealthDeviceClass::StepCounter => bits |= 0b001000 << 2,
+                    HealthDeviceClass::BodyCompositionAnalyzer => bits |= 0b001001 << 2,
+                    HealthDeviceClass::PeakFlowMonitor => bits |= 0b001010 << 2,
+                    HealthDeviceClass::MedicationMonitor => bits |= 0b001011 << 2,
+                    HealthDeviceClass::KneeProsthesis => bits |= 0b001100 << 2,
+                    HealthDeviceClass::AnkleProsthesis => bits |= 0b001101 << 2,
+                    HealthDeviceClass::GenericHealthManager => bits |= 0b001110 << 2,
+                    HealthDeviceClass::PersonalMobilityDevice => bits |= 0b001111 << 2,
+                    _ => (),
+                }
             }
+            DeviceClass::Uncategorized => {
+                bits |= 0b11111 << 8;
+            }
+            DeviceClass::Unknown => (),
         }
-        DeviceClass::Health(minor) => {
-            bits |= 0b01001 << 8;
 
-            match minor {
-                HealthDeviceClass::BloodPressureMeter => bits |= 0b000001 << 2,
-                HealthDeviceClass::Thermometer => bits |= 0b000010 << 2,
-                HealthDeviceClass::WeightScale => bits |= 0b000011 << 2,
-                HealthDeviceClass::GlucoseMeter => bits |= 0b000100 << 2,
-                HealthDeviceClass::PulseOximeter => bits |= 0b000101 << 2,
-                HealthDeviceClass::HeartRateMonitor => bits |= 0b000110 << 2,
-                HealthDeviceClass::HealthDataDisplay => bits |= 0b000111 << 2,
-                HealthDeviceClass::StepCounter => bits |= 0b001000 << 2,
-                HealthDeviceClass::BodyCompositionAnalyzer => bits |= 0b001001 << 2,
-                HealthDeviceClass::PeakFlowMonitor => bits |= 0b001010 << 2,
-                HealthDeviceClass::MedicationMonitor => bits |= 0b001011 << 2,
-                HealthDeviceClass::KneeProsthesis => bits |= 0b001100 << 2,
-                HealthDeviceClass::AnkleProsthesis => bits |= 0b001101 << 2,
-                HealthDeviceClass::GenericHealthManager => bits |= 0b001110 << 2,
-                HealthDeviceClass::PersonalMobilityDevice => bits |= 0b001111 << 2,
-                _ => (),
-            }
-        }
-        DeviceClass::Uncategorized => {
-            bits |= 0b11111 << 8;
-        }
-        DeviceClass::Unknown => (),
+        bits
     }
-
-    bits
 }
 
 #[cfg(test)]
@@ -457,9 +440,9 @@ mod tests {
     #[test]
     pub fn class() {
         let c = DeviceClass::Computer(ComputerDeviceClass::Laptop);
-        let b = to_u32(c.clone());
+        let b: u16 = c.into();
         println!("{:000000000000b} (0x{:x})", b, b);
-        let (c1, _) = from_u32(b);
+        let (c1, _) = from_u32(b as u32);
         assert_eq!(c, c1);
     }
 }

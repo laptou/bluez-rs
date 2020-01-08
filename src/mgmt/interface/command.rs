@@ -81,4 +81,9 @@ impl ::std::fmt::LowerHex for ManagementCommandStatus {
     }
 }
 
-
+#[repr(u8)]
+pub enum Discoverability {
+    None = 0x00,
+    General = 0x01,
+    Limited = 0x02,
+}

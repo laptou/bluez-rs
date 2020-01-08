@@ -1,9 +1,10 @@
-use std::ffi::OsString;
+use std::ffi::CString;
 use std::fmt::{Display, Formatter};
 
 use enumflags2::BitFlags;
 
 use crate::Address;
+use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Controller(pub(crate) u16);
@@ -32,9 +33,9 @@ pub struct ControllerInfo {
     pub manufacturer: [u8; 2],
     pub supported_settings: ControllerSettings,
     pub current_settings: ControllerSettings,
-    pub class_of_device: [u8; 3],
-    pub name: OsString,
-    pub short_name: OsString,
+    pub class_of_device: (DeviceClass, ServiceClasses),
+    pub name: CString,
+    pub short_name: CString,
 }
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
