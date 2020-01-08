@@ -30,6 +30,11 @@ pub enum ManagementError {
     max_len
     )]
     NameTooLong { name: String, max_len: u32 },
+    #[error("A string was supplied that contained a null byte: {}", source)]
+    NullByte {
+        #[source]
+        source: ::std::ffi::NulError,
+    },
     #[error("The pin code is too long; the maximum length is {} bytes.", max_len)]
     PinCodeTooLong { max_len: u32 },
 }
@@ -37,5 +42,11 @@ pub enum ManagementError {
 impl From<std::io::Error> for ManagementError {
     fn from(err: std::io::Error) -> Self {
         ManagementError::IO { source: err }
+    }
+}
+
+impl From<std::ffi::NulError> for ManagementError {
+    fn from(err: std::ffi::NulError) -> Self {
+        ManagementError::NullByte { source: err }
     }
 }

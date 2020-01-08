@@ -1,6 +1,5 @@
 use std::convert::TryInto;
-use std::ffi::{CStr, CString, OsString};
-use std::os::unix::ffi::OsStringExt;
+use std::ffi::CString;
 
 use bytes::*;
 
@@ -483,10 +482,7 @@ impl ManagementClient {
             ManagementCommand::SetDeviceClass,
             controller,
             Some(param.to_bytes()),
-            |_, param| {
-                let mut param = param.unwrap();
-                Ok(class::from_bytes(param))
-            },
+            |_, param| Ok(class::from_bytes(param.unwrap())),
         )
             .await
     }
@@ -507,6 +503,7 @@ impl ManagementClient {
     ///	is found and will stay until removed.
     pub async fn set_local_name(
         &mut self,
+        controller: Controller,
         name: &str,
         short_name: Option<&str>,
     ) -> Result<(CString, CString)> {
@@ -532,7 +529,7 @@ impl ManagementClient {
         CString::new(name)?
             .as_bytes_with_nul()
             .copy_to_slice(&mut param[..249]);
-        CString::new(short_name)?
+        CString::new(short_name.unwrap_or(""))?
             .as_bytes_with_nul()
             .copy_to_slice(&mut param[249..]);
 
