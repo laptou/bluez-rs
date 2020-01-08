@@ -40,10 +40,7 @@ impl ManagementResponse {
                             param: buf.to_bytes(),
                         }
                     } else {
-                        ManagementEvent::CommandStatus {
-                            opcode,
-                            status,
-                        }
+                        ManagementEvent::CommandStatus { opcode, status }
                     }
                 }
                 0x0003 => ManagementEvent::ControllerError { code: buf.get_u8() },

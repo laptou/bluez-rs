@@ -83,7 +83,9 @@ impl ManagementSocket {
         {
             let err = io::Error::last_os_error();
 
-            unsafe { libc::close(fd); }
+            unsafe {
+                libc::close(fd);
+            }
 
             return Err(err);
         }

@@ -2,10 +2,9 @@ use thiserror::Error;
 
 use crate::mgmt::interface::command::{ManagementCommand, ManagementCommandStatus};
 
+pub mod client;
 pub mod interface;
 pub mod socket;
-pub mod client;
-
 
 #[derive(Error, Debug)]
 pub enum ManagementError {
@@ -14,7 +13,7 @@ pub enum ManagementError {
     #[error("IO error: {:?}.", source)]
     IO {
         #[source]
-        source: ::std::io::Error
+        source: ::std::io::Error,
     },
     #[error("Command {:?} returned {:?}.", status, opcode)]
     CommandError {
@@ -31,13 +30,11 @@ pub enum ManagementError {
     InvalidData,
     #[error(
     "The name {} is too long; the maximum length is {} bytes.",
-    name, maxlen
-    )]
-    NameTooLong { name: String, maxlen: u32 },
-    #[error(
-    "The pin code is too long; the maximum length is {} bytes.",
+    name,
     maxlen
     )]
+    NameTooLong { name: String, maxlen: u32 },
+    #[error("The pin code is too long; the maximum length is {} bytes.", maxlen)]
     PinCodeTooLong { maxlen: u32 },
 }
 

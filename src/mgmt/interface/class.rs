@@ -150,14 +150,30 @@ pub fn from_u32(class: u32) -> (DeviceClass, Vec<ServiceClass>) {
     let mut service_classes: Vec<ServiceClass> = vec![];
     let class_bits = class.bits::<bv::BigEndian>();
 
-    if class_bits[16] { service_classes.push(ServiceClass::Positioning); }
-    if class_bits[17] { service_classes.push(ServiceClass::Networking); }
-    if class_bits[18] { service_classes.push(ServiceClass::Rendering); }
-    if class_bits[19] { service_classes.push(ServiceClass::Capturing); }
-    if class_bits[20] { service_classes.push(ServiceClass::ObjectTransfer); }
-    if class_bits[21] { service_classes.push(ServiceClass::Audio); }
-    if class_bits[22] { service_classes.push(ServiceClass::Telephony); }
-    if class_bits[23] { service_classes.push(ServiceClass::Information); }
+    if class_bits[16] {
+        service_classes.push(ServiceClass::Positioning);
+    }
+    if class_bits[17] {
+        service_classes.push(ServiceClass::Networking);
+    }
+    if class_bits[18] {
+        service_classes.push(ServiceClass::Rendering);
+    }
+    if class_bits[19] {
+        service_classes.push(ServiceClass::Capturing);
+    }
+    if class_bits[20] {
+        service_classes.push(ServiceClass::ObjectTransfer);
+    }
+    if class_bits[21] {
+        service_classes.push(ServiceClass::Audio);
+    }
+    if class_bits[22] {
+        service_classes.push(ServiceClass::Telephony);
+    }
+    if class_bits[23] {
+        service_classes.push(ServiceClass::Information);
+    }
 
     let device_class: DeviceClass;
 
