@@ -6,19 +6,20 @@ use num_traits::FromPrimitive;
 
 use crate::Address;
 use crate::mgmt::interface::{AddressType, ManagementCommand, ManagementCommandStatus};
+use crate::mgmt::interface::controller::Controller;
 use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
 use crate::util::*;
 
 pub struct ManagementResponse {
     pub event: ManagementEvent,
-    pub controller: u16,
+    pub controller: Controller,
 }
 
 impl ManagementResponse {
     pub fn parse<T: Buf>(mut buf: T) -> Result<Self, ManagementError> {
         let evt_code = buf.get_u16_le();
-        let controller = buf.get_u16_le();
+        let controller = Controller(buf.get_u16_le());
         buf.advance(2); // we already know param length
 
         Ok(ManagementResponse {

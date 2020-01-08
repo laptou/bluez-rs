@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct Controller(u16);
+pub struct Controller(pub(crate) u16);
 
 impl Display for Controller {
     fn fmt(&self, f: &mut Formatter) -> Result<(), ::std::fmt::Error> {

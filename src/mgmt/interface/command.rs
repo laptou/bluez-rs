@@ -40,7 +40,7 @@ pub enum ManagementCommandStatus {
 }
 
 #[repr(u16)]
-#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
 pub enum ManagementCommand {
     ReadVersionInfo = 0x0001,
     ReadSupportedCommands,
