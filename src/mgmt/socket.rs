@@ -1,9 +1,7 @@
-use std::convert::{TryFrom, TryInto};
-use std::ffi::CStr;
 use std::os::raw::c_ushort;
 use std::u16;
 
-use async_std::io::{self, BufReader, Read, Write};
+use async_std::io::{self, BufReader};
 use async_std::os::unix::io::{FromRawFd, RawFd};
 use async_std::os::unix::net::UnixStream;
 use bytes::*;
@@ -11,10 +9,8 @@ use bytes::buf::BufExt;
 use futures::{AsyncReadExt, AsyncWriteExt};
 use futures::io::{ReadHalf, WriteHalf};
 use libc;
-use num_traits::FromPrimitive;
 
 use crate::mgmt::interface::{ManagementRequest, ManagementResponse};
-use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
 
 #[repr(C)]
@@ -26,6 +22,7 @@ struct SockAddrHci {
 }
 
 #[repr(u16)]
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 enum BtProto {
     L2CAP = 0,
@@ -35,6 +32,7 @@ enum BtProto {
 }
 
 #[repr(u16)]
+#[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
 enum HciChannel {
     Raw = 0,

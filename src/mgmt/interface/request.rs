@@ -2,7 +2,6 @@ use bytes::*;
 
 use crate::mgmt::interface::command::ManagementCommand;
 use crate::mgmt::interface::controller::Controller;
-use crate::mgmt::interface::ManagementResponse;
 
 pub struct ManagementRequest {
     pub opcode: ManagementCommand,

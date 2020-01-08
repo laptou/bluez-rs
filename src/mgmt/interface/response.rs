@@ -1,13 +1,9 @@
-use std::convert::TryFrom;
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
 use bytes::*;
-use bytes::buf::BufExt;
 use num_traits::FromPrimitive;
 
-use crate::Address;
-use crate::mgmt::interface::{AddressType, ManagementCommand, ManagementCommandStatus};
 use crate::mgmt::interface::controller::Controller;
 use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
@@ -48,12 +44,8 @@ impl ManagementResponse {
                 0x0003 => ManagementEvent::ControllerError { code: buf.get_u8() },
                 0x0004 => ManagementEvent::IndexAdded,
                 0x0005 => ManagementEvent::IndexRemoved,
-                0x0006 => ManagementEvent::NewSettings {
-                    settings: unimplemented!(),
-                },
-                0x0007 => ManagementEvent::ClassOfDeviceChanged {
-                    class: unimplemented!(),
-                },
+                0x0006 => unimplemented!("ManagementEvent::NewSettings"),
+                0x0007 => unimplemented!("ManagementEvent::ClassOfDeviceChanged"),
                 0x0008 => {
                     let mut buf = buf.to_bytes();
                     let name = OsString::from_vec(buf.split_to(249).to_vec());
@@ -61,7 +53,7 @@ impl ManagementResponse {
 
                     ManagementEvent::LocalNameChanged { name, short_name }
                 }
-                _ => unimplemented!(),
+                _ => todo!("throw error instead of panicking"),
             },
         })
     }

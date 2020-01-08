@@ -1,16 +1,4 @@
-use std::fmt::{Display, Formatter};
-
-use bytes::Bytes;
-use num_traits::FromPrimitive;
-
-use crate::Address;
-use crate::mgmt::interface::event::ManagementEvent;
-use crate::mgmt::ManagementError;
-
-use super::class::{DeviceClass, ServiceClass};
-use super::request::ManagementRequest;
-use super::response::ManagementResponse;
-use super::super::socket::ManagementSocket;
+use std::fmt::Formatter;
 
 #[repr(u8)]
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
@@ -93,17 +81,4 @@ impl ::std::fmt::LowerHex for ManagementCommandStatus {
     }
 }
 
-#[repr(u8)]
-#[derive(Debug, Eq, PartialEq, FromPrimitive)]
-pub enum AddressType {
-    BrEdr = 0,
-    LEPublic = 1,
-    LERandom = 2,
-}
 
-/// Used to represent the version of the BlueZ management
-/// interface that is in use.
-pub struct ManagementVersion {
-    pub version: u8,
-    pub revision: u16,
-}

@@ -28,8 +28,8 @@ pub async fn main_async() -> Result<(), Box<dyn Error>> {
         let info = client.get_controller_info(controller).await?;
         println!("\t\tname: {:?}", info.name);
         println!("\t\tshort name: {:?}", info.short_name);
-        println!("\t\tsupported settings: {}", info.supported_settings);
-        println!("\t\tcurrent settings: {}", info.current_settings);
+        println!("\t\tsupported settings: {:?}", info.supported_settings);
+        println!("\t\tcurrent settings: {:?}", info.current_settings);
         println!("\t\tmanufacturer: {:?}", info.manufacturer);
         println!("\t\tbluetooth version: {:?}", info.bluetooth_version);
         println!("\t\tclass of device: {:?}", info.class_of_device);

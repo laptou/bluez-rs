@@ -1,6 +1,5 @@
 use std::convert::TryInto;
-use std::ffi::{OsStr, OsString};
-use std::marker::PhantomData;
+use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 
 use bytes::*;
@@ -8,11 +7,10 @@ use bytes::*;
 use crate::Address;
 use crate::mgmt::{ManagementError, Result};
 use crate::mgmt::interface::{
-    ManagementCommand, ManagementCommandStatus, ManagementRequest, ManagementResponse,
-    ManagementVersion,
+    ManagementCommand, ManagementCommandStatus, ManagementRequest,
 };
 use crate::mgmt::interface::controller::{Controller, ControllerInfo, ControllerSettings};
-use crate::mgmt::interface::event::ManagementEvent;
+use crate::mgmt::interface::event::{ManagementEvent, ManagementVersion};
 use crate::mgmt::socket::ManagementSocket;
 
 pub struct ManagementClient {
@@ -111,7 +109,7 @@ impl ManagementClient {
             None,
             |_, param| {
                 let mut param = param.unwrap();
-                let mut count = param.get_u16_le() as usize;
+                let count = param.get_u16_le() as usize;
                 let mut controllers = vec![Controller::none(); count];
                 for i in 0..count {
                     controllers[i] = Controller(param.get_u16_le());
