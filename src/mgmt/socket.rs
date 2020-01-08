@@ -6,7 +6,8 @@ use std::u16;
 use async_std::io::{self, BufReader, Read, Write};
 use async_std::os::unix::io::{FromRawFd, RawFd};
 use async_std::os::unix::net::UnixStream;
-use bytes::{Buf, buf::{FromBuf, IntoBuf}, Bytes, BytesMut};
+use bytes::*;
+use bytes::buf::BufExt;
 use futures::{AsyncReadExt, AsyncWriteExt};
 use futures::io::{ReadHalf, WriteHalf};
 use libc;
@@ -103,19 +104,18 @@ impl ManagementSocket {
     }
 
     pub async fn receive(&mut self) -> Result<ManagementResponse, ManagementError> {
+        // read 6 byte header
         let mut header = [0u8; 6];
-
         self.reader.read_exact(&mut header).await?;
 
-        let param_size = u16::from_le_bytes(&header[4..6].into());
+        // this ugliness forces a &[u8] into [u8; 2]
+        let param_size = u16::from_le_bytes((&header[4..6]).try_into().unwrap()) as usize;
 
-        let mut buf = Vec::from(&header);
+        // read rest of message
+        let mut body = vec![0u8; param_size];
+        self.reader.read_exact(&mut body[..]).await?;
 
-        buf.resize(6 + param_size, 0);
-
-        self.reader.read_exact(buf.as_mut()).await?;
-
-        // calls ManagementResponse::try_from()
-        buf.try_into()
+        // make buffer by chaining header and body
+        ManagementResponse::parse((&header[..]).chain(&body[..]))
     }
 }

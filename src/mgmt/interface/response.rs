@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::ffi::{CStr, CString};
 
-use bytes::{Buf, buf::{FromBuf, IntoBuf}, Bytes};
+use bytes::*;
 use num_traits::FromPrimitive;
 
 use crate::Address;
@@ -15,10 +15,12 @@ pub struct ManagementResponse {
     pub controller: u16,
 }
 
-impl TryFrom<T> for ManagementResponse where T: Buf {
-    type Error = ManagementError;
+impl ManagementResponse {
+    pub fn parse<T: Buf>(mut buf: T) -> Result<Self, ManagementError> {
+        let evt_code = buf.get_u16_le();
+        let controller = buf.get_u16_le();
+        buf.advance(2); // we already know param length
 
-    fn try_from(buf: T) -> Result<Self, Self::Error> {
         Ok(ManagementResponse {
             controller,
             event: match evt_code {
@@ -35,7 +37,7 @@ impl TryFrom<T> for ManagementResponse where T: Buf {
                         ManagementEvent::CommandComplete {
                             opcode,
                             status,
-                            param: buf.collect(),
+                            param: buf.to_bytes(),
                         }
                     } else {
                         ManagementEvent::CommandStatus {

@@ -1,4 +1,4 @@
-use bytes::{Buf, Bytes, IntoBuf};
+use bytes::*;
 
 use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus, ManagementRequest, ManagementResponse, Version};
 use crate::mgmt::interface::controller::Controller;
@@ -40,14 +40,12 @@ impl ManagementClient {
         let response = self.socket.receive().await?;
 
         match response.event {
-            ManagementEvent::CommandComplete { status, param, opcode } => {
+            ManagementEvent::CommandComplete { status, mut param, opcode } => {
                 match status {
                     ManagementCommandStatus::Success => {
-                        let mut cursor = param.into_buf();
-
                         Ok(Version {
-                            version: cursor.get_u8(),
-                            revision: cursor.get_u16_le(),
+                            version: param.get_u8(),
+                            revision: param.get_u16_le(),
                         })
                     }
                     _ => Err(ManagementError::CommandError {
