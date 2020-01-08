@@ -111,7 +111,7 @@ impl ManagementSocket {
         self.reader.read_exact(&mut header).await?;
 
         // this ugliness forces a &[u8] into [u8; 2]
-        let param_size = u16::from_le_bytes((&header[4..6]).try_into().unwrap()) as usize;
+        let param_size = u16::from_le_bytes([header[4], header[5]]) as usize;
 
         // read rest of message
         let mut body = vec![0u8; param_size];

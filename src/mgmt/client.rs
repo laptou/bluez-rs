@@ -142,19 +142,18 @@ impl ManagementClient {
     //	is configured as Low Energy only device (BR/EDR switched off),
     //	the static address is used when set and public address otherwise.
     //
-    //	If no short name is set the Short_Name parameter will be empty.
+    //	If no short name is set the Short_Name parameter will be all zeroes.
     pub async fn get_controller_info(&mut self, controller: Controller) -> Result<ControllerInfo, ManagementError> {
         self.exec_command(ManagementCommand::ReadControllerInfo, controller, None, |_, param| {
             let mut param = param.unwrap();
 
-            let address = Address::from_slice(param.split_off(6).as_ref());
-
+            let address = Address::from_slice(param.split_to(6).as_ref());
             let bluetooth_version = param.get_u8();
-            let manufacturer: [u8; 2] = param.split_off(2).as_ref().try_into().unwrap();
+            let manufacturer: [u8; 2] = param.split_to(2).as_ref().try_into().unwrap();
             let supported_settings = ControllerSettings::from_bits_truncate(param.get_u32_le());
             let current_settings = ControllerSettings::from_bits_truncate(param.get_u32_le());
-            let class_of_device: [u8; 3] = param.split_off(3).as_ref().try_into().unwrap();
-            let name = OsString::from_vec(param.split_off(249).to_vec());
+            let class_of_device: [u8; 3] = param.split_to(3).as_ref().try_into().unwrap();
+            let name = OsString::from_vec(param.split_to(249).to_vec());
             let short_name = OsString::from_vec(param.to_vec());
 
             Ok(ControllerInfo {
