@@ -104,7 +104,7 @@ pub enum AddressType {
 
 /// Used to represent the version of the BlueZ management
 /// interface that is in use.
-pub struct Version {
+pub struct ManagementVersion {
     pub version: u8,
     pub revision: u16,
 }

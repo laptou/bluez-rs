@@ -1,4 +1,7 @@
+use std::ffi::OsString;
 use std::fmt::{Display, Formatter};
+
+use crate::Address;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Controller(pub(crate) u16);
@@ -19,6 +22,17 @@ impl Controller {
     pub fn none() -> Controller {
         Controller(0xFFFF)
     }
+}
+
+pub struct ControllerInfo {
+    pub address: Address,
+    pub bluetooth_version: u8,
+    pub manufacturer: [u8; 2],
+    pub supported_settings: ControllerSettings,
+    pub current_settings: ControllerSettings,
+    pub class_of_device: [u8; 3],
+    pub name: OsString,
+    pub short_name: OsString,
 }
 
 bitflags! {
