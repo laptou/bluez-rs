@@ -1,5 +1,3 @@
-//! This module contains impls that accept and return an Address, since they mostly follow the same pattern
-
 use super::*;
 
 fn address_callback(_: Controller, param: Option<Bytes>) -> Result<(Address, AddressType)> {

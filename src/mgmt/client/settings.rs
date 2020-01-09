@@ -14,6 +14,68 @@ fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSe
 }
 
 impl ManagementClient {
+    /// This command is used to set the local name of a controller. The
+    ///	command parameters also include a short name which will be used
+    ///	in case the full name doesn't fit within EIR/AD data.
+    ///
+    /// Name can be at most 248 bytes. Short name can be at most 10 bytes.
+    /// This function returns a pair of OsStrings in the order (name, short_name).
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    ///
+    ///	The values of name and short name will be remembered when
+    ///	switching the controller off and back on again. So the name
+    ///	and short name only have to be set once when a new controller
+    ///	is found and will stay until removed.
+    pub async fn set_local_name(
+        &mut self,
+        controller: Controller,
+        name: &str,
+        short_name: Option<&str>,
+    ) -> Result<(CString, CString)> {
+        if name.len() > 248 {
+            return Err(ManagementError::NameTooLong {
+                name: name.to_owned(),
+                max_len: 248,
+            });
+        }
+
+        if let Some(short_name) = short_name {
+            if short_name.len() > 10 {
+                return Err(ManagementError::NameTooLong {
+                    name: short_name.to_owned(),
+                    max_len: 10,
+                });
+            }
+        }
+
+        let mut param = BytesMut::with_capacity(260);
+        param.resize(260, 0); // initialize w/ zeros
+
+        CString::new(name)?
+            .as_bytes_with_nul()
+            .copy_to_slice(&mut param[..249]);
+        CString::new(short_name.unwrap_or(""))?
+            .as_bytes_with_nul()
+            .copy_to_slice(&mut param[249..]);
+
+        self.exec_command(
+            ManagementCommand::SetLocalName,
+            controller,
+            Some(param.to_bytes()),
+            |_, param| {
+                let mut param = param.unwrap();
+
+                Ok((
+                    CString::new(param.split_to(249).to_vec()).unwrap(),
+                    CString::new(param.to_vec()).unwrap(),
+                ))
+            },
+        )
+            .await
+    }
+
     /// This command is used to power on or off a controller.
     ///
     ///	If discoverable setting is activated with a timeout, then
@@ -377,6 +439,90 @@ impl ManagementClient {
             .await
     }
 
+    ///	This command is used to set the IO Capability used for pairing.
+    ///	The command accepts both SSP and SMP values.
+    ///
+    ///	Passing KeyboardDisplay will cause the kernel to
+    ///	convert it to DisplayYesNo)in the case of a BR/EDR
+    ///	connection (as KeyboardDisplay is specific to SMP).
+    ///
+    ///	This command can be used when the controller is not powered.
+    pub async fn set_io_capability(
+        &mut self,
+        controller: Controller,
+        io_capability: IoCapability,
+    ) -> Result<()> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(io_capability as u8);
+
+        self.exec_command(
+            ManagementCommand::SetIOCapability,
+            controller,
+            Some(param.to_bytes()),
+            |_, _| Ok(()),
+        )
+            .await
+    }
+
+    /// This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    ///
+    ///	The Source parameter selects the organization that assigned the
+    ///	Vendor parameter:
+    ///
+    ///		0x0000	Disable Device ID
+    ///		0x0001	Bluetooth SIG
+    ///		0x0002	USB Implementer's Forum
+    ///
+    ///	The information is put into the EIR data. If the controller does
+    ///	not support EIR or if SSP is disabled, this command will still
+    ///	succeed. The information is stored for later use and will survive
+    ///	toggling SSP on and off.
+    pub async fn set_device_id(
+        &mut self,
+        controller: Controller,
+        source: u16,
+        vendor: u16,
+        product: u16,
+        version: u16,
+    ) -> Result<()> {
+        let mut param = BytesMut::with_capacity(8);
+        param.put_u16_le(source);
+        param.put_u16_le(vendor);
+        param.put_u16_le(product);
+        param.put_u16_le(version);
+
+        self.exec_command(
+            ManagementCommand::SetDeviceID,
+            controller,
+            Some(param.to_bytes()),
+            |_, _| Ok(()),
+        )
+            .await
+    }
+
+    /// This command allows for setting the Low Energy scan parameters
+    ///	used for connection establishment and passive scanning. It is
+    ///	only supported on controllers with LE support.
+    pub async fn set_scan_parameters(
+        &mut self,
+        controller: Controller,
+        interval: u16,
+        window: u16,
+    ) -> Result<()> {
+        let mut param = BytesMut::with_capacity(4);
+        param.put_u16_le(interval);
+        param.put_u16_le(window);
+
+        self.exec_command(
+            ManagementCommand::SetScanParameters,
+            controller,
+            Some(param.to_bytes()),
+            |_, _| Ok(()),
+        )
+            .await
+    }
+
     ///	This command allows for setting the static random address. It is
     ///	only supported on controllers with LE support. The static random
     ///	address is suppose to be valid for the lifetime of the
@@ -432,7 +578,7 @@ impl ManagementClient {
     ///
     ///	In case the controller does not support Secure Connections
     ///	the command will fail regardless with Not Supported error.
-    pub async fn set_secure_connections(
+    pub async fn set_secure_connections_mode(
         &mut self,
         controller: Controller,
         mode: SecureConnectionsMode,
@@ -466,7 +612,7 @@ impl ManagementClient {
     ///	enter the controller mode to generate debug keys for each
     ///	new pairing. Changing the value back to `Persist` or `Discard` will
     ///	disable the controller mode for generating debug keys.
-    pub async fn set_debug_keys(
+    pub async fn set_debug_mode(
         &mut self,
         controller: Controller,
         mode: DebugKeysMode,
