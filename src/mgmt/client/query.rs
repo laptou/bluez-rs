@@ -89,6 +89,7 @@ impl ManagementClient {
             .await
     }
 
+    /// This command is used to get connection information.
     pub async fn get_connection_info(&mut self, controller: Controller,
                                      address: Address,
                                      address_type: AddressType) -> Result<ConnectionInfo> {
@@ -115,6 +116,7 @@ impl ManagementClient {
             .await
     }
 
+    /// This command is used to get local and piconet clock information.
     pub async fn get_clock_info(&mut self, controller: Controller,
                                 address: Address,
                                 address_type: AddressType) -> Result<ClockInfo> {

@@ -150,3 +150,19 @@ pub struct ClockInfo {
     pub piconet_clock: Option<u32>,
     pub accuracy: Option<u16>,
 }
+
+#[repr(u32)]
+#[derive(Debug, BitFlags)]
+pub enum DeviceFlags {
+    ConfirmName = 1 << 0,
+    LegacyPairing = 1 << 1
+}
+
+#[repr(u8)]
+pub enum DisconnectionReason {
+    Unspecified = 0,
+    Timeout = 1,
+    TerminatedLocal = 2,
+    TerminatedRemote = 3
+}
+

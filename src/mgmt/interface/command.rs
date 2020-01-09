@@ -79,6 +79,7 @@ pub enum ManagementCommand {
     LoadIdentityResolvingKeys,
     GetConnectionInfo,
     GetClockInfo,
+    // this much left!
     AddDevice,
     RemoveDevice,
     LoadConnectionParameters,
@@ -95,7 +96,7 @@ pub enum ManagementCommand {
     GetAdvertisingSizeInfo,
     StartLimitedDiscovery,
     ReadExtendedControllerInfo,
-    SetAppeearance,
+    SetAppearance,
     GetPhyConfig,
     SetPhyConfig,
     LoadBlockedKeys,
