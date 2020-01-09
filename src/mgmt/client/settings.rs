@@ -1,10 +1,11 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 use crate::Address;
-use crate::mgmt::client::*;
 use crate::mgmt::interface::controller::{Controller, ControllerSettings};
 use crate::mgmt::interface::ManagementCommand;
 use crate::mgmt::Result;
+
+use super::*;
 
 // use some consts for common callback patterns
 fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSettings> {
