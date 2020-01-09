@@ -1,4 +1,4 @@
-use std::ffi::{OsString, CString};
+use std::ffi::{CString};
 
 use bytes::Bytes;
 

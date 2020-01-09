@@ -43,7 +43,7 @@ impl ManagementClient {
     ///	This command can be used when the controller is not powered and
     ///	all settings will be programmed once powered.
     ///
-    ///	In case the controller is powered off, 0x000000 will be returned
+    ///	In case the controller is powered off, `0x000000` will be returned
     ///	for the class of device parameter. And after power on the new
     ///	value will be announced via class of device changed event.
     pub async fn add_uuid(
@@ -68,13 +68,13 @@ impl ManagementClient {
     ///	This command is used to remove a UUID previously added using the
     ///	Add UUID command.
     ///
-    ///	When the UUID parameter is an empty UUID (16 x 0x00), then all
+    ///	When the UUID parameter is an empty UUID (16 x `0x00`), then all
     ///	previously loaded UUIDs will be removed.
     ///
     ///	This command can be used when the controller is not powered and
     ///	all settings will be programmed once powered.
     ///
-    ///	In case the controller is powered off, 0x000000 will be returned
+    ///	In case the controller is powered off, `0x000000` will be returned
     ///	for the class of device parameter. And after power on the new
     ///	value will be announced via class of device changed event.
     pub async fn remove_uuid(

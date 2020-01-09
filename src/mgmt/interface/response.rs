@@ -1,12 +1,10 @@
-use std::ffi::OsString;
-use std::os::unix::ffi::OsStringExt;
-
 use bytes::*;
 use num_traits::FromPrimitive;
 
 use crate::mgmt::interface::controller::Controller;
 use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
+use crate::util::bytes_to_c_str;
 
 pub struct ManagementResponse {
     pub event: ManagementEvent,
@@ -48,8 +46,8 @@ impl ManagementResponse {
                 0x0007 => unimplemented!("ManagementEvent::ClassOfDeviceChanged"),
                 0x0008 => {
                     let mut buf = buf.to_bytes();
-                    let name = OsString::from_vec(buf.split_to(249).to_vec());
-                    let short_name = OsString::from_vec(buf.to_vec());
+                    let name = bytes_to_c_str(buf.split_to(249));
+                    let short_name = bytes_to_c_str(buf);
 
                     ManagementEvent::LocalNameChanged { name, short_name }
                 }

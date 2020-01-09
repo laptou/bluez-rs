@@ -1,4 +1,5 @@
 use crate::mgmt::interface::class::from_bytes as class_from_bytes;
+use crate::util::bytes_to_c_str;
 
 use super::*;
 

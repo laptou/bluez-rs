@@ -375,8 +375,8 @@ impl ManagementClient {
     ///	setting is enabled, then undirected connectable advertising packets
     ///	and the identity address or resolvable private address are used.
     ///
-    ///	LE Devices configured via Add Device command with Action 0x01
-    ///	have no effect when using Advertising value 0x01 since only the
+    ///	LE Devices configured via Add Device command with Action `0x01`
+    ///	have no effect when using Advertising value `0x01` since only the
     ///	connectable setting is taken into account.
     ///
     ///	To utilize undirected connectable advertising without changing the
@@ -470,9 +470,9 @@ impl ManagementClient {
     ///	The Source parameter selects the organization that assigned the
     ///	Vendor parameter:
     ///
-    ///		0x0000	Disable Device ID
-    ///		0x0001	Bluetooth SIG
-    ///		0x0002	USB Implementer's Forum
+    ///		`0x0000`	Disable Device ID
+    ///		`0x0001`	Bluetooth SIG
+    ///		`0x0002`	USB Implementer's Forum
     ///
     ///	The information is put into the EIR data. If the controller does
     ///	not support EIR or if SSP is disabled, this command will still
@@ -604,7 +604,7 @@ impl ManagementClient {
     ///	With a value of `Persist` generated debug keys will be kept and can
     ///	be used for future connections. However debug keys are always
     ///	marked as non persistent and should not be stored. This means
-    ///	a reboot or changing the value back to 0x00 will delete them.
+    ///	a reboot or changing the value back to `0x00` will delete them.
     ///
     ///	With a value of `PersistAndGenerate` generated debug keys will be kept and can
     ///	be used for future connections. This has the same affect as

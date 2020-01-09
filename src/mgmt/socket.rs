@@ -1,13 +1,12 @@
 use std::os::raw::c_ushort;
 use std::u16;
 
-use async_std::io::{self, BufReader};
+use futures::io::{ReadHalf, WriteHalf, BufReader, AsyncReadExt, AsyncWriteExt};
+use async_std::io::{self};
 use async_std::os::unix::io::{FromRawFd, RawFd};
 use async_std::os::unix::net::UnixStream;
 use bytes::*;
 use bytes::buf::BufExt;
-use futures::{AsyncReadExt, AsyncWriteExt};
-use futures::io::{ReadHalf, WriteHalf};
 use libc;
 
 use crate::mgmt::interface::{ManagementRequest, ManagementResponse};
@@ -86,7 +85,7 @@ impl ManagementSocket {
             return Err(err);
         }
 
-        let stream: UnixStream = unsafe { UnixStream::from_raw_fd(fd) };
+        let stream = unsafe { UnixStream::from_raw_fd(fd) };
         let (read_stream, write_stream) = stream.split();
 
         Ok(ManagementSocket {
@@ -114,6 +113,6 @@ impl ManagementSocket {
         self.reader.read_exact(&mut body[..]).await?;
 
         // make buffer by chaining header and body
-        ManagementResponse::parse((&header[..]).chain(&body[..]))
+        ManagementResponse::parse(BufExt::chain(&header[..], &body[..]))
     }
 }

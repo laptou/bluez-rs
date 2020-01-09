@@ -1,7 +1,8 @@
 use crate::Address;
+use enumflags2::BitFlags;
 
 #[repr(u8)]
-#[derive(Debug, Eq, PartialEq, FromPrimitive)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
 pub enum AddressType {
     BrEdr = 0,
     LEPublic = 1,
@@ -16,7 +17,7 @@ pub struct ManagementVersion {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum DebugKeysMode {
     Discard = 0,
     Persist = 1,
@@ -24,7 +25,7 @@ pub enum DebugKeysMode {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum SecureConnectionsMode {
     Disabled = 0,
     Enabled = 1,
@@ -32,7 +33,7 @@ pub enum SecureConnectionsMode {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum LeAdvertisingMode {
     Disabled = 0,
     WithConnectable = 1,
@@ -40,7 +41,7 @@ pub enum LeAdvertisingMode {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, FromPrimitive)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
 pub enum DiscoveryAddressTypes {
     /// BR/EDR
     BrEdr = 1,
@@ -59,7 +60,7 @@ pub struct LinkKey {
     pub pin_length: u8,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum LinkKeyType {
     Combination = 0x00,
@@ -85,14 +86,14 @@ pub struct LongTermKey {
     pub value: [u8; 16],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum LongTermKeyType {
     Unauthenticated = 0x00,
     Authenticated = 0x01,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum IoCapability {
     DisplayOnly = 1,
@@ -110,7 +111,7 @@ pub struct OutOfBandData {
     pub randomizer_256: Option<[u8; 16]>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum DiscoverableMode {
     None = 0x00,
@@ -118,7 +119,7 @@ pub enum DiscoverableMode {
     Limited = 0x02,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum PrivacyMode {
     Disabled = 0x00,
@@ -152,13 +153,14 @@ pub struct ClockInfo {
 }
 
 #[repr(u32)]
-#[derive(Debug, BitFlags)]
+#[derive(Debug, Copy, Clone, BitFlags, Eq, PartialEq)]
 pub enum DeviceFlags {
     ConfirmName = 1 << 0,
     LegacyPairing = 1 << 1
 }
 
 #[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum DisconnectionReason {
     Unspecified = 0,
     Timeout = 1,

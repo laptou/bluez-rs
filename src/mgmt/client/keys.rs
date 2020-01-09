@@ -8,7 +8,7 @@ impl ManagementClient {
        ///
        ///	The debug parameter is used to tell the kernel whether to
        ///	accept the usage of debug keys or not. The allowed values for
-       ///	this parameter are 0x00 and 0x01. All other values will return
+       ///	this parameter are `0x00` and `0x01`. All other values will return
        ///	an Invalid Parameters response.
        ///
        ///	Usage of the debug parameter is deprecated and has been
