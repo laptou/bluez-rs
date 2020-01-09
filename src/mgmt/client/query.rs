@@ -88,4 +88,71 @@ impl ManagementClient {
         )
             .await
     }
+
+    pub async fn get_connection_info(&mut self, controller: Controller,
+                                     address: Address,
+                                     address_type: AddressType) -> Result<ConnectionInfo> {
+        let mut param = BytesMut::with_capacity(7);
+        param.put_slice(address.as_ref());
+        param.put_u8(address_type as u8);
+
+        self.exec_command(
+            ManagementCommand::GetConnectionInfo,
+            controller,
+            Some(param.to_bytes()),
+            |_, param| {
+                let mut param = param.unwrap();
+
+                Ok(ConnectionInfo {
+                    address: Address::from_slice(param.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(param.get_u8()).unwrap(),
+                    rssi: if param[0] != 127 { Some(param.get_u8()) } else { None },
+                    tx_power: if param[0] != 127 { Some(param.get_u8()) } else { None },
+                    max_tx_power: if param[0] != 127 { Some(param.get_u8()) } else { None },
+                })
+            },
+        )
+            .await
+    }
+
+    pub async fn get_clock_info(&mut self, controller: Controller,
+                                address: Address,
+                                address_type: AddressType) -> Result<ClockInfo> {
+        let mut param = BytesMut::with_capacity(7);
+        param.put_slice(address.as_ref());
+        param.put_u8(address_type as u8);
+
+        self.exec_command(
+            ManagementCommand::GetClockInfo,
+            controller,
+            Some(param.to_bytes()),
+            |_, param| {
+                let mut param = param.unwrap();
+
+                let address = Address::from_slice(param.split_to(6).as_ref());
+                let address_type = FromPrimitive::from_u8(param.get_u8()).unwrap();
+                let local_clock = param.get_u32_le();
+
+                let mut piconet_clock = None;
+                let mut accuracy = None;
+
+                if address != Address::zero() {
+                    piconet_clock = Some(param.get_u32_le());
+                    let accuracy_tmp = param.get_u16_le();
+                    if accuracy_tmp != 0xFFFF {
+                        accuracy = Some(accuracy_tmp);
+                    }
+                }
+
+                Ok(ClockInfo {
+                    address,
+                    address_type,
+                    local_clock,
+                    piconet_clock,
+                    accuracy,
+                })
+            },
+        )
+            .await
+    }
 }

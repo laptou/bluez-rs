@@ -60,7 +60,7 @@ impl ManagementClient {
         controller: Controller,
         keys: Vec<LongTermKey>,
     ) -> Result<()> {
-        let mut param = BytesMut::with_capacity(2 + keys.len() * 25);
+        let mut param = BytesMut::with_capacity(2 + keys.len() * 32);
         param.put_u16_le(keys.len() as u16);
 
         for key in keys {
@@ -76,6 +76,41 @@ impl ManagementClient {
 
         self.exec_command(
             ManagementCommand::LoadLongTermKeys,
+            controller,
+            Some(param.to_bytes()),
+            |_, _| Ok(()),
+        )
+            .await
+    }
+
+    ///	This command is used to feed the kernel with currently known
+    ///	identity resolving keys. The command does not need to be called
+    ///	again upon the receipt of New Identity Resolving Key events
+    ///	since the kernel updates its list automatically.
+    ///
+    ///	The provided `address` and `address_type` are the identity of
+    ///	a device. So either its public address or static random address.
+    ///
+    ///	Unresolvable random addresses and resolvable random addresses are
+    ///	not valid and will be rejected.
+    ///
+    ///	This command can be used when the controller is not powered.
+    pub async fn load_identity_resolving_keys(
+        &mut self,
+        controller: Controller,
+        keys: Vec<IdentityResolvingKey>,
+    ) -> Result<()> {
+        let mut param = BytesMut::with_capacity(2 + keys.len() * 23);
+        param.put_u16_le(keys.len() as u16);
+
+        for key in keys {
+            param.put_slice(key.address.as_ref());
+            param.put_u8(key.address_type as u8);
+            param.put_slice(&key.value[..]);
+        }
+
+        self.exec_command(
+            ManagementCommand::LoadIdentityResolvingKeys,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),

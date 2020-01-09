@@ -628,4 +628,57 @@ impl ManagementClient {
         )
             .await
     }
+
+    ///	This command is used to enable Low Energy Privacy feature using
+    ///	resolvable private addresses.
+    ///
+    ///	The value `Disabled` disables privacy mode, the values `Strict` and `Limited`
+    ///	enable privacy mode.
+    ///
+    ///	With value `Strict` the kernel will always use the privacy mode. This
+    ///	means resolvable private address is used when the controller is
+    ///	discoverable and also when pairing is initiated.
+    ///
+    ///	With value `Limited` the kernel will use a limited privacy mode with a
+    ///	resolvable private address except when the controller is bondable
+    ///	and discoverable, in which case the identity address is used.
+    ///
+    ///	Exposing the identity address when bondable and discoverable or
+    ///	during initiated pairing can be a privacy issue. For dual-mode
+    ///	controllers this can be neglected since its public address will
+    ///	be exposed over BR/EDR anyway. The benefit of exposing the
+    ///	identity address for pairing purposes is that it makes matching
+    ///	up devices with dual-mode topology during device discovery now
+    ///	possible.
+    ///
+    ///	If the privacy value `Limited` is used, then also the GATT database
+    ///	should expose the Privacy Characteristic so that remote devices
+    ///	can determine if the privacy feature is in use or not.
+    ///
+    ///	When the controller has a public address (mandatory for dual-mode
+    ///	controllers) it is used as identity address. In case the controller
+    ///	is single mode LE only without a public address, it is required
+    ///	to configure a static random address first. The privacy mode can
+    ///	only be enabled when an identity address is available.
+    ///
+    ///	The identity_resolving_key is the local key assigned for the local
+    ///	resolvable private address.
+    pub async fn set_privacy_mode(
+        &mut self,
+        controller: Controller,
+        mode: PrivacyMode,
+        identity_resolving_key: [u8; 16],
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(17);
+        param.put_u8(mode as u8);
+        param.put_slice(&identity_resolving_key[..]);
+
+        self.exec_command(
+            ManagementCommand::SetPrivacy,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
 }

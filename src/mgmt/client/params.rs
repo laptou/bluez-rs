@@ -110,9 +110,43 @@ pub struct OutOfBandData {
     pub randomizer_256: Option<[u8; 16]>,
 }
 
+#[derive(Copy, Clone, Debug)]
 #[repr(u8)]
 pub enum DiscoverableMode {
     None = 0x00,
     General = 0x01,
     Limited = 0x02,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(u8)]
+pub enum PrivacyMode {
+    Disabled = 0x00,
+    Strict = 0x01,
+    Limited = 0x02,
+}
+
+#[derive(Debug)]
+pub struct IdentityResolvingKey {
+    pub address: Address,
+    pub address_type: AddressType,
+    pub value: [u8; 16],
+}
+
+#[derive(Debug)]
+pub struct ConnectionInfo {
+    pub address: Address,
+    pub address_type: AddressType,
+    pub rssi: Option<u8>,
+    pub tx_power: Option<u8>,
+    pub max_tx_power: Option<u8>,
+}
+
+#[derive(Debug)]
+pub struct ClockInfo {
+    pub address: Address,
+    pub address_type: AddressType,
+    pub local_clock: u32,
+    pub piconet_clock: Option<u32>,
+    pub accuracy: Option<u16>,
 }
