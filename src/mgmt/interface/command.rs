@@ -73,17 +73,36 @@ pub enum ManagementCommand {
     SetBREDR,
     SetStaticAddress,
     SetScanParameters,
+    SetSecureConnections,
+    SetDebugKeys,
+    SetPrivacy,
+    LoadIdentityResolvingKeys,
+    GetConnectionInfo,
+    GetClockInfo,
+    AddDevice,
+    RemoveDevice,
+    LoadConnectionParameters,
+    ReadUnconfiguredControllerIndexList,
+    ReadControllerConfigInfo,
+    SetExternalConfig,
+    SetPublicAddress,
+    StartServiceDiscovery,
+    ReadLocalOutOfBandExtended,
+    ReadExtendedControllerIndexList,
+    ReadAdvertisingFeatures,
+    AddAdvertising,
+    RemoveAdvertising,
+    GetAdvertisingSizeInfo,
+    StartLimitedDiscovery,
+    ReadExtendedControllerInfo,
+    SetAppeearance,
+    GetPhyConfig,
+    SetPhyConfig,
+    LoadBlockedKeys,
 }
 
 impl ::std::fmt::LowerHex for ManagementCommandStatus {
     fn fmt(&self, f: &mut Formatter) -> Result<(), ::std::fmt::Error> {
         write!(f, "{:x}", *self as u8)
     }
-}
-
-#[repr(u8)]
-pub enum Discoverability {
-    None = 0x00,
-    General = 0x01,
-    Limited = 0x02,
 }

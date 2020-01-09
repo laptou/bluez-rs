@@ -1,0 +1,484 @@
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+
+use crate::Address;
+use crate::mgmt::client::*;
+use crate::mgmt::interface::controller::{Controller, ControllerSettings};
+use crate::mgmt::interface::ManagementCommand;
+use crate::mgmt::Result;
+
+// use some consts for common callback patterns
+fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSettings> {
+    let mut param = param.unwrap();
+    Ok(ControllerSettings::from_bits_truncate(param.get_u32_le()))
+}
+
+impl ManagementClient {
+    /// This command is used to power on or off a controller.
+    ///
+    ///	If discoverable setting is activated with a timeout, then
+    ///	switching the controller off will expire this timeout and
+    ///	disable discoverable.
+    ///
+    ///	Settings programmed via Set Advertising and Add/Remove
+    ///	Advertising while the controller was powered off will be activated
+    ///	when powering the controller on.
+    ///
+    ///	Switching the controller off will permanently cancel and remove
+    ///	all advertising instances with a timeout set, i.e. time limited
+    ///	advertising instances are not being remembered across power cycles.
+    ///	Advertising Removed events will be issued accordingly.
+    pub async fn set_powered(
+        &mut self,
+        controller: Controller,
+        powered: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(powered as u8);
+
+        self.exec_command(
+            ManagementCommand::SetPowered,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    /// This command is used to set the discoverable property of a
+    ///	controller.
+    ///
+    ///	Timeout is the time in seconds and is only meaningful when
+    ///	Discoverable is set to General or Limited. Providing a timeout
+    ///	with None returns Invalid Parameters. For Limited, the timeout
+    ///	is required.
+    ///
+    ///	This command is only available for BR/EDR capable controllers
+    ///	(e.g. not for single-mode LE ones). It will return Not Supported
+    ///	otherwise.
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered, however using a timeout
+    /// when the controller is not powered will	return Not Powered error.
+    ///
+    ///	When switching discoverable on and the connectable setting is
+    ///	off it will return Rejected error.
+    pub async fn set_discoverable(
+        &mut self,
+        controller: Controller,
+        discoverability: DiscoverableMode,
+        timeout: Option<u16>,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(3);
+        param.put_u8(discoverability as u8);
+        if let Some(timeout) = timeout {
+            param.put_u16_le(timeout);
+        }
+
+        self.exec_command(
+            ManagementCommand::SetDiscoverable,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    /// This command is used to set the connectable property of a
+    ///	controller.
+    ///
+    ///	This command is available for BR/EDR, LE-only and also dual
+    ///	mode controllers. For BR/EDR is changes the page scan setting
+    ///	and for LE controllers it changes the advertising type. For
+    ///	dual mode controllers it affects both settings.
+    ///
+    ///	For LE capable controllers the connectable setting takes effect
+    ///	when advertising is enabled (peripheral) or when directed
+    ///	advertising events are received (central).
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    ///
+    ///	When switching connectable off, it will also switch off the
+    ///	discoverable setting. Switching connectable back on will not
+    ///	restore a previous discoverable. It will stay off and needs
+    ///	to be manually switched back on.
+    ///
+    ///	When switching connectable off, it will expire a discoverable
+    ///	setting with a timeout.
+    ///
+    ///	This setting does not affect known devices from Add Device
+    ///	command. These devices are always allowed to connect.
+    pub async fn set_connectable(
+        &mut self,
+        controller: Controller,
+        connectable: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(connectable as u8);
+
+        self.exec_command(
+            ManagementCommand::SetConnectable,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    /// This command is used to set the controller into a connectable
+    ///	state where the page scan parameters have been set in a way to
+    ///	favor faster connect times with the expense of higher power
+    ///	consumption.
+    ///
+    ///	This command is only available for BR/EDR capable controllers
+    ///	(e.g. not for single-mode LE ones). It will return Not Supported
+    ///	otherwise.
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    ///
+    ///	The setting will be remembered during power down/up toggles.
+    pub async fn set_fast_connectable(
+        &mut self,
+        controller: Controller,
+        fast_connectable: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(fast_connectable as u8);
+
+        self.exec_command(
+            ManagementCommand::SetFastConnectable,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    /// This command is used to set the bondable (pairable) property of an
+    ///	controller.
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    ///
+    ///	Turning bondable on will not automatically switch the controller
+    ///	into connectable mode. That needs to be done separately.
+    ///
+    ///	The setting will be remembered during power down/up toggles.
+    pub async fn set_bondable(
+        &mut self,
+        controller: Controller,
+        bondable: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(bondable as u8);
+
+        self.exec_command(
+            ManagementCommand::SetPairable,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    ///	This command is used to either enable or disable link level
+    ///	security for an controller (also known as Security Mode 3).
+    ///
+    ///	This command is only available for BR/EDR capable controllers
+    ///	(e.g. not for single-mode LE ones). It will return Not Supported
+    ///	otherwise.
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    pub async fn set_link_security(
+        &mut self,
+        controller: Controller,
+        link_security: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(link_security as u8);
+
+        self.exec_command(
+            ManagementCommand::SetLinkSecurity,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    ///	This command is used to enable/disable Secure Simple Pairing
+    ///	support for a controller.
+    ///
+    ///	This command is only available for BR/EDR capable controllers
+    ///	supporting the core specification version 2.1 or greater
+    ///	(e.g. not for single-mode LE controllers or pre-2.1 ones).
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    ///
+    ///	In case the controller does not support Secure Simple Pairing,
+    ///	the command will fail regardless with Not Supported error.
+    pub async fn set_ssp(
+        &mut self,
+        controller: Controller,
+        ssp: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(ssp as u8);
+
+        self.exec_command(
+            ManagementCommand::SetSecureSimplePairing,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    ///	This command is used to enable/disable Bluetooth High Speed
+    ///	support for a controller.
+    ///
+    ///	This command is only available for BR/EDR capable controllers
+    ///	(e.g. not for single-mode LE ones).
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    ///
+    ///	To enable High Speed support, it is required that Secure Simple
+    ///	Pairing support is enabled first. High Speed support is not
+    ///	possible for connections without Secure Simple Pairing.
+    ///
+    ///	When switching Secure Simple Pairing off, the support for High
+    ///	Speed will be switched off as well. Switching Secure Simple
+    ///	Pairing back on, will not re-enable High Speed support. That
+    ///	needs to be done manually.
+    pub async fn set_high_speed(
+        &mut self,
+        controller: Controller,
+        high_speed: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(high_speed as u8);
+
+        self.exec_command(
+            ManagementCommand::SetHighSpeed,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    /// This command is used to enable/disable Low Energy support for a
+    ///	controller.
+    ///
+    ///	This command is only available for LE capable controllers and
+    ///	will yield in a Not Supported error otherwise.
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    ///
+    ///	In case the kernel subsystem does not support Low Energy or the
+    ///	controller does not either, the command will fail regardless.
+    ///
+    ///	Disabling LE support will permanently disable and remove all
+    ///	advertising instances configured with the Add Advertising
+    ///	command. Advertising Removed events will be issued accordingly.
+    pub async fn set_le(&mut self, controller: Controller, le: bool) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(le as u8);
+
+        self.exec_command(
+            ManagementCommand::SetLowEnergy,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    /// This command is used to enable LE advertising on a controller
+    ///	that supports it.
+    ///
+    ///	The value `Disabled` disables advertising, the value `WithConnectable` enables
+    ///	advertising with considering of connectable setting and the
+    ///	value `Enabled` enables advertising in connectable mode.
+    ///
+    ///	Using value `WithConnectable` means that when connectable setting is disabled,
+    ///	the advertising happens with undirected non-connectable advertising
+    ///	packets and a non-resolvable random address is used. If connectable
+    ///	setting is enabled, then undirected connectable advertising packets
+    ///	and the identity address or resolvable private address are used.
+    ///
+    ///	LE Devices configured via Add Device command with Action 0x01
+    ///	have no effect when using Advertising value 0x01 since only the
+    ///	connectable setting is taken into account.
+    ///
+    ///	To utilize undirected connectable advertising without changing the
+    ///	connectable setting, the value `Enabled` can be utilized. It makes the
+    ///	device connectable via LE without the requirement for being
+    ///	connectable on BR/EDR (and/or LE).
+    ///
+    ///	The value `Enabled` should be the preferred mode of operation when
+    ///	implementing peripheral mode.
+    ///
+    ///	Using this command will temporarily deactivate any configuration
+    ///	made by the Add Advertising command. This command takes precedence.
+    ///	Once a Set Advertising command with value `Disabled` is issued any
+    ///	previously made configurations via Add/Remove Advertising, including
+    ///	such changes made while Set Advertising was active, will be re-
+    ///	enabled.
+    ///
+    ///	A pre-requisite is that LE is already enabled, otherwise this
+    ///	command will return a "rejected" response.
+    pub async fn set_advertising(
+        &mut self,
+        controller: Controller,
+        mode: LeAdvertisingMode,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(mode as u8);
+
+        self.exec_command(
+            ManagementCommand::SetAdvertising,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    /// This command is used to enable or disable BR/EDR support
+    ///	on a dual-mode controller.
+    ///
+    ///	A pre-requisite is that LE is already enabled, otherwise
+    ///	this command will return a "rejected" response. Enabling BR/EDR
+    ///	can be done both when powered on and powered off, however
+    ///	disabling it can only be done when powered off (otherwise the
+    ///	command will again return "rejected"). Disabling BR/EDR will
+    ///	automatically disable all other BR/EDR related settings.
+    pub async fn set_bredr(
+        &mut self,
+        controller: Controller,
+        enabled: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(enabled as u8);
+
+        self.exec_command(
+            ManagementCommand::SetBREDR,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    ///	This command allows for setting the static random address. It is
+    ///	only supported on controllers with LE support. The static random
+    ///	address is suppose to be valid for the lifetime of the
+    ///	controller or at least until the next power cycle. To ensure
+    ///	such behavior, setting of the address is limited to when the
+    ///	controller is powered off.
+    ///
+    ///	The `Address::zero()` (`00:00:00:00:00:00`) can be used
+    ///	to disable the static address.
+    ///
+    ///	When a controller has a public address (which is required for
+    ///	all dual-mode controllers), this address is not used. If a dual-mode
+    ///	controller is configured as Low Energy only devices (BR/EDR has
+    ///	been switched off), then the static address is used. Only when
+    ///	the controller information reports a zero address (`00:00:00:00:00:00`),
+    ///	it is required to configure a static address first.
+    ///
+    ///	If privacy mode is enabled and the controller is single mode
+    ///	LE only without a public address, the static random address is
+    ///	used as identity address.
+    ///
+    ///	The Static Address flag from the current settings can also be used
+    ///	to determine if the configured static address is in use or not.
+    pub async fn set_static_address(
+        &mut self,
+        controller: Controller,
+        address: Address,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::from(address.as_ref());
+
+        self.exec_command(
+            ManagementCommand::SetStaticAddress,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    ///	This command is used to enable/disable Secure Connections
+    ///	support for a controller.
+    ///
+    ///	The value `Disabled` disables Secure Connections, the value `Enabled`
+    ///	enables Secure Connections and the value `Only` enables Secure
+    ///	Connections Only mode.
+    ///
+    ///	This command is only available for LE capable controllers as
+    ///	well as controllers supporting the core specification version
+    ///	4.1 or greater.
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    ///
+    ///	In case the controller does not support Secure Connections
+    ///	the command will fail regardless with Not Supported error.
+    pub async fn set_secure_connections(
+        &mut self,
+        controller: Controller,
+        mode: SecureConnectionsMode,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(mode as u8);
+
+        self.exec_command(
+            ManagementCommand::SetSecureConnections,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+
+    /// This command is used to tell the kernel whether to accept the
+    ///	usage of debug keys or not.
+    ///
+    ///	With a value of `Discard` any generated debug key will be discarded
+    ///	as soon as the connection terminates.
+    ///
+    ///	With a value of `Persist` generated debug keys will be kept and can
+    ///	be used for future connections. However debug keys are always
+    ///	marked as non persistent and should not be stored. This means
+    ///	a reboot or changing the value back to 0x00 will delete them.
+    ///
+    ///	With a value of `PersistAndGenerate` generated debug keys will be kept and can
+    ///	be used for future connections. This has the same affect as
+    ///	with value `Persist`. However in addition this value will also
+    ///	enter the controller mode to generate debug keys for each
+    ///	new pairing. Changing the value back to `Persist` or `Discard` will
+    ///	disable the controller mode for generating debug keys.
+    pub async fn set_debug_keys(
+        &mut self,
+        controller: Controller,
+        mode: DebugKeysMode,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(mode as u8);
+
+        self.exec_command(
+            ManagementCommand::SetDebugKeys,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+            .await
+    }
+}

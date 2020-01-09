@@ -4,15 +4,21 @@ use std::ffi::CString;
 use bytes::*;
 use num_traits::FromPrimitive;
 
+pub use params::*;
+pub use settings::*;
+
 use crate::Address;
 use crate::mgmt::{ManagementError, Result};
 use crate::mgmt::interface::{
-    class, Discoverability, ManagementCommand, ManagementCommandStatus, ManagementRequest,
+    class, ManagementCommand, ManagementCommandStatus, ManagementRequest,
 };
 use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
 use crate::mgmt::interface::controller::{Controller, ControllerInfo, ControllerSettings};
-use crate::mgmt::interface::event::{AddressType, ManagementEvent, ManagementVersion};
+use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::socket::ManagementSocket;
+
+mod params;
+mod settings;
 
 fn bytes_to_c_str(bytes: Bytes) -> CString {
     let iterator = bytes.into_iter();
@@ -25,12 +31,6 @@ pub struct ManagementClient {
 }
 
 impl ManagementClient {
-    // use some consts for common callback patterns
-    fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSettings> {
-        let mut param = param.unwrap();
-        Ok(ControllerSettings::from_bits_truncate(param.get_u32_le()))
-    }
-
     fn address_callback(_: Controller, param: Option<Bytes>) -> Result<(Address, AddressType)> {
         let mut param = param.unwrap();
         Ok((
@@ -147,11 +147,11 @@ impl ManagementClient {
     ///	getting the response to the Read Controller Index List command
     ///	or an Index Added event.
     ///
-    ///	The Address parameter describes the controllers public address
+    ///	The `address` parameter describes the controllers public address
     ///	and it can be expected that it is set. However in case of single
-    ///	mode Low Energy only controllers it can be 00:00:00:00:00:00. To
+    ///	mode Low Energy only controllers it can be `00:00:00:00:00:00`. To
     ///	power on the controller in this case, it is required to configure
-    ///	a static address using Set Static Address command first.
+    ///	a static address using Set Static `address` command first.
     ///
     ///	If the public address is set, then it will be used as identity
     ///	address for the controller. If no public address is available,
@@ -182,292 +182,6 @@ impl ManagementClient {
                     short_name: bytes_to_c_str(param),
                 })
             },
-        )
-            .await
-    }
-
-    /// This command is used to power on or off a controller.
-    ///
-    ///	If discoverable setting is activated with a timeout, then
-    ///	switching the controller off will expire this timeout and
-    ///	disable discoverable.
-    ///
-    ///	Settings programmed via Set Advertising and Add/Remove
-    ///	Advertising while the controller was powered off will be activated
-    ///	when powering the controller on.
-    ///
-    ///	Switching the controller off will permanently cancel and remove
-    ///	all advertising instances with a timeout set, i.e. time limited
-    ///	advertising instances are not being remembered across power cycles.
-    ///	Advertising Removed events will be issued accordingly.
-    pub async fn set_powered(
-        &mut self,
-        controller: Controller,
-        powered: bool,
-    ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::with_capacity(1);
-        param.put_u8(powered as u8);
-
-        self.exec_command(
-            ManagementCommand::SetPowered,
-            controller,
-            Some(param.to_bytes()),
-            Self::settings_callback,
-        )
-            .await
-    }
-
-    /// This command is used to set the discoverable property of a
-    ///	controller.
-    ///
-    ///	Timeout is the time in seconds and is only meaningful when
-    ///	Discoverable is set to General or Limited. Providing a timeout
-    ///	with None returns Invalid Parameters. For Limited, the timeout
-    ///	is required.
-    ///
-    ///	This command is only available for BR/EDR capable controllers
-    ///	(e.g. not for single-mode LE ones). It will return Not Supported
-    ///	otherwise.
-    ///
-    ///	This command can be used when the controller is not powered and
-    ///	all settings will be programmed once powered, however using a timeout
-    /// when the controller is not powered will	return Not Powered error.
-    ///
-    ///	When switching discoverable on and the connectable setting is
-    ///	off it will return Rejected error.
-    pub async fn set_discoverable(
-        &mut self,
-        controller: Controller,
-        discoverability: Discoverability,
-        timeout: Option<u16>,
-    ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::with_capacity(3);
-        param.put_u8(discoverability as u8);
-        if let Some(timeout) = timeout {
-            param.put_u16_le(timeout);
-        }
-
-        self.exec_command(
-            ManagementCommand::SetDiscoverable,
-            controller,
-            Some(param.to_bytes()),
-            Self::settings_callback,
-        )
-            .await
-    }
-
-    /// This command is used to set the connectable property of a
-    ///	controller.
-    ///
-    ///	This command is available for BR/EDR, LE-only and also dual
-    ///	mode controllers. For BR/EDR is changes the page scan setting
-    ///	and for LE controllers it changes the advertising type. For
-    ///	dual mode controllers it affects both settings.
-    ///
-    ///	For LE capable controllers the connectable setting takes effect
-    ///	when advertising is enabled (peripheral) or when directed
-    ///	advertising events are received (central).
-    ///
-    ///	This command can be used when the controller is not powered and
-    ///	all settings will be programmed once powered.
-    ///
-    ///	When switching connectable off, it will also switch off the
-    ///	discoverable setting. Switching connectable back on will not
-    ///	restore a previous discoverable. It will stay off and needs
-    ///	to be manually switched back on.
-    ///
-    ///	When switching connectable off, it will expire a discoverable
-    ///	setting with a timeout.
-    ///
-    ///	This setting does not affect known devices from Add Device
-    ///	command. These devices are always allowed to connect.
-    pub async fn set_connectable(
-        &mut self,
-        controller: Controller,
-        connectable: bool,
-    ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::with_capacity(1);
-        param.put_u8(connectable as u8);
-
-        self.exec_command(
-            ManagementCommand::SetConnectable,
-            controller,
-            Some(param.to_bytes()),
-            Self::settings_callback,
-        )
-            .await
-    }
-
-    /// This command is used to set the controller into a connectable
-    ///	state where the page scan parameters have been set in a way to
-    ///	favor faster connect times with the expense of higher power
-    ///	consumption.
-    ///
-    ///	This command is only available for BR/EDR capable controllers
-    ///	(e.g. not for single-mode LE ones). It will return Not Supported
-    ///	otherwise.
-    ///
-    ///	This command can be used when the controller is not powered and
-    ///	all settings will be programmed once powered.
-    ///
-    ///	The setting will be remembered during power down/up toggles.
-    pub async fn set_fast_connectable(
-        &mut self,
-        controller: Controller,
-        fast_connectable: bool,
-    ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::with_capacity(1);
-        param.put_u8(fast_connectable as u8);
-
-        self.exec_command(
-            ManagementCommand::SetFastConnectable,
-            controller,
-            Some(param.to_bytes()),
-            Self::settings_callback,
-        )
-            .await
-    }
-
-    /// This command is used to set the bondable (pairable) property of an
-    ///	controller.
-    ///
-    ///	This command can be used when the controller is not powered and
-    ///	all settings will be programmed once powered.
-    ///
-    ///	Turning bondable on will not automatically switch the controller
-    ///	into connectable mode. That needs to be done separately.
-    ///
-    ///	The setting will be remembered during power down/up toggles.
-    pub async fn set_bondable(
-        &mut self,
-        controller: Controller,
-        bondable: bool,
-    ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::with_capacity(1);
-        param.put_u8(bondable as u8);
-
-        self.exec_command(
-            ManagementCommand::SetPairable,
-            controller,
-            Some(param.to_bytes()),
-            Self::settings_callback,
-        )
-            .await
-    }
-
-    ///	This command is used to either enable or disable link level
-    ///	security for an controller (also known as Security Mode 3).
-    ///
-    ///	This command is only available for BR/EDR capable controllers
-    ///	(e.g. not for single-mode LE ones). It will return Not Supported
-    ///	otherwise.
-    ///
-    ///	This command can be used when the controller is not powered and
-    ///	all settings will be programmed once powered.
-    pub async fn set_link_security(
-        &mut self,
-        controller: Controller,
-        link_security: bool,
-    ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::with_capacity(1);
-        param.put_u8(link_security as u8);
-
-        self.exec_command(
-            ManagementCommand::SetLinkSecurity,
-            controller,
-            Some(param.to_bytes()),
-            Self::settings_callback,
-        )
-            .await
-    }
-
-    ///	This command is used to enable/disable Secure Simple Pairing
-    ///	support for a controller.
-    ///
-    ///	This command is only available for BR/EDR capable controllers
-    ///	supporting the core specification version 2.1 or greater
-    ///	(e.g. not for single-mode LE controllers or pre-2.1 ones).
-    ///
-    ///	This command can be used when the controller is not powered and
-    ///	all settings will be programmed once powered.
-    ///
-    ///	In case the controller does not support Secure Simple Pairing,
-    ///	the command will fail regardless with Not Supported error.
-    pub async fn set_ssp(
-        &mut self,
-        controller: Controller,
-        ssp: bool,
-    ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::with_capacity(1);
-        param.put_u8(ssp as u8);
-
-        self.exec_command(
-            ManagementCommand::SetSecureSimplePairing,
-            controller,
-            Some(param.to_bytes()),
-            Self::settings_callback,
-        )
-            .await
-    }
-
-    ///	This command is used to enable/disable Bluetooth High Speed
-    ///	support for a controller.
-    ///
-    ///	This command is only available for BR/EDR capable controllers
-    ///	(e.g. not for single-mode LE ones).
-    ///
-    ///	This command can be used when the controller is not powered and
-    ///	all settings will be programmed once powered.
-    ///
-    ///	To enable High Speed support, it is required that Secure Simple
-    ///	Pairing support is enabled first. High Speed support is not
-    ///	possible for connections without Secure Simple Pairing.
-    ///
-    ///	When switching Secure Simple Pairing off, the support for High
-    ///	Speed will be switched off as well. Switching Secure Simple
-    ///	Pairing back on, will not re-enable High Speed support. That
-    ///	needs to be done manually.
-    pub async fn set_high_speed(
-        &mut self,
-        controller: Controller,
-        high_speed: bool,
-    ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::with_capacity(1);
-        param.put_u8(high_speed as u8);
-
-        self.exec_command(
-            ManagementCommand::SetHighSpeed,
-            controller,
-            Some(param.to_bytes()),
-            Self::settings_callback,
-        )
-            .await
-    }
-
-    /// This command is used to enable/disable Low Energy support for a
-    ///	controller.
-    ///
-    ///	This command is only available for LE capable controllers and
-    ///	will yield in a Not Supported error otherwise.
-    ///
-    ///	This command can be used when the controller is not powered and
-    ///	all settings will be programmed once powered.
-    ///
-    ///	In case the kernel subsystem does not support Low Energy or the
-    ///	controller does not either, the command will fail regardless.
-    ///
-    ///	Disabling LE support will permanently disable and remove all
-    ///	advertising instances configured with the Add Advertising
-    ///	command. Advertising Removed events will be issued accordingly.
-    pub async fn set_le(&mut self, controller: Controller, le: bool) -> Result<ControllerSettings> {
-        let mut param = BytesMut::with_capacity(1);
-        param.put_u8(le as u8);
-
-        self.exec_command(
-            ManagementCommand::SetLowEnergy,
-            controller,
-            Some(param.to_bytes()),
-            Self::settings_callback,
         )
             .await
     }
@@ -733,7 +447,7 @@ impl ManagementClient {
     ///	devices.
     ///
     ///	For devices using resolvable random addresses with a known
-    ///	identity resolving key, the Address and Address_Type will
+    ///	identity resolving key, the `address` and `address_type` will
     ///	contain the identity information.
     ///
     ///	This command can only be used when the controller is powered.
@@ -835,7 +549,7 @@ impl ManagementClient {
     ///	convert it to 1 (DisplayYesNo) in the case of a BR/EDR
     ///	connection (as KeyboardDisplay is specific to SMP).
     ///
-    ///	The Address and Address_Type of the return parameters will
+    ///	The `address` and `address_type` of the return parameters will
     ///	return the identity address if known. In case of resolvable
     ///	random address given as command parameters and the remote
     ///	provides an identity resolving key, the return parameters
@@ -868,7 +582,7 @@ impl ManagementClient {
             .await
     }
 
-    ///	The Address and Address_Type parameters should match what was
+    ///	The `address` and `address_type` parameters should match what was
     ///	given to a preceding Pair Device command.
     ///
     ///	This command can only be used when the controller is powered.
@@ -1091,7 +805,7 @@ impl ManagementClient {
     /// This command is used to remove data added using the Add Remote
     ///	Out Of Band Data command.
     ///
-    ///	When the Address parameter is 00:00:00:00:00:00, then all
+    ///	When the `address` parameter is `00:00:00:00:00:00`, then all
     ///	previously added data will be removed.
     ///
     ///	This command can be used when the controller is not powered and
@@ -1119,7 +833,7 @@ impl ManagementClient {
     ///	devices. A Device Found event will be sent for each discovered
     ///	device.
     ///
-    ///	Possible values for the Address_Type parameter are a bit-wise or
+    ///	Possible values for the `address_type` parameter are a bit-wise or
     ///	of the following bits:
     ///
     ///		0	BR/EDR
@@ -1238,7 +952,7 @@ impl ManagementClient {
     /// This command is used to remove a device from the list of blocked
     ///	devices (where it was added to using the Block Device command).
     ///
-    ///	When the Address parameter is 00:00:00:00:00:00, then all
+    ///	When the `address` parameter is `00:00:00:00:00:00`, then all
     ///	previously blocked devices will be unblocked.
     ///
     ///	This command can be used when the controller is not powered.
@@ -1284,91 +998,25 @@ impl ManagementClient {
             .await
     }
 
-    pub async fn set_advertising(
+    /// This command allows for setting the Low Energy scan parameters
+    ///	used for connection establishment and passive scanning. It is
+    ///	only supported on controllers with LE support.
+    pub async fn set_scan_parameters(
         &mut self,
         controller: Controller,
-        advertising: bool,
-    ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::with_capacity(1);
-        param.put_u8(advertising as u8);
+        interval: u16,
+        window: u16,
+    ) -> Result<()> {
+        let mut param = BytesMut::with_capacity(4);
+        param.put_u16_le(interval);
+        param.put_u16_le(window);
 
         self.exec_command(
-            ManagementCommand::SetAdvertising,
+            ManagementCommand::SetScanParameters,
             controller,
             Some(param.to_bytes()),
-            Self::settings_callback,
+            |_, _| Ok(()),
         )
             .await
     }
-}
-
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, FromPrimitive)]
-pub enum DiscoveryAddressTypes {
-    /// BR/EDR
-    BrEdr = 1,
-    /// LE (public & random)
-    LE = 6,
-    /// BR/EDR/LE (interleaved discovery)
-    BrEdrLE = 7,
-}
-
-#[derive(Debug)]
-pub struct LinkKey {
-    address: Address,
-    address_type: AddressType,
-    key_type: LinkKeyType,
-    value: [u8; 16],
-    pin_length: u8,
-}
-
-#[derive(Copy, Clone, Debug)]
-#[repr(u8)]
-pub enum LinkKeyType {
-    Combination = 0x00,
-    LocalUnit = 0x01,
-    RemoteUnit = 0x02,
-    DebugCombination = 0x03,
-    UnauthenticatedCombinationP192 = 0x04,
-    AuthenticatedCombinationP192 = 0x05,
-    ChangedCombination = 0x06,
-    UnauthenticatedCombinationP256 = 0x07,
-    AuthenticatedCombinationP256 = 0x08,
-}
-
-#[derive(Debug)]
-pub struct LongTermKey {
-    address: Address,
-    address_type: AddressType,
-    key_type: LongTermKeyType,
-    master: u8,
-    encryption_size: u8,
-    encryption_diversifier: u16,
-    random_number: u64,
-    value: [u8; 16],
-}
-
-#[derive(Copy, Clone, Debug)]
-#[repr(u8)]
-pub enum LongTermKeyType {
-    Unauthenticated = 0x00,
-    Authenticated = 0x01,
-}
-
-#[derive(Copy, Clone, Debug)]
-#[repr(u8)]
-pub enum IoCapability {
-    DisplayOnly = 1,
-    DisplayYesNo,
-    KeyboardOnly,
-    NoInputNoOutput,
-    KeyboardDisplay,
-}
-
-#[derive(Debug)]
-pub struct OutOfBandData {
-    hash_192: [u8; 16],
-    randomizer_192: [u8; 16],
-    hash_256: Option<[u8; 16]>,
-    randomizer_256: Option<[u8; 16]>,
 }

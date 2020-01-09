@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Address {
     bytes: [u8; 6],
 }
@@ -14,6 +14,10 @@ impl Address {
         let mut arr = [0u8; 6];
         arr.copy_from_slice(bytes);
         Address { bytes: arr }
+    }
+
+    pub const fn zero() -> Address {
+        Address { bytes: [0u8; 6] }
     }
 }
 
