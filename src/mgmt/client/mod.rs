@@ -9,7 +9,7 @@ pub use settings::*;
 
 use crate::Address;
 use crate::mgmt::{ManagementError, Result};
-use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus, ManagementRequest};
+use crate::mgmt::interface::*;
 use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
 use crate::mgmt::interface::controller::{Controller, ControllerInfo, ControllerSettings};
 use crate::mgmt::interface::event::ManagementEvent;
@@ -27,7 +27,7 @@ mod settings;
 
 pub struct ManagementClient {
     socket: ManagementSocket,
-    handler: Option<Box<dyn FnMut(Controller, ManagementEvent) -> ()>>,
+    handler: Option<Box<dyn FnMut(Controller, &ManagementEvent) -> ()>>,
 }
 
 impl ManagementClient {
@@ -39,7 +39,7 @@ impl ManagementClient {
     }
 
     pub fn new_with_handler(
-        handler: Box<dyn FnMut(Controller, ManagementEvent) -> ()>,
+        handler: Box<dyn FnMut(Controller, &ManagementEvent) -> ()>,
     ) -> Result<Self> {
         Ok(ManagementClient {
             socket: ManagementSocket::open()?,
@@ -47,11 +47,36 @@ impl ManagementClient {
         })
     }
 
+    /// Sets a handler that will be called every time this client processes
+    /// an event. CommandComplete and CommandStatus events will NOT reach this handler;
+    /// instead their contents can be accessed as the return value of the method
+    /// that you called.
     pub fn set_handler(
         &mut self,
-        handler: Option<Box<dyn FnMut(Controller, ManagementEvent) -> ()>>,
+        handler: Option<Box<dyn FnMut(Controller, &ManagementEvent) -> ()>>,
     ) {
         self.handler = handler;
+    }
+
+    /// Tells the client to check if any new data has been sent in by the kernel.
+    /// If you do not call this method, you will not recieve any events except
+    /// when you happen to issue a command. If `block` is true, this method
+    /// will block until there is a response to read. If `block` is false,
+    /// this method will either return a pending response or return `Err(ManagementError::NoData)`,
+    /// which in most cases can be safely ignored.
+    pub async fn process(&mut self, block: bool) -> Result<ManagementResponse> {
+        let response = self.socket.receive(block).await?;
+
+        match &response.event {
+            ManagementEvent::CommandStatus { .. } | ManagementEvent::CommandComplete { .. } => (),
+            _ => {
+                if let Some(handler) = &mut self.handler {
+                    (handler)(response.controller, &response.event)
+                }
+            }
+        }
+
+        Ok(response)
     }
 
     #[inline]
@@ -77,10 +102,8 @@ impl ManagementClient {
         // which is either command complete or command status
         // with the same opcode as the command that we sent
         loop {
-            let response = self.socket.receive().await?;
+            let response = self.process(true).await?;
 
-            // if we got an error, just send that back to the user
-            // otherwise, give the data received to our callback fn
             match response.event {
                 ManagementEvent::CommandComplete {
                     status,
@@ -103,11 +126,7 @@ impl ManagementClient {
                         _ => Err(ManagementError::CommandError { opcode, status }),
                     }
                 }
-                _ => {
-                    if let Some(handler) = &mut self.handler {
-                        (handler)(response.controller, response.event)
-                    }
-                }
+                _ => (),
             }
         }
     }

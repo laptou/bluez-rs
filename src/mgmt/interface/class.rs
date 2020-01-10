@@ -158,7 +158,7 @@ pub fn from_array(class: [u8; 3]) -> (DeviceClass, ServiceClasses) {
 pub fn from_u32(class: u32) -> (DeviceClass, ServiceClasses) {
     let service_classes = ServiceClasses::from_bits_truncate(class);
 
-    let class_bits = class.bits::<bv::BigEndian>();
+    let class_bits = class.bits::<bv::LittleEndian>();
     let device_class: DeviceClass;
 
     // major device class encoded in bits 8-12

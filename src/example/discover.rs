@@ -1,12 +1,14 @@
 extern crate bluez;
 
 use std::error::Error;
+use std::time::Duration;
 
 use async_std::task::block_on;
 
 use bluez::client::*;
 use bluez::interface::controller::*;
 use bluez::interface::event::ManagementEvent;
+use bluez::ManagementError;
 
 #[async_std::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
@@ -39,10 +41,11 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
         println!("\t\tname: {:?}", info.name);
         println!("\t\tshort name: {:?}", info.short_name);
+        println!("\t\taddress: {:?}", info.address);
         println!("\t\tsupported settings: {:?}", info.supported_settings);
         println!("\t\tcurrent settings: {:?}", info.current_settings);
-        println!("\t\tmanufacturer: {:?}", info.manufacturer);
-        println!("\t\tbluetooth version: {:?}", info.bluetooth_version);
+        println!("\t\tmanufacturer: 0x{:04x}", info.manufacturer);
+        println!("\t\tbluetooth version: 0x{:02x}", info.bluetooth_version);
         println!("\t\tclass of device: {:?}", info.class_of_device);
     }
 
@@ -69,12 +72,16 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             ..
         } => {
             println!(
-                "[{:?}] found device {:?} ({:?})",
+                "[{:?}] found device {} ({:?})",
                 controller, address, address_type
             );
             println!("\tflags: {:?}", flags);
             println!("\trssi: {:?}", rssi);
         }
+        ManagementEvent::Discovering {
+            discovering,
+            address_type,
+        } => println!("discovering: {} {:?}", discovering, address_type),
         _ => (),
     })));
 
@@ -84,6 +91,12 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             AddressTypeFlag::BREDR | AddressTypeFlag::LEPublic | AddressTypeFlag::LERandom,
         )
         .await?;
+
+    for _ in 0..5000 {
+        // don't block if there's no data, just keep looping and sleeping
+        client.process(false).await?;
+        std::thread::sleep(Duration::from_millis(50));
+    }
 
     Ok(())
 }

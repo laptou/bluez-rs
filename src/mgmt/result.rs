@@ -6,6 +6,8 @@ pub type Result<T> = std::result::Result<T, ManagementError>;
 pub enum ManagementError {
     #[error("Unknown error.")]
     Unknown,
+    #[error("No data was available to be read.")]
+    NoData,
     #[error("IO error: {:?}.", source)]
     IO {
         #[source]

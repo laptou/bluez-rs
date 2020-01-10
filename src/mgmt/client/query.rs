@@ -115,10 +115,7 @@ impl ManagementClient {
                 let mut connections = Vec::with_capacity(count);
 
                 for _ in 0..count {
-                    connections.push((
-                        Address::from_slice(param.split_to(6).as_ref()),
-                        FromPrimitive::from_u8(param.get_u8()).unwrap(),
-                    ));
+                    connections.push((param.get_address(), param.get_primitive_u8()));
                 }
 
                 Ok(connections)
@@ -145,8 +142,8 @@ impl ManagementClient {
             |_, param| {
                 let mut param = param.unwrap();
                 Ok(ConnectionInfo {
-                    address: Address::from_slice(param.split_to(6).as_ref()),
-                    address_type: FromPrimitive::from_u8(param.get_u8()).unwrap(),
+                    address: param.get_address(),
+                    address_type: param.get_primitive_u8(),
                     rssi: if param[0] != 127 {
                         Some(param.get_i8())
                     } else {

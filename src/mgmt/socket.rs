@@ -100,10 +100,17 @@ impl ManagementSocket {
         self.writer.write(&buf).await
     }
 
-    pub async fn receive(&mut self) -> Result<ManagementResponse, ManagementError> {
+    pub async fn receive(&mut self, block: bool) -> Result<ManagementResponse, ManagementError> {
         // read 6 byte header
         let mut header = [0u8; 6];
-        self.reader.read_exact(&mut header).await?;
+
+        if block {
+            self.reader.read_exact(&mut header);
+        } else {
+            if self.reader.read(&mut header).await? < 6 {
+                return Err(ManagementError::NoData);
+            }
+        }
 
         // this ugliness forces a &[u8] into [u8; 2]
         let param_size = u16::from_le_bytes([header[4], header[5]]) as usize;

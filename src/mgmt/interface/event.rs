@@ -1,10 +1,11 @@
 use std::ffi::CString;
 
 use bytes::Bytes;
+use enumflags2::BitFlags;
 
 use crate::Address;
 use crate::mgmt::client::{
-    AddressType, DeviceFlags, DisconnectionReason, LinkKeyType, LongTermKeyType,
+    AddressType, AddressTypeFlag, DeviceFlag, DisconnectionReason, LinkKeyType, LongTermKeyType,
 };
 use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus};
 use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
@@ -97,7 +98,7 @@ pub enum ManagementEvent {
     DeviceConnected {
         address: Address,
         address_type: AddressType,
-        flags: DeviceFlags,
+        flags: BitFlags<DeviceFlag>,
         eir_data: Bytes,
     },
 
@@ -187,7 +188,7 @@ pub enum ManagementEvent {
         address: Address,
         address_type: AddressType,
         rssi: i8,
-        flags: DeviceFlags,
+        flags: BitFlags<DeviceFlag>,
         eir_data: Bytes,
     },
 
@@ -195,7 +196,7 @@ pub enum ManagementEvent {
     ///	devices. This discovering state can come and go multiple times
     ///	between a StartDiscover and a StopDiscovery command.
     Discovering {
-        address_type: AddressType,
+        address_type: BitFlags<AddressTypeFlag>,
         discovering: bool,
     },
 
@@ -239,6 +240,7 @@ pub enum ManagementEvent {
         entered: u8,
     },
 
+    ///
     NewIdentityResolvingKey {
         store_hint: bool,
         random_address: Address,

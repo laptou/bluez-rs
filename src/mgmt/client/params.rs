@@ -161,8 +161,8 @@ pub struct ClockInfo {
 }
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, BitFlags, Eq, PartialEq, FromPrimitive)]
-pub enum DeviceFlags {
+#[derive(Debug, Copy, Clone, BitFlags, Eq, PartialEq)]
+pub enum DeviceFlag {
     ConfirmName = 1 << 0,
     LegacyPairing = 1 << 1,
 }

@@ -1,6 +1,7 @@
 use std::convert::TryInto;
 
 use bytes::*;
+use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 
 use crate::Address;
@@ -76,7 +77,7 @@ impl ManagementResponse {
                 0x000B => ManagementEvent::DeviceConnected {
                     address: Address::from_slice(buf.split_to(6).as_ref()),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                    flags: FromPrimitive::from_u32(buf.get_u32_le()).unwrap(),
+                    flags: BitFlags::from_bits_truncate(buf.get_u32_le()),
                     eir_data: {
                         let len = buf.get_u16_le() as usize;
                         buf.split_to(len)
@@ -116,14 +117,14 @@ impl ManagementResponse {
                     address: Address::from_slice(buf.split_to(6).as_ref()),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     rssi: buf.get_i8(),
-                    flags: FromPrimitive::from_u32(buf.get_u32_le()).unwrap(),
+                    flags: BitFlags::from_bits_truncate(buf.get_u32_le()),
                     eir_data: {
                         let len = buf.get_u16_le() as usize;
                         buf.split_to(len)
                     },
                 },
                 0x0013 => ManagementEvent::Discovering {
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: BitFlags::from_bits_truncate(buf.get_u8()),
                     discovering: buf.get_bool(),
                 },
                 0x0014 => ManagementEvent::DeviceBlocked {
