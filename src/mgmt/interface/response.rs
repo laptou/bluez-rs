@@ -5,6 +5,7 @@ use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 
 use crate::Address;
+use crate::mgmt::client::{ConnectionInfo, ConnectionParams};
 use crate::mgmt::interface::controller::Controller;
 use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
@@ -47,8 +48,12 @@ impl ManagementResponse {
                 0x0003 => ManagementEvent::ControllerError { code: buf.get_u8() },
                 0x0004 => ManagementEvent::IndexAdded,
                 0x0005 => ManagementEvent::IndexRemoved,
-                0x0006 => todo!("ManagementEvent::NewSettings"),
-                0x0007 => todo!("ManagementEvent::ClassOfDeviceChanged"),
+                0x0006 => ManagementEvent::NewSettings {
+                    settings: BitFlags::from_bits_truncate(buf.get_u32_le()),
+                },
+                0x0007 => ManagementEvent::ClassOfDeviceChanged {
+                    class: crate::interface::class::from_bytes(buf),
+                },
                 0x0008 => {
                     let name = buf.split_to(249).get_c_string();
                     let short_name = buf.get_c_string();
@@ -151,6 +156,68 @@ impl ManagementResponse {
                     address: buf.get_address(),
                     address_type: buf.get_primitive_u8(),
                     value: buf.get_u8x16(),
+                },
+                0x0019 => ManagementEvent::NewSignatureResolvingKey {
+                    store_hint: buf.get_bool(),
+                    address: buf.get_address(),
+                    address_type: buf.get_primitive_u8(),
+                    key_type: buf.get_primitive_u8(),
+                    value: buf.get_u8x16(),
+                },
+                0x001A => ManagementEvent::DeviceAdded {
+                    address: buf.get_address(),
+                    address_type: buf.get_primitive_u8(),
+                    action: buf.get_primitive_u8(),
+                },
+                0x001B => ManagementEvent::DeviceRemoved {
+                    address: buf.get_address(),
+                    address_type: buf.get_primitive_u8(),
+                },
+                0x001C => ManagementEvent::NewConnectionParams {
+                    store_hint: buf.get_bool(),
+                    param: ConnectionParams {
+                        address: buf.get_address(),
+                        address_type: buf.get_primitive_u8(),
+                        min_connection_interval: buf.get_u16_le(),
+                        max_connection_interval: buf.get_u16_le(),
+                        connection_latency: buf.get_u16_le(),
+                        supervision_timeout: buf.get_u16_le(),
+                    },
+                },
+                0x001D => ManagementEvent::UnconfiguredIndexAdded,
+                0x001E => ManagementEvent::UnconfiguredIndexRemoved,
+                0x001F => ManagementEvent::NewConfigOptions {
+                    missing_options: BitFlags::from_bits_truncate(buf.get_u32_le()),
+                },
+                0x0020 => ManagementEvent::ExtendedIndexAdded {
+                    controller_type: buf.get_primitive_u8(),
+                    controller_bus: buf.get_primitive_u8(),
+                },
+                0x0021 => ManagementEvent::ExtendedIndexRemoved {
+                    controller_type: buf.get_primitive_u8(),
+                    controller_bus: buf.get_primitive_u8(),
+                },
+                0x0022 => ManagementEvent::LocalOutOfBandExtDataUpdated {
+                    address_type: buf.get_primitive_u8(),
+                    eir_data: {
+                        let len = buf.get_u16_le() as usize;
+                        buf.split_to(len)
+                    },
+                },
+                0x0023 => ManagementEvent::AdvertisingAdded {
+                    instance: buf.get_u8(),
+                },
+                0x0024 => ManagementEvent::AdvertisingRemoved {
+                    instance: buf.get_u8(),
+                },
+                0x0025 => ManagementEvent::ExtControllerInfoChanged {
+                    eir_data: {
+                        let len = buf.get_u16_le() as usize;
+                        buf.split_to(len)
+                    },
+                },
+                0x0026 => ManagementEvent::PhyConfigChanged {
+                    selected_phys: BitFlags::from_bits_truncate(buf.get_u32_le()),
                 },
                 _ => todo!("throw error instead of panicking"),
             },

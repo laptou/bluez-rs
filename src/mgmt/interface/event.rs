@@ -4,9 +4,7 @@ use bytes::Bytes;
 use enumflags2::BitFlags;
 
 use crate::Address;
-use crate::mgmt::client::{
-    AddressType, AddressTypeFlag, DeviceFlag, DisconnectionReason, LinkKeyType, LongTermKeyType,
-};
+use crate::mgmt::client::*;
 use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus};
 use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
 use crate::mgmt::interface::controller::ControllerSettings;
@@ -55,7 +53,7 @@ pub enum ManagementEvent {
     ///	controller has changed. When the controller is powered off the
     ///	Class of Device value will always be reported as zero.
     ClassOfDeviceChanged {
-        class: (ServiceClasses, DeviceClass),
+        class: (DeviceClass, ServiceClasses),
     },
 
     /// This event indicates that the local name of the controller has
@@ -240,7 +238,34 @@ pub enum ManagementEvent {
         entered: u8,
     },
 
+    /// This event indicates that a new identity resolving key has been
+    ///	generated for a remote device.
     ///
+    ///	The `store_hint` parameter indicates whether the host is expected
+    ///	to store the key persistently or not.
+    ///
+    ///	The `random_address` provides the resolvable random address that
+    ///	was resolved into an identity. A value of 00:00:00:00:00:00
+    ///	indicates that the identity resolving key was provided for
+    ///	a public address or static random address.
+    ///
+    ///	Once this event has been send for a resolvable random address,
+    ///	all further events mapping this device will send out using the
+    ///	identity address information.
+    ///
+    ///	This event also indicates that now the identity address should
+    ///	be used for commands instead of the resolvable random address.
+    ///
+    ///	It is possible that some devices allow discovering via its
+    ///	identity address, but after pairing using resolvable private
+    ///	address only. In such a case `store_hint` will be false` and the
+    ///	`random_address` will indicate `00:00:00:00:00:00`. For these devices,
+    ///	the Privacy Characteristic of the remote GATT database should
+    ///	be consulted to decide if the identity resolving key must be
+    ///	stored persistently or not.
+    ///
+    ///	Devices using Set Privacy command with the option 0x02 would
+    ///	be such type of device.
     NewIdentityResolvingKey {
         store_hint: bool,
         random_address: Address,
@@ -248,4 +273,164 @@ pub enum ManagementEvent {
         address_type: AddressType,
         value: [u8; 16],
     },
+
+    /// This event indicates that a new signature resolving key has been
+    ///	generated for either the master or slave device.
+    ///
+    ///	The `store_hint` parameter indicates whether the host is expected
+    ///	to store the key persistently or not.
+    ///
+    ///	The local keys are used for signing data to be sent to the
+    ///	remote device, whereas the remote keys are used to verify
+    ///	signatures received from the remote device.
+    ///
+    ///	The local signature resolving key will be generated with each
+    ///	pairing request. Only after receiving this event with the Type
+    ///	indicating a local key is it possible to use ATT Signed Write
+    ///	procedures.
+    ///
+    ///	The provided `address` and `address_type` are the identity of
+    ///	a device. So either its public address or static random address.
+    NewSignatureResolvingKey {
+        store_hint: bool,
+        address: Address,
+        address_type: AddressType,
+        key_type: SignatureResolvingKeyType,
+        value: [u8; 16],
+    },
+
+    /// This event indicates that a device has been added using the
+    ///	Add Device command.
+    ///
+    ///	The event will only be sent to management sockets other than the
+    ///	one through which the command was sent.
+    DeviceAdded {
+        address: Address,
+        address_type: AddressType,
+        action: AddDeviceAction,
+    },
+
+    /// This event indicates that a device has been removed using the
+    ///	Remove Device command.
+    ///
+    ///	The event will only be sent to management sockets other than the
+    ///	one through which the command was sent.
+    DeviceRemoved {
+        address: Address,
+        address_type: AddressType,
+    },
+
+    /// This event indicates a new set of connection parameters from
+    ///	a peripheral device.
+    ///
+    ///	The `store_hint` parameter indicates whether the host is expected
+    ///	to store this information persistently or not.
+    ///
+    ///	The `min_connection_interval`, `max_connection_interval`,
+    ///	`connection_latency` and `supervision_timeout` parameters are
+    ///	encoded as described in Core 4.1 spec, Vol 2, 7.7.65.3.
+    NewConnectionParams {
+        store_hint: bool,
+        param: ConnectionParams,
+    },
+
+    /// This event indicates that a new unconfigured controller has been
+    ///	added to the system. It is usually followed by a Read Controller
+    ///	Configuration Information command.
+    ///
+    ///	Only when a controller requires further configuration, it will
+    ///	be announced with this event. If it supports configuration, but
+    ///	does not require it, then an Index Added event will be used.
+    ///
+    ///	Once the Read Extended Controller Index List command has been
+    ///	used at least once, the Extended Index Added event will be
+    ///	send instead of this one.
+    UnconfiguredIndexAdded,
+
+    /// This event indicates that an unconfigured controller has been
+    ///	removed from the system.
+    ///
+    ///	Once the Read Extended Controller Index List command has been
+    ///	used at least once, the Extended Index Removed event will be
+    ///	send instead of this one.
+    UnconfiguredIndexRemoved,
+
+    /// This event indicates that one or more of the options for the
+    ///	controller configuration has changed.
+    NewConfigOptions {
+        missing_options: BitFlags<ControllerConfigOptions>,
+    },
+
+    /// This event indicates that a new controller index has been
+    ///	added to the system.
+    ///
+    ///	This event will only be used after Read Extended Controller Index
+    ///	List has been used at least once. If it has not been used, then
+    ///	Index Added and Unconfigured Index Added are sent instead.
+    ExtendedIndexAdded {
+        controller_type: ControllerType,
+        controller_bus: ControllerBus,
+    },
+
+    /// This event indicates that a new controller index has been
+    ///	removed from the system.
+    ///
+    ///	This event will only be used after Read Extended Controller Index
+    ///	List has been used at least once. If it has not been used, then
+    ///	Index Added and Unconfigured Index Added are sent instead.
+    ExtendedIndexRemoved {
+        controller_type: ControllerType,
+        controller_bus: ControllerBus,
+    },
+
+    /// This event is used when the Read Local Out Of Band Extended Data
+    ///	command has been used and some other user requested a new set
+    ///	of local out-of-band data. This allows for the original caller
+    ///	to adjust the data.
+    ///
+    ///	When LE Privacy is used and LE Secure Connections out-of-band
+    ///	data has been requested, then this event will be emitted every
+    ///	time the Resolvable Private Address (RPA) gets changed. The new
+    ///	RPA will be included in the `eir_data`.
+    ///
+    ///	The event will only be sent to management sockets other than the
+    ///	one through which the command was sent. It will additionally also
+    ///	only be sent to sockets that have used the command at least once.
+    LocalOutOfBandExtDataUpdated {
+        address_type: AddressType,
+        eir_data: Bytes,
+    },
+
+    /// This event indicates that an advertising instance has been added
+    ///	using the Add Advertising command.
+    ///
+    ///	The event will only be sent to management sockets other than the
+    ///	one through which the command was sent.
+    AdvertisingAdded { instance: u8 },
+
+    /// This event indicates that an advertising instance has been removed
+    ///	using the Remove Advertising command.
+    ///
+    ///	The event will only be sent to management sockets other than the
+    ///	one through which the command was sent.
+    AdvertisingRemoved { instance: u8 },
+
+    /// This event indicates that controller information has been updated
+    ///	and new values are used. This includes the local name, class of
+    ///	device, device id and LE address information.
+    ///
+    ///	This event will only be used after Read Extended Controller
+    ///	Information command has been used at least once. If it has not
+    ///	been used the legacy events are used.
+    ///
+    ///	The event will only be sent to management sockets other than the
+    ///	one through which the change was triggered.
+    ExtControllerInfoChanged { eir_data: Bytes },
+
+    /// This event indicates that an advertising instance has been added
+    ///	using the Add Advertising command.
+    ///
+    ///	The event will only be sent to management sockets other than the
+    ///	one through which the command was sent.
+    PhyConfigChanged { selected_phys: BitFlags<PhyFlag> },
 }

@@ -791,7 +791,7 @@ impl ManagementClient {
     pub async fn set_phy_config(
         &mut self,
         controller: Controller,
-        selected_phys: BitFlags<Phy>,
+        selected_phys: BitFlags<PhyFlag>,
     ) -> Result<()> {
         let mut param = BytesMut::with_capacity(4);
         param.put_u32_le(selected_phys.bits());

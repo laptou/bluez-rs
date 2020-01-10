@@ -133,7 +133,7 @@ impl ManagementClient {
     pub async fn load_connection_parameters(
         &mut self,
         controller: Controller,
-        connection_params: Vec<ConnectionParameters>,
+        connection_params: Vec<ConnectionParams>,
     ) -> Result<()> {
         let mut param = BytesMut::with_capacity(2 + connection_params.len() * 15);
         param.put_u16_le(connection_params.len() as u16);

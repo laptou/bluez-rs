@@ -185,7 +185,7 @@ pub enum AddDeviceAction {
 }
 
 #[derive(Debug)]
-pub struct ConnectionParameters {
+pub struct ConnectionParams {
     pub address: Address,
     pub address_type: AddressType,
     pub min_connection_interval: u16,
@@ -359,14 +359,14 @@ pub enum AdvertisingFlags {
 }
 
 pub struct PhyConfig {
-    pub supported_phys: BitFlags<Phy>,
-    pub configurable_phys: BitFlags<Phy>,
-    pub selected_phys: BitFlags<Phy>,
+    pub supported_phys: BitFlags<PhyFlag>,
+    pub configurable_phys: BitFlags<PhyFlag>,
+    pub selected_phys: BitFlags<PhyFlag>,
 }
 
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, BitFlags)]
-pub enum Phy {
+pub enum PhyFlag {
     BR1M1Slot = 1 << 0,
     BR1M3Slot = 1 << 1,
     BR1M5Slot = 1 << 2,
@@ -395,4 +395,13 @@ pub enum BlockedKeyType {
     LinkKey = 1 << 0,
     LongTermKey = 1 << 1,
     IdentityResolvingKey = 1 << 2,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
+#[repr(u8)]
+pub enum SignatureResolvingKeyType {
+    UnauthenticatedLocalCSRK = 0x00,
+    UnauthenticatedRemoteCSRK = 0x01,
+    AuthenticatedLocalCSRK = 0x02,
+    AuthenticatedRemoteCSRK,
 }
