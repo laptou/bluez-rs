@@ -1,9 +1,46 @@
 use std::ffi::CString;
 
-use bytes::Bytes;
+use bytes::Buf;
+use num_traits::FromPrimitive;
 
-pub(crate) fn bytes_to_c_str(bytes: Bytes) -> CString {
-    let iterator = bytes.into_iter();
-    let bytes = iterator.take_while(|&i| i != 0).collect();
-    return unsafe { CString::from_vec_unchecked(bytes) };
+use crate::Address;
+
+pub(crate) trait BufExt2: Buf {
+    fn get_address(&mut self) -> Address {
+        let mut arr = [0u8; 6];
+        self.copy_to_slice(&mut arr[..]);
+        Address::from(arr)
+    }
+
+    fn get_u8x16(&mut self) -> [u8; 16] {
+        let mut arr = [0u8; 16];
+        self.copy_to_slice(&mut arr[..]);
+        arr
+    }
+
+    fn get_bool(&mut self) -> bool {
+        self.get_u8() != 0
+    }
+
+    fn get_primitive_u8<T: FromPrimitive>(&mut self) -> T {
+        FromPrimitive::from_u8(self.get_u8()).unwrap()
+    }
+
+    fn get_primitive_u16_le<T: FromPrimitive>(&mut self) -> T {
+        FromPrimitive::from_u16(self.get_u16_le()).unwrap()
+    }
+
+    fn get_c_string(&mut self) -> CString {
+        let mut bytes = vec![];
+        let mut current = self.get_u8();
+        while current != 0 && self.has_remaining() {
+            bytes.push(current);
+            current = self.get_u8();
+        }
+        return unsafe { CString::from_vec_unchecked(bytes) };
+    }
+}
+
+impl<T: Buf> BufExt2 for T {
+
 }

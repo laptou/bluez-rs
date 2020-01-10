@@ -31,7 +31,7 @@ impl Controller {
 pub struct ControllerInfo {
     pub address: Address,
     pub bluetooth_version: u8,
-    pub manufacturer: [u8; 2],
+    pub manufacturer: u16,
     pub supported_settings: ControllerSettings,
     pub current_settings: ControllerSettings,
     pub class_of_device: (DeviceClass, ServiceClasses),

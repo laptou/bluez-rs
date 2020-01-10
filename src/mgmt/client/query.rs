@@ -2,7 +2,7 @@ use enumflags2::BitFlags;
 
 use crate::mgmt::interface::class::from_bytes as class_from_bytes;
 use crate::mgmt::interface::controller::ControllerInfoExt;
-use crate::util::bytes_to_c_str;
+use crate::util::BufExt2;
 
 use super::*;
 
@@ -81,12 +81,12 @@ impl ManagementClient {
                 Ok(ControllerInfo {
                     address: Address::from_slice(param.split_to(6).as_ref()),
                     bluetooth_version: param.get_u8(),
-                    manufacturer: param.split_to(2).as_ref().try_into().unwrap(),
+                    manufacturer: param.get_u16_le(),
                     supported_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
                     current_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
                     class_of_device: class_from_bytes(param.split_to(3).to_bytes()),
-                    name: bytes_to_c_str(param.split_to(249)),
-                    short_name: bytes_to_c_str(param),
+                    name: param.split_to(249).get_c_string(),
+                    short_name: param.get_c_string(),
                 })
             },
         )

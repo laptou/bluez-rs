@@ -3,7 +3,7 @@ use std::ffi::CString;
 use bytes::Bytes;
 
 use crate::Address;
-use crate::mgmt::client::{AddressType, DeviceFlags, DisconnectionReason};
+use crate::mgmt::client::{AddressType, DeviceFlags, DisconnectionReason, LinkKeyType, LongTermKeyType};
 use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus};
 use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
 use crate::mgmt::interface::controller::ControllerSettings;
@@ -68,7 +68,7 @@ pub enum ManagementEvent {
         store_hint: bool,
         address: Address,
         address_type: AddressType,
-        key_type: u8,
+        key_type: LinkKeyType,
         value: [u8; 16],
         pin_length: u8,
     },
@@ -79,14 +79,14 @@ pub enum ManagementEvent {
     ///	this would not be set if the authentication requirement was "No
     ///	Bonding").
     NewLongTermKey {
-        store_hint: u8,
+        store_hint: bool,
         address: Address,
         address_type: AddressType,
-        authenticated: bool,
+        key_type: LongTermKeyType,
         master: u8,
         encryption_size: u8,
         encryption_diversifier: u16,
-        random_number: [u8; 8],
+        random_number: u64,
         value: [u8; 16],
     },
 
@@ -184,7 +184,7 @@ pub enum ManagementEvent {
     DeviceFound {
         address: Address,
         address_type: AddressType,
-        rssi: u8,
+        rssi: i8,
         flags: DeviceFlags,
         eir_data: Bytes,
     },
@@ -236,4 +236,12 @@ pub enum ManagementEvent {
         passkey: u32,
         entered: u8,
     },
+
+    NewIdentityResolvingKey {
+        store_hint: bool,
+        random_address: Address,
+        address: Address,
+        address_type: AddressType,
+        value: [u8; 16]
+    }
 }

@@ -68,7 +68,7 @@ pub struct LinkKey {
     pub pin_length: u8,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
 #[repr(u8)]
 pub enum LinkKeyType {
     Combination = 0x00,
@@ -94,7 +94,7 @@ pub struct LongTermKey {
     pub value: [u8; 16],
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
 #[repr(u8)]
 pub enum LongTermKeyType {
     Unauthenticated = 0x00,
@@ -161,14 +161,14 @@ pub struct ClockInfo {
 }
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, BitFlags, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, BitFlags, Eq, PartialEq, FromPrimitive)]
 pub enum DeviceFlags {
     ConfirmName = 1 << 0,
     LegacyPairing = 1 << 1,
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
 pub enum DisconnectionReason {
     Unspecified = 0,
     Timeout = 1,
@@ -177,7 +177,7 @@ pub enum DisconnectionReason {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
 pub enum AddDeviceAction {
     BackgroundScan = 0,
     AllowConnect = 1,

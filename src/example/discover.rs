@@ -2,9 +2,9 @@ extern crate bluez;
 
 use std::error::Error;
 
-use futures::stream::{self, StreamExt};
+use async_std::task::block_on;
 
-use bluez::client::ManagementClient;
+use bluez::client::{AddressType, ManagementClient};
 use bluez::interface::controller::*;
 use bluez::interface::event::ManagementEvent;
 
@@ -19,15 +19,18 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     let controllers = client.get_controller_list().await?;
-    let mut controllers_info = stream::iter(controllers)
-        .map(async |controller| {
+
+    // async closures aren't stable yet so we'll just block on each one
+    // instead of using streams
+    let controllers_info = controllers
+        .into_iter()
+        .map(|controller|
             (
                 controller,
-                client.get_controller_info(*controller).await.unwrap(),
-            );
-        })
-        .collect::<Vec<(Controller, ControllerInfo)>>()
-        .await;
+                block_on(client.get_controller_info(controller)).unwrap(),
+            )
+        )
+        .collect::<Vec<(Controller, ControllerInfo)>>();
 
     println!("\navailable controllers:");
 
@@ -50,19 +53,25 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         .nth(0)
         .expect("no usable controllers found");
 
-    // power it on
-    client.set_powered(controller, true);
+    if !info.current_settings.contains(ControllerSetting::Powered) {
+        println!("powering on bluetooth controller {}", controller);
+        client.set_powered(controller, true).await?;
+    }
 
     // scan for some devices
     // to do this we'll need to listen for the Device Found event, so we will set a handler
     client.set_handler(Some(Box::new(|controller, event| {
         match event {
             ManagementEvent::DeviceFound { address, address_type, flags, rssi, .. } => {
-                println!()
+                println!("found device {:?} ({:?})", address, address_type);
+                println!("\tflags: {:?}", flags);
+                println!("\trssi: {:?}", rssi);
             }
             _ => ()
         }
     })));
+
+    client.start_discovery(controller, AddressType::BREDR | AddressType::LEPublic | AddressType::LERandom).await?;
 
     Ok(())
 }
