@@ -38,9 +38,7 @@ impl BlueZClient {
         })
     }
 
-    pub fn new_with_handler(
-        handler: Box<dyn FnMut(Controller, &Event) -> ()>,
-    ) -> Result<Self> {
+    pub fn new_with_handler(handler: Box<dyn FnMut(Controller, &Event) -> ()>) -> Result<Self> {
         Ok(BlueZClient {
             socket: ManagementSocket::open()?,
             handler: Some(handler),
@@ -51,10 +49,7 @@ impl BlueZClient {
     /// an event. CommandComplete and CommandStatus events will NOT reach this handler;
     /// instead their contents can be accessed as the return value of the method
     /// that you called.
-    pub fn set_handler(
-        &mut self,
-        handler: Option<Box<dyn FnMut(Controller, &Event) -> ()>>,
-    ) {
+    pub fn set_handler(&mut self, handler: Option<Box<dyn FnMut(Controller, &Event) -> ()>>) {
         self.handler = handler;
     }
 
@@ -111,9 +106,7 @@ impl BlueZClient {
                     opcode: evt_opcode,
                 } if opcode == evt_opcode => {
                     return match status {
-                        CommandStatus::Success => {
-                            callback(response.controller, Some(param))
-                        }
+                        CommandStatus::Success => callback(response.controller, Some(param)),
                         _ => Err(Error::CommandError { opcode, status }),
                     }
                 }

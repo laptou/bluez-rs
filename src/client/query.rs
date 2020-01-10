@@ -71,25 +71,20 @@ impl BlueZClient {
     ///
     ///	If no short name is set the Short_Name parameter will be all zeroes.
     pub async fn get_controller_info(&mut self, controller: Controller) -> Result<ControllerInfo> {
-        self.exec_command(
-            Command::ReadControllerInfo,
-            controller,
-            None,
-            |_, param| {
-                let mut param = param.unwrap();
+        self.exec_command(Command::ReadControllerInfo, controller, None, |_, param| {
+            let mut param = param.unwrap();
 
-                Ok(ControllerInfo {
-                    address: Address::from_slice(param.split_to(6).as_ref()),
-                    bluetooth_version: param.get_u8(),
-                    manufacturer: param.get_u16_le(),
-                    supported_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
-                    current_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
-                    class_of_device: class_from_bytes(param.split_to(3).to_bytes()),
-                    name: param.split_to(249).get_c_string(),
-                    short_name: param.get_c_string(),
-                })
-            },
-        )
+            Ok(ControllerInfo {
+                address: Address::from_slice(param.split_to(6).as_ref()),
+                bluetooth_version: param.get_u8(),
+                manufacturer: param.get_u16_le(),
+                supported_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
+                current_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
+                class_of_device: class_from_bytes(param.split_to(3).to_bytes()),
+                name: param.split_to(249).get_c_string(),
+                short_name: param.get_c_string(),
+            })
+        })
         .await
     }
 
@@ -105,22 +100,17 @@ impl BlueZClient {
         &mut self,
         controller: Controller,
     ) -> Result<Vec<(Address, AddressType)>> {
-        self.exec_command(
-            Command::GetConnections,
-            controller,
-            None,
-            |_, param| {
-                let mut param = param.unwrap();
-                let count = param.get_u16_le() as usize;
-                let mut connections = Vec::with_capacity(count);
+        self.exec_command(Command::GetConnections, controller, None, |_, param| {
+            let mut param = param.unwrap();
+            let count = param.get_u16_le() as usize;
+            let mut connections = Vec::with_capacity(count);
 
-                for _ in 0..count {
-                    connections.push((param.get_address(), param.get_primitive_u8()));
-                }
+            for _ in 0..count {
+                connections.push((param.get_address(), param.get_primitive_u8()));
+            }
 
-                Ok(connections)
-            },
-        )
+            Ok(connections)
+        })
         .await
     }
 
@@ -384,19 +374,14 @@ impl BlueZClient {
     ///	Disabling BR/EDR completely or respectively LE has no impact
     ///	on the PHY configuration. It is remembered over power cycles.
     pub async fn get_phy_config(&mut self, controller: Controller) -> Result<PhyConfig> {
-        self.exec_command(
-            Command::GetPhyConfig,
-            controller,
-            None,
-            |_, param| {
-                let mut param = param.unwrap();
-                Ok(PhyConfig {
-                    supported_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
-                    configurable_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
-                    selected_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
-                })
-            },
-        )
+        self.exec_command(Command::GetPhyConfig, controller, None, |_, param| {
+            let mut param = param.unwrap();
+            Ok(PhyConfig {
+                supported_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
+                configurable_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
+                selected_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
+            })
+        })
         .await
     }
 }

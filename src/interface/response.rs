@@ -28,12 +28,12 @@ impl Response {
             event: match evt_code {
                 0x0001 | 0x0002 => {
                     let opcode = buf.get_u16_le();
-                    let opcode = FromPrimitive::from_u16(opcode)
-                        .ok_or(Error::UnknownOpcode { opcode })?;
+                    let opcode =
+                        FromPrimitive::from_u16(opcode).ok_or(Error::UnknownOpcode { opcode })?;
 
                     let status = buf.get_u8();
-                    let status = FromPrimitive::from_u8(status)
-                        .ok_or(Error::UnknownStatus { status })?;
+                    let status =
+                        FromPrimitive::from_u8(status).ok_or(Error::UnknownStatus { status })?;
 
                     if evt_code == 0x0001 {
                         Event::CommandComplete {

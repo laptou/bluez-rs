@@ -28,6 +28,7 @@ impl Controller {
     }
 }
 
+#[derive(Debug)]
 pub struct ControllerInfo {
     pub address: Address,
     pub bluetooth_version: u8,

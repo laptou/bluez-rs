@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "bluez"
-version = "0.0.3"
+version = "0.1.0"
 dependencies = [
  "async-std 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitvec 0.16.2 (registry+https://github.com/rust-lang/crates.io-index)",

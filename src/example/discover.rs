@@ -91,7 +91,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         )
         .await?;
 
-    for _ in 0..5000 {
+    for _ in 0..50 {
         // don't block if there's no data, just keep looping and sleeping
         client.process(false).await?;
         std::thread::sleep(Duration::from_millis(50));

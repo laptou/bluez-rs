@@ -7,6 +7,9 @@ A library for controlling Bluetooth on Linux.
 [Documentation](https://docs.rs/bluez)
 [Example](https://github.com/laptou/bluez-rs/blob/master/src/example/discover.rs)
 
+To run the example, clone this repository, `cargo build`, and then `sudo target/debug/discover`.
+`sudo` is necessary because many of the functions of this crate are not possible without the `CAP_NET_RAW` capability.
+
 ## License
 This project is licensed under the MIT license.
 

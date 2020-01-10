@@ -16,28 +16,23 @@ impl BlueZClient {
     ///	is powered down. After each power-cycle it is required to call
     ///	this command again to get updated values.
     pub async fn read_local_oob_data(&mut self, controller: Controller) -> Result<OutOfBandData> {
-        self.exec_command(
-            Command::ReadLocalOutOfBand,
-            controller,
-            None,
-            |_, param| {
-                let mut param = param.unwrap();
-                Ok(OutOfBandData {
-                    hash_192: param.split_to(16).as_ref().try_into().unwrap(),
-                    randomizer_192: param.split_to(16).as_ref().try_into().unwrap(),
-                    hash_256: if param.has_remaining() {
-                        Some(param.split_to(16).as_ref().try_into().unwrap())
-                    } else {
-                        None
-                    },
-                    randomizer_256: if param.has_remaining() {
-                        Some(param.split_to(16).as_ref().try_into().unwrap())
-                    } else {
-                        None
-                    },
-                })
-            },
-        )
+        self.exec_command(Command::ReadLocalOutOfBand, controller, None, |_, param| {
+            let mut param = param.unwrap();
+            Ok(OutOfBandData {
+                hash_192: param.split_to(16).as_ref().try_into().unwrap(),
+                randomizer_192: param.split_to(16).as_ref().try_into().unwrap(),
+                hash_256: if param.has_remaining() {
+                    Some(param.split_to(16).as_ref().try_into().unwrap())
+                } else {
+                    None
+                },
+                randomizer_256: if param.has_remaining() {
+                    Some(param.split_to(16).as_ref().try_into().unwrap())
+                } else {
+                    None
+                },
+            })
+        })
         .await
     }
 
