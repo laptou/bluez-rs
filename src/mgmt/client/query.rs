@@ -298,4 +298,35 @@ impl ManagementClient {
         )
         .await
     }
+
+    ///	by this command.
+    pub async fn get_ext_controller_info(
+        &mut self,
+        controller: Controller,
+    ) -> Result<Vec<(Controller, ControllerType, ControllerBus)>> {
+        todo!()
+    }
+
+    /// If BR/EDR is supported, then BR 1M 1-Slot is supported by
+    ///	default and can also not be deselected. If LE is supported,
+    ///	then LE 1M TX and LE 1M RX are supported by default.
+    ///
+    ///	Disabling BR/EDR completely or respectively LE has no impact
+    ///	on the PHY configuration. It is remembered over power cycles.
+    pub async fn get_phy_config(&mut self, controller: Controller) -> Result<PhyConfig> {
+        self.exec_command(
+            ManagementCommand::GetPhyConfig,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.unwrap();
+                Ok(PhyConfig {
+                    supported_phys: BitFlags::from_bits_truncate(param.get_u16_le()),
+                    configurable_phys: BitFlags::from_bits_truncate(param.get_u16_le()),
+                    selected_phys: BitFlags::from_bits_truncate(param.get_u16_le()),
+                })
+            },
+        )
+        .await
+    }
 }

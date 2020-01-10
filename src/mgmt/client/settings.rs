@@ -753,13 +753,54 @@ impl ManagementClient {
         let mut param = BytesMut::from(address.as_ref());
 
         self.exec_command(
-            ManagementCommand::SetExternalConfig,
+            ManagementCommand::SetPublicAddress,
             controller,
             Some(param.to_bytes()),
             |_, param| {
                 let mut param = param.unwrap();
                 Ok(BitFlags::from_bits_truncate(param.get_u32_le()))
             },
+        )
+        .await
+    }
+
+    ///	This command is used to set the appearance value of a controller.
+    ///
+    ///	This command can be used when the controller is not
+    ///	powered and all settings will be programmed once powered.
+    ///
+    ///	The value of appearance will be remembered when switching
+    ///	the controller off and back on again. So the appearance only
+    ///	have to be set once when a new controller is found and will
+    ///	stay until removed.
+    // todo: implement appearance as enum instead of u16
+    pub async fn set_appearance(&mut self, controller: Controller, appearance: u16) -> Result<()> {
+        let mut param = BytesMut::with_capacity(2);
+        param.put_u16_le(appearance);
+
+        self.exec_command(
+            ManagementCommand::SetAppearance,
+            controller,
+            Some(param.to_bytes()),
+            |_, _| Ok(()),
+        )
+        .await
+    }
+
+    ///	on the PHY configuration. It is remembered over power cycles.
+    pub async fn set_phy_config(
+        &mut self,
+        controller: Controller,
+        selected_phys: BitFlags<Phy>,
+    ) -> Result<()> {
+        let mut param = BytesMut::with_capacity(4);
+        param.put_u32_le(selected_phys.bits());
+
+        self.exec_command(
+            ManagementCommand::SetPhyConfig,
+            controller,
+            Some(param.to_bytes()),
+            |_, _| Ok(()),
         )
         .await
     }

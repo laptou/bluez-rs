@@ -106,4 +106,34 @@ impl ManagementClient {
         )
         .await
     }
+
+    ///	This command is used to start the process of discovering remote
+    ///	devices using the limited discovery procedure. A Device Found event
+    ///	will be sent for each discovered device.
+    ///
+    ///	The limited discovery uses active scanning for Low Energy scanning
+    ///	and will search for devices with the limited discoverability flag
+    ///	configured. On BR/EDR it uses LIAC and filters on the limited
+    ///	discoverability flag of the class of device.
+    ///
+    ///	When the discovery procedure starts the Discovery event will
+    ///	notify this similar to Start Discovery.
+    ///
+    ///	This command can only be used when the controller is powered.
+    pub async fn start_limited_discovery(
+        &mut self,
+        controller: Controller,
+        address_types: BitFlags<AddressTypeFlag>,
+    ) -> Result<BitFlags<AddressTypeFlag>> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(address_types.bits());
+
+        self.exec_command(
+            ManagementCommand::StartLimitedDiscovery,
+            controller,
+            Some(param.to_bytes()),
+            |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),
+        )
+        .await
+    }
 }

@@ -357,3 +357,42 @@ pub enum AdvertisingFlags {
     /// Indicates support for advertising in secondary channel in LE CODED PHY.
     SecondaryChannelLECoded = 1 << 9,
 }
+
+pub struct PhyConfig {
+    pub supported_phys: BitFlags<Phy>,
+    pub configurable_phys: BitFlags<Phy>,
+    pub selected_phys: BitFlags<Phy>,
+}
+
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, BitFlags)]
+pub enum Phy {
+    BR1M1Slot = 1 << 0,
+    BR1M3Slot = 1 << 1,
+    BR1M5Slot = 1 << 2,
+    EDR2M1Slot = 1 << 3,
+    EDR2M3Slot = 1 << 4,
+    EDR2M5Slot = 1 << 5,
+    EDR3M1Slot = 1 << 6,
+    EDR3M3Slot = 1 << 7,
+    EDR3M5Slot = 1 << 8,
+    LE1MTx = 1 << 9,
+    LE1MRx = 1 << 10,
+    LE2MTx = 1 << 11,
+    LE2MRx = 1 << 12,
+    LECodedTx = 1 << 13,
+    LECodedRx = 1 << 14,
+}
+
+pub struct BlockedKey {
+    pub key_type: BlockedKeyType,
+    pub value: [u8; 16],
+}
+
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
+pub enum BlockedKeyType {
+    LinkKey = 1 << 0,
+    LongTermKey = 1 << 1,
+    IdentityResolvingKey = 1 << 2,
+}

@@ -155,4 +155,33 @@ impl ManagementClient {
         )
         .await
     }
+
+    /// This command is used to feed the kernel a list of keys that
+    ///	are known to be vulnerable.
+    ///
+    ///	If the pairing procedure produces any of these keys, they will be
+    ///	silently dropped and any attempt to enable encryption rejected.
+    ///
+    /// This command can be used when the controller is not powered.
+    pub async fn load_blocked_keys(
+        &mut self,
+        controller: Controller,
+        keys: Vec<BlockedKey>,
+    ) -> Result<()> {
+        let mut param = BytesMut::with_capacity(2 + keys.len() * 17);
+        param.put_u16_le(keys.len() as u16);
+
+        for key in keys {
+            param.put_u8(key.key_type as u8);
+            param.put_slice(&key.value[..]);
+        }
+
+        self.exec_command(
+            ManagementCommand::LoadBlockedKeys,
+            controller,
+            Some(param.to_bytes()),
+            |_, _| Ok(()),
+        )
+        .await
+    }
 }
