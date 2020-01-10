@@ -96,6 +96,7 @@ impl ManagementSocket {
 
     /// Returns either an error or the number of bytes that were sent.
     pub async fn send(&mut self, request: ManagementRequest) -> Result<usize, io::Error> {
+        dbg!(&request);
         let buf: Bytes = request.into();
         self.writer.write(&buf).await
     }

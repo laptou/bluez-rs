@@ -1,4 +1,4 @@
-use std::fmt::Formatter;
+use std::fmt;
 
 #[repr(u8)]
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
@@ -27,7 +27,7 @@ pub enum ManagementCommandStatus {
 }
 
 #[repr(u16)]
-#[derive(Eq, PartialEq, FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
+#[derive(Eq, PartialEq, FromPrimitive, ToPrimitive, Copy, Clone)]
 pub enum ManagementCommand {
     ReadVersionInfo = 0x0001,
     ReadSupportedCommands,
@@ -79,7 +79,6 @@ pub enum ManagementCommand {
     LoadIdentityResolvingKeys,
     GetConnectionInfo,
     GetClockInfo,
-    // this much left!
     AddDevice,
     RemoveDevice,
     LoadConnectionParameters,
@@ -91,6 +90,7 @@ pub enum ManagementCommand {
     ReadLocalOutOfBandExtended,
     ReadExtendedControllerIndexList,
     ReadAdvertisingFeatures,
+    // this much left!
     AddAdvertising,
     RemoveAdvertising,
     GetAdvertisingSizeInfo,
@@ -102,8 +102,8 @@ pub enum ManagementCommand {
     LoadBlockedKeys,
 }
 
-impl ::std::fmt::LowerHex for ManagementCommandStatus {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), ::std::fmt::Error> {
+impl fmt::LowerHex for ManagementCommandStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "{:x}", *self as u8)
     }
 }

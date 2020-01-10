@@ -109,22 +109,21 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, param| {
                 let mut param = param.unwrap();
-
                 Ok(ConnectionInfo {
                     address: Address::from_slice(param.split_to(6).as_ref()),
                     address_type: FromPrimitive::from_u8(param.get_u8()).unwrap(),
                     rssi: if param[0] != 127 {
-                        Some(param.get_u8())
+                        Some(param.get_i8())
                     } else {
                         None
                     },
                     tx_power: if param[0] != 127 {
-                        Some(param.get_u8())
+                        Some(param.get_i8())
                     } else {
                         None
                     },
                     max_tx_power: if param[0] != 127 {
-                        Some(param.get_u8())
+                        Some(param.get_i8())
                     } else {
                         None
                     },
@@ -254,6 +253,47 @@ impl ManagementClient {
                     supported_options: BitFlags::from_bits_truncate(param.get_u32_le()),
                     missing_options: BitFlags::from_bits_truncate(param.get_u32_le()),
                 })
+            },
+        )
+        .await
+    }
+
+    /// This command returns the list of currently known controllers. It
+    ///	includes configured, unconfigured and alternate controllers.
+    ///
+    ///	Controllers added or removed after calling this command can be
+    ///	be monitored using the Extended Index Added and Extended Index
+    ///	Removed events.
+    ///
+    ///	The existing Index Added, Index Removed, Unconfigured Index Added
+    ///	and Unconfigured Index Removed are no longer sent after this command
+    ///	has been used at least once.
+    ///
+    ///	Instead of calling Read Controller Index List and Read Unconfigured
+    ///	Controller Index List, this command combines all the information
+    ///	and can be used to retrieve the controller list.
+    ///
+    /// Controllers marked as RAW only operation are currently not listed
+    ///	by this command.
+    pub async fn get_ext_controller_list(
+        &mut self,
+    ) -> Result<Vec<(Controller, ControllerType, ControllerBus)>> {
+        self.exec_command(
+            ManagementCommand::ReadExtendedControllerIndexList,
+            Controller::none(),
+            None,
+            |_, param| {
+                let mut param = param.unwrap();
+                let count = param.get_u16_le() as usize;
+                let mut index = Vec::with_capacity(count);
+                for _ in 0..count {
+                    index.push((
+                        Controller(param.get_u16_le()),
+                        FromPrimitive::from_u8(param.get_u8()).unwrap(),
+                        FromPrimitive::from_u8(param.get_u8()).unwrap(),
+                    ));
+                }
+                Ok(index)
             },
         )
         .await
