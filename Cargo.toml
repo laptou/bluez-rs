@@ -26,3 +26,8 @@ name = "discover"
 path = "src/example/discover.rs"
 doc = false
 
+[[bin]]
+name = "list"
+path = "src/example/list.rs"
+doc = false
+

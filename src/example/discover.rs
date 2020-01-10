@@ -1,3 +1,8 @@
+//! This example powers on the first available controller
+//! and then starts searching for devices.
+//!
+//! Copyright (c) 2020 Ibiyemi Abiodun
+
 extern crate bluez;
 
 use std::error::Error;
@@ -13,45 +18,20 @@ use bluez::interface::event::Event;
 pub async fn main() -> Result<(), Box<dyn Error>> {
     let mut client = BlueZClient::new().unwrap();
 
-    let version = client.get_mgmt_version().await?;
-    println!(
-        "management version: {}.{}",
-        version.version, version.revision
-    );
-
     let controllers = client.get_controller_list().await?;
 
-    // async closures aren't stable yet so we'll just block on each one
-    // instead of using streams
-    let controllers_info = controllers
-        .into_iter()
-        .map(|controller| {
-            (
-                controller,
-                block_on(client.get_controller_info(controller)).unwrap(),
-            )
-        })
-        .collect::<Vec<(Controller, ControllerInfo)>>();
-
-    println!("\navailable controllers:");
-
-    for (controller, info) in &controllers_info {
-        println!("\t{:?}", controller);
-
-        println!("\t\tname: {:?}", info.name);
-        println!("\t\tshort name: {:?}", info.short_name);
-        println!("\t\taddress: {:?}", info.address);
-        println!("\t\tsupported settings: {:?}", info.supported_settings);
-        println!("\t\tcurrent settings: {:?}", info.current_settings);
-        println!("\t\tmanufacturer: 0x{:04x}", info.manufacturer);
-        println!("\t\tbluetooth version: 0x{:02x}", info.bluetooth_version);
-        println!("\t\tclass of device: {:?}", info.class_of_device);
-    }
-
     // find the first controller we can power on
-    let (controller, info) = controllers_info
+    let (controller, info) = controllers
         .into_iter()
-        .filter(|(_, info)| info.supported_settings.contains(ControllerSetting::Powered))
+        .filter_map( |controller| {
+            let info = block_on(client.get_controller_info(controller)).ok()?;
+
+            if info.supported_settings.contains(ControllerSetting::Powered) {
+                Some((controller, info))
+            } else {
+                None
+            }
+        })
         .nth(0)
         .expect("no usable controllers found");
 
@@ -69,6 +49,10 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             AddressTypeFlag::BREDR | AddressTypeFlag::LEPublic | AddressTypeFlag::LERandom,
         )
         .await?;
+
+    client.set_handler(|controller, event| {
+
+    });
 
     // just wait for discovery forever
     loop {

@@ -76,6 +76,7 @@
 //! # }
 //! ```
 //!
+//! # The `process()` loop
 //! Since [`process()`][process] returns the latest response to be processed, you may be wondering
 //! why you would use a callback at all; isn't it easier to just take the return values inside
 //! the loop?
@@ -89,7 +90,7 @@
 //! just calls [`process()`][process] repeatedly until a relevant Command Status event appears, and
 //! [`process()`][process] will call your handler.
 //!
-//! # Pitfall
+//! # Permissions
 //! Commands that just query information, such as
 //! [`BlueZClient::get_controller_info`](crate::client::BlueZClient::get_controller_info),
 //! will usually work. However, commands that try to change any settings, such as
