@@ -30,9 +30,9 @@
 //!
 //! Aside from directly issuing commands to the Bluetooth controller and recieving a response,
 //! you may want to listen for events or perform processes that span multiple commands. For
-//! this to work, you need to supply a callback to your client and call [`process`]. The callback
+//! this to work, you need to supply a callback to your client and call [`process()`][process]. The callback
 //! will be called any time that the client processes an event (excluding events that indicate that
-//! a command has completed), while [`process`] will cause the client to check the underlying
+//! a command has completed), while [`process()`][process] will cause the client to check the underlying
 //! socket for new input.
 //!
 //! ```no_run
@@ -69,7 +69,6 @@
 //!     .await?;
 //!
 //! for _ in 0..5000 {
-//!     // don't block if there's no data, just keep looping and sleeping
 //!     client.process().await?;
 //!     std::thread::sleep(Duration::from_millis(50));
 //! }
@@ -77,7 +76,7 @@
 //! # }
 //! ```
 //!
-//! Since [`process`] returns the latest response to be processed, you may be wondering
+//! Since [`process()`][process] returns the latest response to be processed, you may be wondering
 //! why you would use a callback at all; isn't it easier to just take the return values inside
 //! the loop?
 //!
@@ -87,8 +86,8 @@
 //! for the span of each command (i.e., between the instruction being sent to the kernel
 //! and the kernel sending a Command Status event), but another event may arrive before
 //! the Command Status event, a way is needed to capture such an event. Internally, each command
-//! just calls [`process`] repeatedly until a relevant Command Status event appears, and
-//! [`process`] will call your handler.
+//! just calls [`process()`][process] repeatedly until a relevant Command Status event appears, and
+//! [`process()`][process] will call your handler.
 //!
 //! # Pitfalls
 //! Commands that just query information, such as
@@ -111,7 +110,7 @@ pub use result::{Error, Result};
 pub mod client;
 pub mod interface;
 pub mod result;
-pub mod socket;
 
+mod socket;
 mod address;
 mod util;
