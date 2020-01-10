@@ -20,7 +20,7 @@ mod query;
 mod class;
 mod discovery;
 mod oob;
-mod keys;
+mod load;
 mod advertising;
 mod interact;
 mod params;

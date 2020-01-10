@@ -158,4 +158,35 @@ impl ManagementClient {
         )
             .await
     }
+
+    ///	This command returns the list of currently unconfigured controllers.
+    ///	Unconfigured controllers added after calling this command can be
+    ///	monitored using the Unconfigured Index Added event.
+    ///
+    ///	An unconfigured controller can either move to a configured state
+    ///	by indicating Unconfigured Index Removed event followed by an
+    ///	Index Added event; or it can be removed from the system which
+    ///	would be indicated by the Unconfigured Index Removed event.
+    ///
+    ///	Only controllers that require configuration will be listed with
+    ///	this command. A controller that is fully configured will not
+    ///	be listed even if it supports configuration changes.
+    pub async fn get_unconfigured_controller_list(&mut self) -> Result<Vec<Controller>> {
+        self.exec_command(
+            ManagementCommand::ReadUnconfiguredControllerIndexList,
+            Controller::none(),
+            None,
+            |_, param| {
+                let mut param = param.unwrap();
+                let count = param.get_u16_le() as usize;
+                let mut controllers = vec![Controller::none(); count];
+                for i in 0..count {
+                    controllers[i] = Controller(param.get_u16_le());
+                }
+
+                Ok(controllers)
+            },
+        )
+            .await
+    }
 }

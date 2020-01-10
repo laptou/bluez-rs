@@ -117,4 +117,42 @@ impl ManagementClient {
         )
             .await
     }
+
+    ///	This command is used to load connection parameters from several
+    ///	devices into kernel. Currently this is only supported on controllers
+    ///	with Low Energy support.
+    ///
+    ///	The provided Address and Address_Type are the identity of
+    ///	a device. So either its public address or static random address.
+    ///
+    ///	The `min_connection_interval`, `max_connection_interval`,
+    ///	`connection_latency` and `supervision_timeout` parameters should
+    ///	be configured as described in Core 4.1 spec, Vol 2, 7.8.12.
+    ///
+    ///	This command can be used when the controller is not powered.
+    pub async fn load_connection_parameters(
+        &mut self,
+        controller: Controller,
+        connection_params: Vec<ConnectionParameters>,
+    ) -> Result<()> {
+        let mut param = BytesMut::with_capacity(2 + connection_params.len() * 15);
+        param.put_u16_le(connection_params.len() as u16);
+
+        for cxn_param in connection_params {
+            param.put_slice(cxn_param.address.as_ref());
+            param.put_u8(cxn_param.address_type as u8);
+            param.put_u16_le(cxn_param.min_connection_interval);
+            param.put_u16_le(cxn_param.max_connection_interval);
+            param.put_u16_le(cxn_param.connection_latency);
+            param.put_u16_le(cxn_param.supervision_timeout);
+        }
+
+        self.exec_command(
+            ManagementCommand::LoadConnectionParameters,
+            controller,
+            Some(param.to_bytes()),
+            |_, _| Ok(()),
+        )
+            .await
+    }
 }

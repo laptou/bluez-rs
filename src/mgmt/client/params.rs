@@ -1,5 +1,6 @@
-use crate::Address;
 use enumflags2::BitFlags;
+
+use crate::Address;
 
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
@@ -167,4 +168,23 @@ pub enum DisconnectionReason {
     TerminatedLocal = 2,
     TerminatedRemote = 3
 }
+
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum AddDeviceAction {
+    BackgroundScan = 0,
+    AllowConnect = 1,
+    AutoConnect = 2,
+}
+
+#[derive(Debug)]
+pub struct ConnectionParameters {
+    pub address: Address,
+    pub address_type: AddressType,
+    pub min_connection_interval: u16,
+    pub max_connection_interval: u16,
+    pub connection_latency: u16,
+    pub supervision_timeout: u16,
+}
+
 

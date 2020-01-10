@@ -8,6 +8,21 @@ fn address_callback(_: Controller, param: Option<Bytes>) -> Result<(Address, Add
     ))
 }
 
+fn address_bytes(address: Address, address_type: AddressType) -> Bytes {
+    let mut param = BytesMut::with_capacity(7);
+    param.put_slice(address.as_ref());
+    param.put_u8(address_type as u8);
+    param.to_bytes()
+}
+
+fn address_bytes_with_u8(address: Address, address_type: AddressType, extra: u8) -> Bytes {
+    let mut param = BytesMut::with_capacity(8);
+    param.put_slice(address.as_ref());
+    param.put_u8(address_type as u8);
+    param.put_u8(extra as u8);
+    param.to_bytes()
+}
+
 impl ManagementClient {
     ///	This command is only valid during device discovery and is
     ///	expected for each Device Found event with the Confirm Name
@@ -26,15 +41,10 @@ impl ManagementClient {
         address_type: AddressType,
         name_known: bool,
     ) -> Result<(Address, AddressType)> {
-        let mut param = BytesMut::with_capacity(8);
-        param.put_slice(address.as_ref());
-        param.put_u8(address_type as u8);
-        param.put_u8(name_known as u8);
-
         self.exec_command(
             ManagementCommand::ConfirmName,
             controller,
-            Some(param.to_bytes()),
+            Some(address_bytes_with_u8(address, address_type, name_known as u8)),
             address_callback,
         )
             .await
@@ -60,14 +70,10 @@ impl ManagementClient {
         address: Address,
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
-        let mut param = BytesMut::with_capacity(7);
-        param.put_slice(address.as_ref());
-        param.put_u8(address_type as u8);
-
         self.exec_command(
             ManagementCommand::BlockDevice,
             controller,
-            Some(param.to_bytes()),
+            Some(address_bytes(address, address_type)),
             address_callback,
         )
             .await
@@ -86,14 +92,10 @@ impl ManagementClient {
         address: Address,
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
-        let mut param = BytesMut::with_capacity(7);
-        param.put_slice(address.as_ref());
-        param.put_u8(address_type as u8);
-
         self.exec_command(
             ManagementCommand::UnblockDevice,
             controller,
-            Some(param.to_bytes()),
+            Some(address_bytes(address, address_type)),
             address_callback,
         )
             .await
@@ -109,14 +111,10 @@ impl ManagementClient {
         address: Address,
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
-        let mut param = BytesMut::with_capacity(7);
-        param.put_slice(address.as_ref());
-        param.put_u8(address_type as u8);
-
         self.exec_command(
             ManagementCommand::Disconnect,
             controller,
-            Some(param.to_bytes()),
+            Some(address_bytes(address, address_type)),
             address_callback,
         )
             .await
@@ -222,15 +220,10 @@ impl ManagementClient {
         address_type: AddressType,
         io_capability: IoCapability,
     ) -> Result<(Address, AddressType)> {
-        let mut param = BytesMut::with_capacity(8);
-        param.put_slice(address.as_ref());
-        param.put_u8(address_type as u8);
-        param.put_u8(io_capability as u8);
-
         self.exec_command(
             ManagementCommand::PairDevice,
             controller,
-            Some(param.to_bytes()),
+            Some(address_bytes_with_u8(address, address_type, io_capability as u8)),
             address_callback,
         )
             .await
@@ -246,14 +239,10 @@ impl ManagementClient {
         address: Address,
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
-        let mut param = BytesMut::with_capacity(7);
-        param.put_slice(address.as_ref());
-        param.put_u8(address_type as u8);
-
         self.exec_command(
             ManagementCommand::CancelPairDevice,
             controller,
-            Some(param.to_bytes()),
+            Some(address_bytes(address, address_type)),
             address_callback,
         )
             .await
@@ -282,15 +271,10 @@ impl ManagementClient {
         address_type: AddressType,
         disconnect: bool,
     ) -> Result<(Address, AddressType)> {
-        let mut param = BytesMut::with_capacity(8);
-        param.put_slice(address.as_ref());
-        param.put_u8(address_type as u8);
-        param.put_u8(disconnect as u8);
-
         self.exec_command(
             ManagementCommand::UnpairDevice,
             controller,
-            Some(param.to_bytes()),
+            Some(address_bytes_with_u8(address, address_type, disconnect as u8)),
             address_callback,
         )
             .await
@@ -305,10 +289,6 @@ impl ManagementClient {
         address_type: AddressType,
         reply: bool,
     ) -> Result<(Address, AddressType)> {
-        let mut param = BytesMut::with_capacity(7);
-        param.put_slice(address.as_ref());
-        param.put_u8(address_type as u8);
-
         self.exec_command(
             if reply {
                 ManagementCommand::UserConfirmationReply
@@ -316,7 +296,7 @@ impl ManagementClient {
                 ManagementCommand::UserConfirmationNegativeReply
             },
             controller,
-            Some(param.to_bytes()),
+            Some(address_bytes(address, address_type)),
             address_callback,
         )
             .await
@@ -433,14 +413,77 @@ impl ManagementClient {
         address: Address,
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
-        let mut param = BytesMut::with_capacity(39);
-        param.put_slice(address.as_ref());
-        param.put_u8(address_type as u8);
-
         self.exec_command(
             ManagementCommand::RemoveRemoteOutOfBand,
             controller,
-            Some(param.to_bytes()),
+            Some(address_bytes(address, address_type)),
+            address_callback,
+        )
+            .await
+    }
+
+    ///	This command is used to add a device to the action list. The
+    ///	action list allows scanning for devices and enables incoming
+    ///	connections from known devices.
+    ///
+    ///	With the `BackgroundScan` action, when the device is found, a new Device Found
+    ///	event will be sent indicating this device is available. This
+    ///	action is only valid for LE Public and LE Random address types.
+    ///
+    ///	With the `AllowConnect` action, the device is allowed to connect. For BR/EDR
+    ///	address type this means an incoming connection. For LE Public
+    ///	and LE Random address types, a connection will be established
+    ///	to devices using directed advertising. If successful a Device
+    ///	Connected event will be sent.
+    ///
+    ///	With the `AutoConnect`, when the device is found, it will be connected
+    ///	and if successful a Device Connected event will be sent. This
+    ///	action is only valid for LE Public and LE Random address types.
+    ///
+    ///	When a device is blocked using Block Device command, then it is
+    ///	valid to add the device here, but all actions will be ignored
+    ///	until the device is unblocked.
+    ///
+    ///	Devices added with `AllowConnect` are allowed to connect even if the
+    ///	connectable setting is off. This acts as list of known trusted
+    ///	devices.
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    pub async fn add_device(
+        &mut self,
+        controller: Controller,
+        address: Address,
+        address_type: AddressType,
+        action: AddDeviceAction
+    ) -> Result<(Address, AddressType)> {
+        self.exec_command(
+            ManagementCommand::AddDevice,
+            controller,
+            Some(address_bytes_with_u8(address, address_type, action as u8)),
+            address_callback,
+        )
+            .await
+    }
+
+    ///	This command is used to remove a device from the action list
+    ///	previously added by using the Add Device command.
+    ///
+    ///	When the Address parameter is `00:00:00:00:00:00`, then all
+    ///	previously added devices will be removed.
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
+    pub async fn remove_device(
+        &mut self,
+        controller: Controller,
+        address: Address,
+        address_type: AddressType,
+    ) -> Result<(Address, AddressType)> {
+        self.exec_command(
+            ManagementCommand::AddDevice,
+            controller,
+            Some(address_bytes(address, address_type)),
             address_callback,
         )
             .await
