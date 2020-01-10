@@ -3,8 +3,11 @@ name = "bluez"
 version = "0.1.0"
 authors = ["Ibiyemi Abiodun <ibiyemi@intulon.com>"]
 edition = "2018"
+repository = "https://github.com/laptou/bluez-rs"
+readme = "README.md"
 description = "Control Bluetooth on Linux."
 license = "MIT"
+keywords = ["bluetooth", "bluez", "linux"]
 
 [dependencies]
 libc = "0.2"

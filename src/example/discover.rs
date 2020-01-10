@@ -61,28 +61,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // scan for some devices
-    // to do this we'll need to listen for the Device Found event, so we will set a handler
-    client.set_handler(Some(Box::new(|controller, event| match event {
-        Event::DeviceFound {
-            address,
-            address_type,
-            flags,
-            rssi,
-            ..
-        } => {
-            println!(
-                "[{:?}] found device {} ({:?})",
-                controller, address, address_type
-            );
-            println!("\tflags: {:?}", flags);
-            println!("\trssi: {:?}", rssi);
-        }
-        Event::Discovering {
-            discovering,
-            address_type,
-        } => println!("discovering: {} {:?}", discovering, address_type),
-        _ => (),
-    })));
+    // to do this we'll need to listen for the Device Found event
 
     client
         .start_discovery(
@@ -91,11 +70,47 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         )
         .await?;
 
-    for _ in 0..50 {
-        // don't block if there's no data, just keep looping and sleeping
-        client.process(false).await?;
+    // just wait for discovery forever
+    loop {
+        // process() blocks until there is a response to be had
+        let response = client.process().await?;
+
+        match response.event {
+            Event::DeviceFound {
+                address,
+                address_type,
+                flags,
+                rssi,
+                ..
+            } => {
+                println!(
+                    "[{:?}] found device {} ({:?})",
+                    controller, address, address_type
+                );
+                println!("\tflags: {:?}", flags);
+                println!("\trssi: {:?}", rssi);
+            }
+            Event::Discovering {
+                discovering,
+                address_type,
+            } => {
+                println!("discovering: {} {:?}", discovering, address_type);
+
+                // if discovery ended, turn it back on
+                if !discovering {
+                    client
+                        .start_discovery(
+                            controller,
+                            AddressTypeFlag::BREDR
+                                | AddressTypeFlag::LEPublic
+                                | AddressTypeFlag::LERandom,
+                        )
+                        .await?;
+                }
+            }
+            _ => (),
+        }
+
         std::thread::sleep(Duration::from_millis(50));
     }
-
-    Ok(())
 }

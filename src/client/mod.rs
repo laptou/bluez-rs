@@ -25,9 +25,11 @@ mod params;
 mod query;
 mod settings;
 
+type BlueZClientHandler = dyn FnMut(Controller, &Event) -> ();
+
 pub struct BlueZClient {
     socket: ManagementSocket,
-    handler: Option<Box<dyn FnMut(Controller, &Event) -> ()>>,
+    handler: Option<Box<BlueZClientHandler>>,
 }
 
 impl BlueZClient {
@@ -38,7 +40,7 @@ impl BlueZClient {
         })
     }
 
-    pub fn new_with_handler(handler: Box<dyn FnMut(Controller, &Event) -> ()>) -> Result<Self> {
+    pub fn new_with_handler(handler: Box<BlueZClientHandler>) -> Result<Self> {
         Ok(BlueZClient {
             socket: ManagementSocket::open()?,
             handler: Some(handler),
@@ -49,7 +51,7 @@ impl BlueZClient {
     /// an event. CommandComplete and CommandStatus events will NOT reach this handler;
     /// instead their contents can be accessed as the return value of the method
     /// that you called.
-    pub fn set_handler(&mut self, handler: Option<Box<dyn FnMut(Controller, &Event) -> ()>>) {
+    pub fn set_handler(&mut self, handler: Option<Box<BlueZClientHandler>>) {
         self.handler = handler;
     }
 
@@ -59,8 +61,8 @@ impl BlueZClient {
     /// will block until there is a response to read. If `block` is false,
     /// this method will either return a pending response or return `Err(ManagementError::NoData)`,
     /// which in most cases can be safely ignored.
-    pub async fn process(&mut self, block: bool) -> Result<Response> {
-        let response = self.socket.receive(block).await?;
+    pub async fn process(&mut self) -> Result<Response> {
+        let response = self.socket.receive().await?;
 
         match &response.event {
             Event::CommandStatus { .. } | Event::CommandComplete { .. } => (),
@@ -97,7 +99,7 @@ impl BlueZClient {
         // which is either command complete or command status
         // with the same opcode as the command that we sent
         loop {
-            let response = self.process(true).await?;
+            let response = self.process().await?;
 
             match response.event {
                 Event::CommandComplete {

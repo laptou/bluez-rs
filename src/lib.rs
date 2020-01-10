@@ -30,10 +30,9 @@
 //!
 //! Aside from directly issuing commands to the Bluetooth controller and recieving a response,
 //! you may want to listen for events or perform processes that span multiple commands. For
-//! this to work, you need to supply a callback to your client and call
-//! [`BlueZClient::process()`](crate::client::BlueZClient::process). The callback will be
-//! called any time that the client processes an event (excluding events that indicate that a
-//! command has completed), while `process()` will cause the client to check the underlying
+//! this to work, you need to supply a callback to your client and call [`process`]. The callback
+//! will be called any time that the client processes an event (excluding events that indicate that
+//! a command has completed), while [`process`] will cause the client to check the underlying
 //! socket for new input.
 //!
 //! ```no_run
@@ -71,12 +70,25 @@
 //!
 //! for _ in 0..5000 {
 //!     // don't block if there's no data, just keep looping and sleeping
-//!     client.process(false).await?;
+//!     client.process().await?;
 //!     std::thread::sleep(Duration::from_millis(50));
 //! }
 //! #  Ok(())
 //! # }
 //! ```
+//!
+//! Since [`process`] returns the latest response to be processed, you may be wondering
+//! why you would use a callback at all; isn't it easier to just take the return values inside
+//! the loop?
+//!
+//! In the case demonstrated here, it would be. In fact, this is how it is implemented
+//! in the [version of the sample on GitHub][sample], but the reason for the callback is that events
+//! can arrive while a command is being executed. Since the client is mutably borrowed
+//! for the span of each command (i.e., between the instruction being sent to the kernel
+//! and the kernel sending a Command Status event), but another event may arrive before
+//! the Command Status event, a way is needed to capture such an event. Internally, each command
+//! just calls [`process`] repeatedly until a relevant Command Status event appears, and
+//! [`process`] will call your handler.
 //!
 //! # Pitfalls
 //! Commands that just query information, such as
@@ -84,6 +96,9 @@
 //! will usually work. However, commands that try to change any settings, such as
 //! [`BlueZClient::set_powered`](crate::client::BlueZClient::set_powered) will fail with
 //! 'permission denied' errors if your process does not have the `CAP_NET_RAW` capability.
+//!
+//! [process]: crate::client::BlueZClient::process
+//! [sample]: https://github.com/laptou/bluez-rs/tree/master/src/example/discover.rs
 
 #[macro_use]
 extern crate num_derive;
