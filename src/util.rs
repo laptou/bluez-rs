@@ -41,6 +41,4 @@ pub(crate) trait BufExt2: Buf {
     }
 }
 
-impl<T: Buf> BufExt2 for T {
-
-}
+impl<T: Buf> BufExt2 for T {}

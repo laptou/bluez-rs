@@ -3,7 +3,9 @@ use std::ffi::CString;
 use bytes::Bytes;
 
 use crate::Address;
-use crate::mgmt::client::{AddressType, DeviceFlags, DisconnectionReason, LinkKeyType, LongTermKeyType};
+use crate::mgmt::client::{
+    AddressType, DeviceFlags, DisconnectionReason, LinkKeyType, LongTermKeyType,
+};
 use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus};
 use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
 use crate::mgmt::interface::controller::ControllerSettings;
@@ -242,6 +244,6 @@ pub enum ManagementEvent {
         random_address: Address,
         address: Address,
         address_type: AddressType,
-        value: [u8; 16]
-    }
+        value: [u8; 16],
+    },
 }

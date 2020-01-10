@@ -4,7 +4,7 @@ use std::error::Error;
 
 use async_std::task::block_on;
 
-use bluez::client::{AddressType, ManagementClient};
+use bluez::client::*;
 use bluez::interface::controller::*;
 use bluez::interface::event::ManagementEvent;
 
@@ -24,12 +24,12 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     // instead of using streams
     let controllers_info = controllers
         .into_iter()
-        .map(|controller|
+        .map(|controller| {
             (
                 controller,
                 block_on(client.get_controller_info(controller)).unwrap(),
             )
-        )
+        })
         .collect::<Vec<(Controller, ControllerInfo)>>();
 
     println!("\navailable controllers:");
@@ -60,18 +60,30 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
     // scan for some devices
     // to do this we'll need to listen for the Device Found event, so we will set a handler
-    client.set_handler(Some(Box::new(|controller, event| {
-        match event {
-            ManagementEvent::DeviceFound { address, address_type, flags, rssi, .. } => {
-                println!("found device {:?} ({:?})", address, address_type);
-                println!("\tflags: {:?}", flags);
-                println!("\trssi: {:?}", rssi);
-            }
-            _ => ()
+    client.set_handler(Some(Box::new(|controller, event| match event {
+        ManagementEvent::DeviceFound {
+            address,
+            address_type,
+            flags,
+            rssi,
+            ..
+        } => {
+            println!(
+                "[{:?}] found device {:?} ({:?})",
+                controller, address, address_type
+            );
+            println!("\tflags: {:?}", flags);
+            println!("\trssi: {:?}", rssi);
         }
+        _ => (),
     })));
 
-    client.start_discovery(controller, AddressType::BREDR | AddressType::LEPublic | AddressType::LERandom).await?;
+    client
+        .start_discovery(
+            controller,
+            AddressTypeFlag::BREDR | AddressTypeFlag::LEPublic | AddressTypeFlag::LERandom,
+        )
+        .await?;
 
     Ok(())
 }

@@ -53,135 +53,103 @@ impl ManagementResponse {
                     let short_name = buf.get_c_string();
 
                     ManagementEvent::LocalNameChanged { name, short_name }
+                }
+                0x0009 => ManagementEvent::NewLinkKey {
+                    store_hint: buf.get_bool(),
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    key_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    value: buf.split_to(16).as_ref().try_into().unwrap(),
+                    pin_length: buf.get_u8(),
                 },
-                0x0009 => {
-                    ManagementEvent::NewLinkKey {
-                        store_hint: buf.get_bool(),
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        key_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        value: buf.split_to(16).as_ref().try_into().unwrap(),
-                        pin_length: buf.get_u8()
-                    }
+                0x000A => ManagementEvent::NewLongTermKey {
+                    store_hint: buf.get_bool(),
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    key_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    master: buf.get_u8(),
+                    encryption_size: buf.get_u8(),
+                    encryption_diversifier: buf.get_u16_le(),
+                    random_number: buf.get_u64_le(),
+                    value: buf.split_to(16).as_ref().try_into().unwrap(),
                 },
-                0x000A => {
-                    ManagementEvent::NewLongTermKey {
-                        store_hint: buf.get_bool(),
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        key_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        master: buf.get_u8(),
-                        encryption_size: buf.get_u8(),
-                        encryption_diversifier: buf.get_u16_le(),
-                        random_number: buf.get_u64_le(),
-                        value: buf.split_to(16).as_ref().try_into().unwrap(),
-                    }
+                0x000B => ManagementEvent::DeviceConnected {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    flags: FromPrimitive::from_u32(buf.get_u32_le()).unwrap(),
+                    eir_data: {
+                        let len = buf.get_u16_le() as usize;
+                        buf.split_to(len)
+                    },
                 },
-                0x000B => {
-                    ManagementEvent::DeviceConnected {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        flags: FromPrimitive::from_u32(buf.get_u32_le()).unwrap(),
-                        eir_data: {
-                            let len = buf.get_u16_le() as usize;
-                            buf.split_to(len)
-                        }
-                    }
+                0x000C => ManagementEvent::DeviceDisconnected {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    reason: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                 },
-                0x000C => {
-                    ManagementEvent::DeviceDisconnected {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        reason: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                    }
+                0x000D => ManagementEvent::ConnectFailed {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    status: buf.get_u8(),
                 },
-                0x000D => {
-                    ManagementEvent::ConnectFailed {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        status: buf.get_u8()
-                    }
+                0x000E => ManagementEvent::PinCodeRequest {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    secure: buf.get_bool(),
                 },
-                0x000E => {
-                    ManagementEvent::PinCodeRequest {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        secure: buf.get_bool()
-                    }
+                0x000F => ManagementEvent::UserConfirmationRequest {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    confirm_hint: buf.get_bool(),
+                    value: buf.get_u32_le(),
                 },
-                0x000F => {
-                    ManagementEvent::UserConfirmationRequest {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        confirm_hint: buf.get_bool(),
-                        value: buf.get_u32_le()
-                    }
+                0x0010 => ManagementEvent::UserPasskeyRequest {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                 },
-                0x0010 => {
-                    ManagementEvent::UserPasskeyRequest {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                    }
+                0x0011 => ManagementEvent::AuthenticationFailed {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    status: buf.get_u8(),
                 },
-                0x0011 => {
-                    ManagementEvent::AuthenticationFailed {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        status: buf.get_u8()
-                    }
+                0x0012 => ManagementEvent::DeviceFound {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    rssi: buf.get_i8(),
+                    flags: FromPrimitive::from_u32(buf.get_u32_le()).unwrap(),
+                    eir_data: {
+                        let len = buf.get_u16_le() as usize;
+                        buf.split_to(len)
+                    },
                 },
-                0x0012 => {
-                    ManagementEvent::DeviceFound {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        rssi: buf.get_i8(),
-                        flags: FromPrimitive::from_u32(buf.get_u32_le()).unwrap(),
-                        eir_data: {
-                            let len = buf.get_u16_le() as usize;
-                            buf.split_to(len)
-                        }
-                    }
+                0x0013 => ManagementEvent::Discovering {
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    discovering: buf.get_bool(),
                 },
-                0x0013 => {
-                    ManagementEvent::Discovering {
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        discovering: buf.get_bool()
-                    }
+                0x0014 => ManagementEvent::DeviceBlocked {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                 },
-                0x0014 => {
-                    ManagementEvent::DeviceBlocked {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                    }
+                0x0015 => ManagementEvent::DeviceUnblocked {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                 },
-                0x0015 => {
-                    ManagementEvent::DeviceUnblocked {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                    }
+                0x0016 => ManagementEvent::DeviceUnpaired {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                 },
-                0x0016 => {
-                    ManagementEvent::DeviceUnpaired {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                    }
+                0x0017 => ManagementEvent::PasskeyNotify {
+                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    passkey: buf.get_u32_le(),
+                    entered: buf.get_u8(),
                 },
-                0x0017 => {
-                    ManagementEvent::PasskeyNotify {
-                        address: Address::from_slice(buf.split_to(6).as_ref()),
-                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                        passkey: buf.get_u32_le(),
-                        entered: buf.get_u8()
-                    }
-                },
-                0x0018 => {
-                    ManagementEvent::NewIdentityResolvingKey {
-                        store_hint: buf.get_bool(),
-                        random_address: buf.get_address(),
-                        address: buf.get_address(),
-                        address_type: buf.get_primitive_u8(),
-                        value: buf.get_u8x16(),
-                    }
+                0x0018 => ManagementEvent::NewIdentityResolvingKey {
+                    store_hint: buf.get_bool(),
+                    random_address: buf.get_address(),
+                    address: buf.get_address(),
+                    address_type: buf.get_primitive_u8(),
+                    value: buf.get_u8x16(),
                 },
                 _ => todo!("throw error instead of panicking"),
             },
