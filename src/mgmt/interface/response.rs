@@ -1,6 +1,9 @@
+use std::convert::TryInto;
+
 use bytes::*;
 use num_traits::FromPrimitive;
 
+use crate::Address;
 use crate::mgmt::interface::controller::Controller;
 use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::ManagementError;
@@ -42,14 +45,25 @@ impl ManagementResponse {
                 0x0003 => ManagementEvent::ControllerError { code: buf.get_u8() },
                 0x0004 => ManagementEvent::IndexAdded,
                 0x0005 => ManagementEvent::IndexRemoved,
-                0x0006 => unimplemented!("ManagementEvent::NewSettings"),
-                0x0007 => unimplemented!("ManagementEvent::ClassOfDeviceChanged"),
+                0x0006 => todo!("ManagementEvent::NewSettings"),
+                0x0007 => todo!("ManagementEvent::ClassOfDeviceChanged"),
                 0x0008 => {
                     let mut buf = buf.to_bytes();
                     let name = bytes_to_c_str(buf.split_to(249));
                     let short_name = bytes_to_c_str(buf);
 
                     ManagementEvent::LocalNameChanged { name, short_name }
+                },
+                0x0009 => {
+                    let mut buf = buf.to_bytes();
+                    ManagementEvent::NewLinkKey {
+                        store_hint: buf.get_u8() as bool,
+                        address: Address::from_slice(buf.split_to(6).as_ref()),
+                        address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                        key_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                        value: buf.split_to(16).as_ref().try_into().unwrap(),
+                        pin_length: buf.get_u8()
+                    }
                 }
                 _ => todo!("throw error instead of panicking"),
             },

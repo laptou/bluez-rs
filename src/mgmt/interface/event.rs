@@ -65,7 +65,7 @@ pub enum ManagementEvent {
     ///	would not be set if the authentication requirement was "No
     ///	Bonding").
     NewLinkKey {
-        store_hint: u8,
+        store_hint: bool,
         address: Address,
         address_type: AddressType,
         key_type: u8,
