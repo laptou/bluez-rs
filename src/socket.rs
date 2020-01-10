@@ -9,8 +9,8 @@ use bytes::buf::BufExt;
 use futures::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
 use libc;
 
-use crate::mgmt::interface::{ManagementRequest, ManagementResponse};
-use crate::mgmt::ManagementError;
+use crate::Error;
+use crate::interface::{Request, Response};
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -95,20 +95,20 @@ impl ManagementSocket {
     }
 
     /// Returns either an error or the number of bytes that were sent.
-    pub async fn send(&mut self, request: ManagementRequest) -> Result<usize, io::Error> {
+    pub async fn send(&mut self, request: Request) -> Result<usize, io::Error> {
         let buf: Bytes = request.into();
         self.writer.write(&buf).await
     }
 
-    pub async fn receive(&mut self, block: bool) -> Result<ManagementResponse, ManagementError> {
+    pub async fn receive(&mut self, block: bool) -> Result<Response, Error> {
         // read 6 byte header
         let mut header = [0u8; 6];
 
         if block {
-            self.reader.read_exact(&mut header);
+            self.reader.read_exact(&mut header).await?;
         } else {
             if self.reader.read(&mut header).await? < 6 {
-                return Err(ManagementError::NoData);
+                return Err(Error::NoData);
             }
         }
 
@@ -120,6 +120,6 @@ impl ManagementSocket {
         self.reader.read_exact(&mut body[..]).await?;
 
         // make buffer by chaining header and body
-        ManagementResponse::parse(BufExt::chain(&header[..], &body[..]))
+        Response::parse(BufExt::chain(&header[..], &body[..]))
     }
 }

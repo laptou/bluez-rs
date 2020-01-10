@@ -4,13 +4,13 @@ use bytes::Bytes;
 use enumflags2::BitFlags;
 
 use crate::Address;
-use crate::mgmt::client::*;
-use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus};
-use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
-use crate::mgmt::interface::controller::ControllerSettings;
+use crate::client::*;
+use crate::interface::{Command, CommandStatus};
+use crate::interface::class::{DeviceClass, ServiceClasses};
+use crate::interface::controller::ControllerSettings;
 
 #[derive(Debug)]
-pub enum ManagementEvent {
+pub enum Event {
     /// This event is an indication that a command has completed. The
     ///	fixed set of parameters includes the opcode to identify the
     ///	command that completed as well as a status value to indicate
@@ -18,8 +18,8 @@ pub enum ManagementEvent {
     ///	specific and documented in the section for each command
     ///	separately.
     CommandComplete {
-        opcode: ManagementCommand,
-        status: ManagementCommandStatus,
+        opcode: Command,
+        status: CommandStatus,
         param: Bytes,
     },
 
@@ -28,8 +28,8 @@ pub enum ManagementEvent {
     ///	(anything else except success status) this also means that the
     ///	command has finished executing.
     CommandStatus {
-        opcode: ManagementCommand,
-        status: ManagementCommandStatus,
+        opcode: Command,
+        status: CommandStatus,
     },
 
     /// This event maps straight to the HCI Hardware Error event and is

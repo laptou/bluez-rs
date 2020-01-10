@@ -1,19 +1,19 @@
 use enumflags2::BitFlags;
 
-use crate::mgmt::interface::class::from_bytes as class_from_bytes;
-use crate::mgmt::interface::controller::ControllerInfoExt;
+use crate::interface::class::from_bytes as class_from_bytes;
+use crate::interface::controller::ControllerInfoExt;
 use crate::util::BufExt2;
 
 use super::*;
 
-impl ManagementClient {
+impl BlueZClient {
     /// This command returns the Management version and revision.
     ///	Besides, being informational the information can be used to
     ///	determine whether certain behavior has changed or bugs fixed
     ///	when interacting with the kernel.
     pub async fn get_mgmt_version(&mut self) -> Result<ManagementVersion> {
         self.exec_command(
-            ManagementCommand::ReadVersionInfo,
+            Command::ReadVersionInfo,
             Controller::none(),
             None,
             |_, param| {
@@ -32,7 +32,7 @@ impl ManagementClient {
     ///	monitored using the Index Added and Index Removed events.
     pub async fn get_controller_list(&mut self) -> Result<Vec<Controller>> {
         self.exec_command(
-            ManagementCommand::ReadControllerIndexList,
+            Command::ReadControllerIndexList,
             Controller::none(),
             None,
             |_, param| {
@@ -72,7 +72,7 @@ impl ManagementClient {
     ///	If no short name is set the Short_Name parameter will be all zeroes.
     pub async fn get_controller_info(&mut self, controller: Controller) -> Result<ControllerInfo> {
         self.exec_command(
-            ManagementCommand::ReadControllerInfo,
+            Command::ReadControllerInfo,
             controller,
             None,
             |_, param| {
@@ -106,7 +106,7 @@ impl ManagementClient {
         controller: Controller,
     ) -> Result<Vec<(Address, AddressType)>> {
         self.exec_command(
-            ManagementCommand::GetConnections,
+            Command::GetConnections,
             controller,
             None,
             |_, param| {
@@ -136,7 +136,7 @@ impl ManagementClient {
         param.put_u8(address_type as u8);
 
         self.exec_command(
-            ManagementCommand::GetConnectionInfo,
+            Command::GetConnectionInfo,
             controller,
             Some(param.to_bytes()),
             |_, param| {
@@ -177,7 +177,7 @@ impl ManagementClient {
         param.put_u8(address_type as u8);
 
         self.exec_command(
-            ManagementCommand::GetClockInfo,
+            Command::GetClockInfo,
             controller,
             Some(param.to_bytes()),
             |_, param| {
@@ -224,7 +224,7 @@ impl ManagementClient {
     ///	be listed even if it supports configuration changes.
     pub async fn get_unconfigured_controller_list(&mut self) -> Result<Vec<Controller>> {
         self.exec_command(
-            ManagementCommand::ReadUnconfiguredControllerIndexList,
+            Command::ReadUnconfiguredControllerIndexList,
             Controller::none(),
             None,
             |_, param| {
@@ -275,7 +275,7 @@ impl ManagementClient {
         controller: Controller,
     ) -> Result<ControllerConfigInfo> {
         self.exec_command(
-            ManagementCommand::ReadControllerConfigInfo,
+            Command::ReadControllerConfigInfo,
             controller,
             None,
             |_, param| {
@@ -311,7 +311,7 @@ impl ManagementClient {
         &mut self,
     ) -> Result<Vec<(Controller, ControllerType, ControllerBus)>> {
         self.exec_command(
-            ManagementCommand::ReadExtendedControllerIndexList,
+            Command::ReadExtendedControllerIndexList,
             Controller::none(),
             None,
             |_, param| {
@@ -355,7 +355,7 @@ impl ManagementClient {
         controller: Controller,
     ) -> Result<ControllerInfoExt> {
         self.exec_command(
-            ManagementCommand::ReadExtendedControllerInfo,
+            Command::ReadExtendedControllerInfo,
             controller,
             None,
             |_, param| {
@@ -385,7 +385,7 @@ impl ManagementClient {
     ///	on the PHY configuration. It is remembered over power cycles.
     pub async fn get_phy_config(&mut self, controller: Controller) -> Result<PhyConfig> {
         self.exec_command(
-            ManagementCommand::GetPhyConfig,
+            Command::GetPhyConfig,
             controller,
             None,
             |_, param| {

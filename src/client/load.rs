@@ -1,6 +1,6 @@
 use super::*;
 
-impl ManagementClient {
+impl BlueZClient {
     /// This command is used to feed the kernel with currently known
     ///	link keys. The command does not need to be called again upon the
     ///	receipt of New Link Key events since the kernel updates its list
@@ -35,7 +35,7 @@ impl ManagementClient {
         }
 
         self.exec_command(
-            ManagementCommand::LoadLinkKeys,
+            Command::LoadLinkKeys,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),
@@ -75,7 +75,7 @@ impl ManagementClient {
         }
 
         self.exec_command(
-            ManagementCommand::LoadLongTermKeys,
+            Command::LoadLongTermKeys,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),
@@ -110,7 +110,7 @@ impl ManagementClient {
         }
 
         self.exec_command(
-            ManagementCommand::LoadIdentityResolvingKeys,
+            Command::LoadIdentityResolvingKeys,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),
@@ -148,7 +148,7 @@ impl ManagementClient {
         }
 
         self.exec_command(
-            ManagementCommand::LoadConnectionParameters,
+            Command::LoadConnectionParameters,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),
@@ -177,7 +177,7 @@ impl ManagementClient {
         }
 
         self.exec_command(
-            ManagementCommand::LoadBlockedKeys,
+            Command::LoadBlockedKeys,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),

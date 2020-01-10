@@ -7,13 +7,13 @@ use num_traits::FromPrimitive;
 pub use params::*;
 pub use settings::*;
 
+use crate::{Error, Result};
 use crate::Address;
-use crate::mgmt::{ManagementError, Result};
-use crate::mgmt::interface::*;
-use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
-use crate::mgmt::interface::controller::{Controller, ControllerInfo, ControllerSettings};
-use crate::mgmt::interface::event::ManagementEvent;
-use crate::mgmt::socket::ManagementSocket;
+use crate::interface::*;
+use crate::interface::class::{DeviceClass, ServiceClasses};
+use crate::interface::controller::{Controller, ControllerInfo, ControllerSettings};
+use crate::interface::event::Event;
+use crate::socket::ManagementSocket;
 
 mod advertising;
 mod class;
@@ -25,23 +25,23 @@ mod params;
 mod query;
 mod settings;
 
-pub struct ManagementClient {
+pub struct BlueZClient {
     socket: ManagementSocket,
-    handler: Option<Box<dyn FnMut(Controller, &ManagementEvent) -> ()>>,
+    handler: Option<Box<dyn FnMut(Controller, &Event) -> ()>>,
 }
 
-impl ManagementClient {
+impl BlueZClient {
     pub fn new() -> Result<Self> {
-        Ok(ManagementClient {
+        Ok(BlueZClient {
             socket: ManagementSocket::open()?,
             handler: None,
         })
     }
 
     pub fn new_with_handler(
-        handler: Box<dyn FnMut(Controller, &ManagementEvent) -> ()>,
+        handler: Box<dyn FnMut(Controller, &Event) -> ()>,
     ) -> Result<Self> {
-        Ok(ManagementClient {
+        Ok(BlueZClient {
             socket: ManagementSocket::open()?,
             handler: Some(handler),
         })
@@ -53,7 +53,7 @@ impl ManagementClient {
     /// that you called.
     pub fn set_handler(
         &mut self,
-        handler: Option<Box<dyn FnMut(Controller, &ManagementEvent) -> ()>>,
+        handler: Option<Box<dyn FnMut(Controller, &Event) -> ()>>,
     ) {
         self.handler = handler;
     }
@@ -64,11 +64,11 @@ impl ManagementClient {
     /// will block until there is a response to read. If `block` is false,
     /// this method will either return a pending response or return `Err(ManagementError::NoData)`,
     /// which in most cases can be safely ignored.
-    pub async fn process(&mut self, block: bool) -> Result<ManagementResponse> {
+    pub async fn process(&mut self, block: bool) -> Result<Response> {
         let response = self.socket.receive(block).await?;
 
         match &response.event {
-            ManagementEvent::CommandStatus { .. } | ManagementEvent::CommandComplete { .. } => (),
+            Event::CommandStatus { .. } | Event::CommandComplete { .. } => (),
             _ => {
                 if let Some(handler) = &mut self.handler {
                     (handler)(response.controller, &response.event)
@@ -82,7 +82,7 @@ impl ManagementClient {
     #[inline]
     async fn exec_command<F: FnOnce(Controller, Option<Bytes>) -> Result<T>, T>(
         &mut self,
-        opcode: ManagementCommand,
+        opcode: Command,
         controller: Controller,
         param: Option<Bytes>,
         callback: F,
@@ -91,7 +91,7 @@ impl ManagementClient {
 
         // send request
         self.socket
-            .send(ManagementRequest {
+            .send(Request {
                 opcode,
                 controller,
                 param,
@@ -105,25 +105,25 @@ impl ManagementClient {
             let response = self.process(true).await?;
 
             match response.event {
-                ManagementEvent::CommandComplete {
+                Event::CommandComplete {
                     status,
                     param,
                     opcode: evt_opcode,
                 } if opcode == evt_opcode => {
                     return match status {
-                        ManagementCommandStatus::Success => {
+                        CommandStatus::Success => {
                             callback(response.controller, Some(param))
                         }
-                        _ => Err(ManagementError::CommandError { opcode, status }),
+                        _ => Err(Error::CommandError { opcode, status }),
                     }
                 }
-                ManagementEvent::CommandStatus {
+                Event::CommandStatus {
                     status,
                     opcode: evt_opcode,
                 } if opcode == evt_opcode => {
                     return match status {
-                        ManagementCommandStatus::Success => callback(response.controller, None),
-                        _ => Err(ManagementError::CommandError { opcode, status }),
+                        CommandStatus::Success => callback(response.controller, None),
+                        _ => Err(Error::CommandError { opcode, status }),
                     }
                 }
                 _ => (),

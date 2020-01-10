@@ -5,7 +5,7 @@ use bytes::Bytes;
 use enumflags2::BitFlags;
 
 use crate::Address;
-use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
+use crate::interface::class::{DeviceClass, ServiceClasses};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Controller(pub(crate) u16);

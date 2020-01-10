@@ -3,7 +3,7 @@ use enumflags2::BitFlags;
 use super::*;
 use super::interact::{address_bytes, address_callback};
 
-impl ManagementClient {
+impl BlueZClient {
     /// This command is used to read the local Out of Band data.
     ///
     ///	This command can only be used when the controller is powered.
@@ -17,7 +17,7 @@ impl ManagementClient {
     ///	this command again to get updated values.
     pub async fn read_local_oob_data(&mut self, controller: Controller) -> Result<OutOfBandData> {
         self.exec_command(
-            ManagementCommand::ReadLocalOutOfBand,
+            Command::ReadLocalOutOfBand,
             controller,
             None,
             |_, param| {
@@ -50,7 +50,7 @@ impl ManagementClient {
         address_types: BitFlags<AddressTypeFlag>,
     ) -> Result<(BitFlags<AddressTypeFlag>, Bytes)> {
         self.exec_command(
-            ManagementCommand::ReadLocalOutOfBandExtended,
+            Command::ReadLocalOutOfBandExtended,
             controller,
             Some(BytesMut::from([address_types.bits() as u8].as_ref() as &[u8]).to_bytes()),
             |_, param| {
@@ -122,7 +122,7 @@ impl ManagementClient {
         }
 
         self.exec_command(
-            ManagementCommand::AddRemoteOutOfBand,
+            Command::AddRemoteOutOfBand,
             controller,
             Some(param.to_bytes()),
             address_callback,
@@ -145,7 +145,7 @@ impl ManagementClient {
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            ManagementCommand::RemoveRemoteOutOfBand,
+            Command::RemoveRemoteOutOfBand,
             controller,
             Some(address_bytes(address, address_type)),
             address_callback,

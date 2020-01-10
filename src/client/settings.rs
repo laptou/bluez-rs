@@ -2,9 +2,9 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 
 use crate::Address;
-use crate::mgmt::interface::controller::{Controller, ControllerSettings};
-use crate::mgmt::interface::ManagementCommand;
-use crate::mgmt::Result;
+use crate::interface::Command;
+use crate::interface::controller::{Controller, ControllerSettings};
+use crate::Result;
 
 use super::*;
 
@@ -14,7 +14,7 @@ fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSe
     Ok(ControllerSettings::from_bits_truncate(param.get_u32_le()))
 }
 
-impl ManagementClient {
+impl BlueZClient {
     /// This command is used to set the local name of a controller. The
     ///	command parameters also include a short name which will be used
     ///	in case the full name doesn't fit within EIR/AD data.
@@ -36,7 +36,7 @@ impl ManagementClient {
         short_name: Option<&str>,
     ) -> Result<(CString, CString)> {
         if name.len() > 248 {
-            return Err(ManagementError::NameTooLong {
+            return Err(Error::NameTooLong {
                 name: name.to_owned(),
                 max_len: 248,
             });
@@ -44,7 +44,7 @@ impl ManagementClient {
 
         if let Some(short_name) = short_name {
             if short_name.len() > 10 {
-                return Err(ManagementError::NameTooLong {
+                return Err(Error::NameTooLong {
                     name: short_name.to_owned(),
                     max_len: 10,
                 });
@@ -62,7 +62,7 @@ impl ManagementClient {
             .copy_to_slice(&mut param[249..]);
 
         self.exec_command(
-            ManagementCommand::SetLocalName,
+            Command::SetLocalName,
             controller,
             Some(param.to_bytes()),
             |_, param| {
@@ -100,7 +100,7 @@ impl ManagementClient {
         param.put_u8(powered as u8);
 
         self.exec_command(
-            ManagementCommand::SetPowered,
+            Command::SetPowered,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -139,7 +139,7 @@ impl ManagementClient {
         }
 
         self.exec_command(
-            ManagementCommand::SetDiscoverable,
+            Command::SetDiscoverable,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -181,7 +181,7 @@ impl ManagementClient {
         param.put_u8(connectable as u8);
 
         self.exec_command(
-            ManagementCommand::SetConnectable,
+            Command::SetConnectable,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -211,7 +211,7 @@ impl ManagementClient {
         param.put_u8(fast_connectable as u8);
 
         self.exec_command(
-            ManagementCommand::SetFastConnectable,
+            Command::SetFastConnectable,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -238,7 +238,7 @@ impl ManagementClient {
         param.put_u8(bondable as u8);
 
         self.exec_command(
-            ManagementCommand::SetPairable,
+            Command::SetPairable,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -264,7 +264,7 @@ impl ManagementClient {
         param.put_u8(link_security as u8);
 
         self.exec_command(
-            ManagementCommand::SetLinkSecurity,
+            Command::SetLinkSecurity,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -293,7 +293,7 @@ impl ManagementClient {
         param.put_u8(ssp as u8);
 
         self.exec_command(
-            ManagementCommand::SetSecureSimplePairing,
+            Command::SetSecureSimplePairing,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -327,7 +327,7 @@ impl ManagementClient {
         param.put_u8(high_speed as u8);
 
         self.exec_command(
-            ManagementCommand::SetHighSpeed,
+            Command::SetHighSpeed,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -355,7 +355,7 @@ impl ManagementClient {
         param.put_u8(le as u8);
 
         self.exec_command(
-            ManagementCommand::SetLowEnergy,
+            Command::SetLowEnergy,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -406,7 +406,7 @@ impl ManagementClient {
         param.put_u8(mode as u8);
 
         self.exec_command(
-            ManagementCommand::SetAdvertising,
+            Command::SetAdvertising,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -432,7 +432,7 @@ impl ManagementClient {
         param.put_u8(enabled as u8);
 
         self.exec_command(
-            ManagementCommand::SetBREDR,
+            Command::SetBREDR,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -457,7 +457,7 @@ impl ManagementClient {
         param.put_u8(io_capability as u8);
 
         self.exec_command(
-            ManagementCommand::SetIOCapability,
+            Command::SetIOCapability,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),
@@ -494,7 +494,7 @@ impl ManagementClient {
         param.put_u16_le(version);
 
         self.exec_command(
-            ManagementCommand::SetDeviceID,
+            Command::SetDeviceID,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),
@@ -516,7 +516,7 @@ impl ManagementClient {
         param.put_u16_le(window);
 
         self.exec_command(
-            ManagementCommand::SetScanParameters,
+            Command::SetScanParameters,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),
@@ -555,7 +555,7 @@ impl ManagementClient {
         let mut param = BytesMut::from(address.as_ref());
 
         self.exec_command(
-            ManagementCommand::SetStaticAddress,
+            Command::SetStaticAddress,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -588,7 +588,7 @@ impl ManagementClient {
         param.put_u8(mode as u8);
 
         self.exec_command(
-            ManagementCommand::SetSecureConnections,
+            Command::SetSecureConnections,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -622,7 +622,7 @@ impl ManagementClient {
         param.put_u8(mode as u8);
 
         self.exec_command(
-            ManagementCommand::SetDebugKeys,
+            Command::SetDebugKeys,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -675,7 +675,7 @@ impl ManagementClient {
         param.put_slice(&identity_resolving_key[..]);
 
         self.exec_command(
-            ManagementCommand::SetPrivacy,
+            Command::SetPrivacy,
             controller,
             Some(param.to_bytes()),
             settings_callback,
@@ -708,7 +708,7 @@ impl ManagementClient {
         let mut param = BytesMut::from([config as u8].as_ref() as &[u8]);
 
         self.exec_command(
-            ManagementCommand::SetExternalConfig,
+            Command::SetExternalConfig,
             controller,
             Some(param.to_bytes()),
             |_, param| {
@@ -753,7 +753,7 @@ impl ManagementClient {
         let mut param = BytesMut::from(address.as_ref());
 
         self.exec_command(
-            ManagementCommand::SetPublicAddress,
+            Command::SetPublicAddress,
             controller,
             Some(param.to_bytes()),
             |_, param| {
@@ -779,7 +779,7 @@ impl ManagementClient {
         param.put_u16_le(appearance);
 
         self.exec_command(
-            ManagementCommand::SetAppearance,
+            Command::SetAppearance,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),
@@ -797,7 +797,7 @@ impl ManagementClient {
         param.put_u32_le(selected_phys.bits());
 
         self.exec_command(
-            ManagementCommand::SetPhyConfig,
+            Command::SetPhyConfig,
             controller,
             Some(param.to_bytes()),
             |_, _| Ok(()),

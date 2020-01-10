@@ -2,7 +2,7 @@ use enumflags2::BitFlags;
 
 use super::*;
 
-impl ManagementClient {
+impl BlueZClient {
     ///	This command is used to read the advertising features supported
     ///	by the controller and stack. The `max_adv_data_len` and `max_scan_rsp_len` provides extra
     ///	information about the maximum length of the data fields. For
@@ -14,7 +14,7 @@ impl ManagementClient {
         controller: Controller,
     ) -> Result<AdvertisingFeaturesInfo> {
         self.exec_command(
-            ManagementCommand::ReadAdvertisingFeatures,
+            Command::ReadAdvertisingFeatures,
             controller,
             None,
             |_, param| {
@@ -114,7 +114,7 @@ impl ManagementClient {
         param.put_slice(&info.scan_rsp[..]);
 
         self.exec_command(
-            ManagementCommand::AddAdvertising,
+            Command::AddAdvertising,
             controller,
             Some(param.to_bytes()),
             |_, param| Ok(param.unwrap().get_u8()),
@@ -147,7 +147,7 @@ impl ManagementClient {
         param.put_u8(instance);
 
         self.exec_command(
-            ManagementCommand::RemoveAdvertising,
+            Command::RemoveAdvertising,
             controller,
             Some(param.to_bytes()),
             |_, param| Ok(param.unwrap().get_u8()),
@@ -177,7 +177,7 @@ impl ManagementClient {
         param.put_u8(instance);
 
         self.exec_command(
-            ManagementCommand::GetAdvertisingSizeInfo,
+            Command::GetAdvertisingSizeInfo,
             controller,
             Some(param.to_bytes()),
             |_, param| {

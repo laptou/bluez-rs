@@ -2,7 +2,7 @@ use enumflags2::BitFlags;
 
 use super::*;
 
-impl ManagementClient {
+impl BlueZClient {
     ///	This command is used to start the process of discovering remote
     ///	devices. A Device Found event will be sent for each discovered
     ///	device.
@@ -30,7 +30,7 @@ impl ManagementClient {
         param.put_u8(address_types.bits());
 
         self.exec_command(
-            ManagementCommand::StartDiscovery,
+            Command::StartDiscovery,
             controller,
             Some(param.to_bytes()),
             |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),
@@ -51,7 +51,7 @@ impl ManagementClient {
         param.put_u8(address_types.bits());
 
         self.exec_command(
-            ManagementCommand::StopDiscovery,
+            Command::StopDiscovery,
             controller,
             Some(param.to_bytes()),
             |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),
@@ -99,7 +99,7 @@ impl ManagementClient {
         }
 
         self.exec_command(
-            ManagementCommand::StartServiceDiscovery,
+            Command::StartServiceDiscovery,
             controller,
             Some(param.to_bytes()),
             |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),
@@ -129,7 +129,7 @@ impl ManagementClient {
         param.put_u8(address_types.bits());
 
         self.exec_command(
-            ManagementCommand::StartLimitedDiscovery,
+            Command::StartLimitedDiscovery,
             controller,
             Some(param.to_bytes()),
             |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),

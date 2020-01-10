@@ -1,9 +1,9 @@
-use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus};
+use crate::interface::{Command, CommandStatus};
 
-pub type Result<T> = std::result::Result<T, ManagementError>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Error, Debug)]
-pub enum ManagementError {
+pub enum Error {
     #[error("Unknown error.")]
     Unknown,
     #[error("No data was available to be read.")]
@@ -15,8 +15,8 @@ pub enum ManagementError {
     },
     #[error("Command {:?} returned {:?}.", status, opcode)]
     CommandError {
-        opcode: ManagementCommand,
-        status: ManagementCommandStatus,
+        opcode: Command,
+        status: CommandStatus,
     },
     #[error("Unknown opcode: {:x}.", opcode)]
     UnknownOpcode { opcode: u16 },
@@ -41,14 +41,14 @@ pub enum ManagementError {
     PinCodeTooLong { max_len: u32 },
 }
 
-impl From<std::io::Error> for ManagementError {
+impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
-        ManagementError::IO { source: err }
+        Error::IO { source: err }
     }
 }
 
-impl From<std::ffi::NulError> for ManagementError {
+impl From<std::ffi::NulError> for Error {
     fn from(err: std::ffi::NulError) -> Self {
-        ManagementError::NullByte { source: err }
+        Error::NullByte { source: err }
     }
 }

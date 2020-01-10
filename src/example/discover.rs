@@ -7,12 +7,11 @@ use async_std::task::block_on;
 
 use bluez::client::*;
 use bluez::interface::controller::*;
-use bluez::interface::event::ManagementEvent;
-use bluez::ManagementError;
+use bluez::interface::event::Event;
 
 #[async_std::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
-    let mut client = ManagementClient::new().unwrap();
+    let mut client = BlueZClient::new().unwrap();
 
     let version = client.get_mgmt_version().await?;
     println!(
@@ -64,7 +63,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     // scan for some devices
     // to do this we'll need to listen for the Device Found event, so we will set a handler
     client.set_handler(Some(Box::new(|controller, event| match event {
-        ManagementEvent::DeviceFound {
+        Event::DeviceFound {
             address,
             address_type,
             flags,
@@ -78,7 +77,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             println!("\tflags: {:?}", flags);
             println!("\trssi: {:?}", rssi);
         }
-        ManagementEvent::Discovering {
+        Event::Discovering {
             discovering,
             address_type,
         } => println!("discovering: {} {:?}", discovering, address_type),

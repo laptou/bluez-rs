@@ -5,6 +5,7 @@ A library for controlling Bluetooth on Linux.
 [![crates.io](https://img.shields.io/crates/l/bluez.svg?style=for-the-badge)](https://github.com/laptou/bluez-rs/blob/master/LICENSE)
 
 [Documentation](https://docs.rs/bluez)
+[Example](https://github.com/laptou/bluez-rs/blob/master/src/example/discover.rs)
 
 ## License
 This project is licensed under the MIT license.

@@ -1,8 +1,8 @@
-use crate::mgmt::interface::class::from_bytes as class_from_bytes;
+use crate::interface::class::from_bytes as class_from_bytes;
 
 use super::*;
 
-impl ManagementClient {
+impl BlueZClient {
     /// This command is used to set the major and minor device class for
     ///	BR/EDR capable controllers.
     ///
@@ -27,7 +27,7 @@ impl ManagementClient {
         param.put_u16_le(device_class.into());
 
         self.exec_command(
-            ManagementCommand::SetDeviceClass,
+            Command::SetDeviceClass,
             controller,
             Some(param.to_bytes()),
             |_, param| Ok(class_from_bytes(param.unwrap())),
@@ -57,7 +57,7 @@ impl ManagementClient {
         param.put_u8((svc_hint.bits() >> 16) as u8);
 
         self.exec_command(
-            ManagementCommand::AddUUID,
+            Command::AddUUID,
             controller,
             Some(param.to_bytes()),
             |_, param| Ok(class_from_bytes(param.unwrap())),
@@ -85,7 +85,7 @@ impl ManagementClient {
         let mut param = BytesMut::from(&uuid[..]);
 
         self.exec_command(
-            ManagementCommand::RemoveUUID,
+            Command::RemoveUUID,
             controller,
             Some(param.to_bytes()),
             |_, param| Ok(class_from_bytes(param.unwrap())),

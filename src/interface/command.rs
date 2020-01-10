@@ -2,7 +2,7 @@ use std::fmt;
 
 #[repr(u8)]
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
-pub enum ManagementCommandStatus {
+pub enum CommandStatus {
     Success = 0x00,
     UnknownCommand = 0x01,
     NotConnected = 0x02,
@@ -28,7 +28,7 @@ pub enum ManagementCommandStatus {
 
 #[repr(u16)]
 #[derive(Eq, PartialEq, FromPrimitive, ToPrimitive, Copy, Clone, Debug)]
-pub enum ManagementCommand {
+pub enum Command {
     ReadVersionInfo = 0x0001,
     ReadSupportedCommands,
     ReadControllerIndexList,
@@ -102,7 +102,7 @@ pub enum ManagementCommand {
     LoadBlockedKeys,
 }
 
-impl fmt::LowerHex for ManagementCommandStatus {
+impl fmt::LowerHex for CommandStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "{:x}", *self as u8)
     }

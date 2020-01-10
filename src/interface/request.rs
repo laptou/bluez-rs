@@ -1,16 +1,16 @@
 use bytes::*;
 
-use crate::mgmt::interface::command::ManagementCommand;
-use crate::mgmt::interface::controller::Controller;
+use crate::interface::command::Command;
+use crate::interface::controller::Controller;
 
 #[derive(Debug)]
-pub struct ManagementRequest {
-    pub opcode: ManagementCommand,
+pub struct Request {
+    pub opcode: Command,
     pub controller: Controller,
     pub param: Bytes,
 }
 
-impl Into<Bytes> for ManagementRequest {
+impl Into<Bytes> for Request {
     fn into(self) -> Bytes {
         let mut buf = BytesMut::with_capacity(6 + self.param.len());
 

@@ -30,7 +30,7 @@ pub(crate) fn address_bytes_with_u8(
     param.to_bytes()
 }
 
-impl ManagementClient {
+impl BlueZClient {
     ///	This command is only valid during device discovery and is
     ///	expected for each Device Found event with the Confirm Name
     ///	flag set.
@@ -49,7 +49,7 @@ impl ManagementClient {
         name_known: bool,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            ManagementCommand::ConfirmName,
+            Command::ConfirmName,
             controller,
             Some(address_bytes_with_u8(
                 address,
@@ -82,7 +82,7 @@ impl ManagementClient {
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            ManagementCommand::BlockDevice,
+            Command::BlockDevice,
             controller,
             Some(address_bytes(address, address_type)),
             address_callback,
@@ -104,7 +104,7 @@ impl ManagementClient {
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            ManagementCommand::UnblockDevice,
+            Command::UnblockDevice,
             controller,
             Some(address_bytes(address, address_type)),
             address_callback,
@@ -123,7 +123,7 @@ impl ManagementClient {
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            ManagementCommand::Disconnect,
+            Command::Disconnect,
             controller,
             Some(address_bytes(address, address_type)),
             address_callback,
@@ -146,7 +146,7 @@ impl ManagementClient {
         let opcode;
 
         if let Some(pin_code) = pin_code {
-            opcode = ManagementCommand::PinCodeReply;
+            opcode = Command::PinCodeReply;
             param = BytesMut::with_capacity(24);
             param.put_slice(address.as_ref());
             param.put_u8(address_type as u8);
@@ -154,7 +154,7 @@ impl ManagementClient {
             param.put_slice(&pin_code[..]);
             param.resize(24, 0);
         } else {
-            opcode = ManagementCommand::PinCodeNegativeReply;
+            opcode = Command::PinCodeNegativeReply;
             param = BytesMut::with_capacity(7);
             param.put_slice(address.as_ref());
             param.put_u8(address_type as u8);
@@ -193,7 +193,7 @@ impl ManagementClient {
         io_capability: IoCapability,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            ManagementCommand::PairDevice,
+            Command::PairDevice,
             controller,
             Some(address_bytes_with_u8(
                 address,
@@ -216,7 +216,7 @@ impl ManagementClient {
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            ManagementCommand::CancelPairDevice,
+            Command::CancelPairDevice,
             controller,
             Some(address_bytes(address, address_type)),
             address_callback,
@@ -248,7 +248,7 @@ impl ManagementClient {
         disconnect: bool,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            ManagementCommand::UnpairDevice,
+            Command::UnpairDevice,
             controller,
             Some(address_bytes_with_u8(
                 address,
@@ -271,9 +271,9 @@ impl ManagementClient {
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
             if reply {
-                ManagementCommand::UserConfirmationReply
+                Command::UserConfirmationReply
             } else {
-                ManagementCommand::UserConfirmationNegativeReply
+                Command::UserConfirmationNegativeReply
             },
             controller,
             Some(address_bytes(address, address_type)),
@@ -296,13 +296,13 @@ impl ManagementClient {
         let mut param;
 
         if let Some(passkey) = passkey {
-            opcode = ManagementCommand::UserPasskeyReply;
+            opcode = Command::UserPasskeyReply;
             param = BytesMut::with_capacity(11);
             param.put_slice(address.as_ref());
             param.put_u8(address_type as u8);
             param.put_u32_le(passkey);
         } else {
-            opcode = ManagementCommand::UserPasskeyNegativeReply;
+            opcode = Command::UserPasskeyNegativeReply;
             param = BytesMut::with_capacity(7);
             param.put_slice(address.as_ref());
             param.put_u8(address_type as u8);
@@ -348,7 +348,7 @@ impl ManagementClient {
         action: AddDeviceAction,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            ManagementCommand::AddDevice,
+            Command::AddDevice,
             controller,
             Some(address_bytes_with_u8(address, address_type, action as u8)),
             address_callback,
@@ -371,7 +371,7 @@ impl ManagementClient {
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            ManagementCommand::AddDevice,
+            Command::AddDevice,
             controller,
             Some(address_bytes(address, address_type)),
             address_callback,
