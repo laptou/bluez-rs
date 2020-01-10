@@ -1,7 +1,8 @@
 use enumflags2::BitFlags;
 
-use super::*;
 use super::interact::{address_bytes, address_callback};
+use super::*;
+use crate::util::BufExt2;
 
 impl<'a> BlueZClient<'a> {
     /// This command is used to read the local Out of Band data.
@@ -19,15 +20,15 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(Command::ReadLocalOutOfBand, controller, None, |_, param| {
             let mut param = param.unwrap();
             Ok(OutOfBandData {
-                hash_192: param.split_to(16).as_ref().try_into().unwrap(),
-                randomizer_192: param.split_to(16).as_ref().try_into().unwrap(),
+                hash_192: param.get_u8x16(),
+                randomizer_192: param.get_u8x16(),
                 hash_256: if param.has_remaining() {
-                    Some(param.split_to(16).as_ref().try_into().unwrap())
+                    Some(param.get_u8x16())
                 } else {
                     None
                 },
                 randomizer_256: if param.has_remaining() {
-                    Some(param.split_to(16).as_ref().try_into().unwrap())
+                    Some(param.get_u8x16())
                 } else {
                     None
                 },
@@ -50,13 +51,14 @@ impl<'a> BlueZClient<'a> {
             Some(BytesMut::from([address_types.bits() as u8].as_ref() as &[u8]).to_bytes()),
             |_, param| {
                 let mut param = param.unwrap();
-                let address_types = BitFlags::from_bits_truncate(param.get_u8());
-                let eir_data_len = param.get_u16_le();
                 Ok((
-                    address_types,
+                    param.get_flags_u8(),
                     // read eir data length param, then use that to split
                     // should just end up splitting at the end but just to be safe
-                    param.split_to(eir_data_len as usize),
+                    {
+                        let eir_data_len = param.get_u16_le();
+                        param.split_to(eir_data_len as usize)
+                    },
                 ))
             },
         )

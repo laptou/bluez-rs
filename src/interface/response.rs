@@ -4,12 +4,12 @@ use bytes::*;
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 
-use crate::Address;
 use crate::client::ConnectionParams;
-use crate::Error;
 use crate::interface::controller::Controller;
 use crate::interface::event::Event;
 use crate::util::BufExt2;
+use crate::Address;
+use crate::Error;
 
 pub struct Response {
     pub event: Event,

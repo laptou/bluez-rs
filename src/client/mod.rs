@@ -1,19 +1,17 @@
-use std::convert::TryInto;
 use std::ffi::CString;
 
 use bytes::*;
-use num_traits::FromPrimitive;
 
 pub use params::*;
 pub use settings::*;
 
-use crate::{Error, Result};
-use crate::Address;
-use crate::interface::*;
 use crate::interface::class::{DeviceClass, ServiceClasses};
-use crate::interface::controller::{Controller, ControllerInfo, ControllerSettings};
+use crate::interface::controller::{Controller, ControllerInfo};
 use crate::interface::event::Event;
+use crate::interface::*;
 use crate::socket::ManagementSocket;
+use crate::Address;
+use crate::{Error, Result};
 
 mod advertising;
 mod class;

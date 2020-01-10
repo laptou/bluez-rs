@@ -203,7 +203,7 @@ pub enum ControllerConfigOptions {
 
 #[derive(Debug)]
 pub struct ControllerConfigInfo {
-    pub manufacturer: [u8; 2],
+    pub manufacturer: u16,
     pub supported_options: BitFlags<ControllerConfigOptions>,
     pub missing_options: BitFlags<ControllerConfigOptions>,
 }

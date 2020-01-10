@@ -4,8 +4,8 @@ use std::fmt::{Display, Formatter};
 use bytes::Bytes;
 use enumflags2::BitFlags;
 
-use crate::Address;
 use crate::interface::class::{DeviceClass, ServiceClasses};
+use crate::Address;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Controller(pub(crate) u16);
@@ -43,7 +43,7 @@ pub struct ControllerInfo {
 pub struct ControllerInfoExt {
     pub address: Address,
     pub bluetooth_version: u8,
-    pub manufacturer: [u8; 2],
+    pub manufacturer: u16,
     pub supported_settings: ControllerSettings,
     pub current_settings: ControllerSettings,
 

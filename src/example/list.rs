@@ -24,7 +24,10 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     println!("\navailable controllers:");
 
     for (controller, controller_type, controller_bus) in controllers {
-        println!("\t{:?} ({:?}, {:?})", controller, controller_type, controller_bus);
+        println!(
+            "\t{:?} ({:?}, {:?})",
+            controller, controller_type, controller_bus
+        );
         let info = client.get_controller_info(controller).await?;
 
         println!("\t\tname: {:?}", info.name);

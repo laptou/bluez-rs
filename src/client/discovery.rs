@@ -1,6 +1,7 @@
 use enumflags2::BitFlags;
 
 use super::*;
+use crate::util::BufExt2;
 
 impl<'a> BlueZClient<'a> {
     ///	This command is used to start the process of discovering remote
@@ -33,7 +34,7 @@ impl<'a> BlueZClient<'a> {
             Command::StartDiscovery,
             controller,
             Some(param.to_bytes()),
-            |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),
+            |_, param| Ok(param.unwrap().get_flags_u8()),
         )
         .await
     }
@@ -54,7 +55,7 @@ impl<'a> BlueZClient<'a> {
             Command::StopDiscovery,
             controller,
             Some(param.to_bytes()),
-            |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),
+            |_, param| Ok(param.unwrap().get_flags_u8()),
         )
         .await
     }
@@ -102,7 +103,7 @@ impl<'a> BlueZClient<'a> {
             Command::StartServiceDiscovery,
             controller,
             Some(param.to_bytes()),
-            |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),
+            |_, param| Ok(param.unwrap().get_flags_u8()),
         )
         .await
     }
@@ -132,7 +133,7 @@ impl<'a> BlueZClient<'a> {
             Command::StartLimitedDiscovery,
             controller,
             Some(param.to_bytes()),
-            |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),
+            |_, param| Ok(param.unwrap().get_flags_u8()),
         )
         .await
     }

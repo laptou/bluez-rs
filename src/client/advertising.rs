@@ -1,6 +1,5 @@
-use enumflags2::BitFlags;
-
 use super::*;
+use crate::util::BufExt2;
 
 impl<'a> BlueZClient<'a> {
     ///	This command is used to read the advertising features supported
@@ -19,19 +18,15 @@ impl<'a> BlueZClient<'a> {
             None,
             |_, param| {
                 let mut param = param.unwrap();
-                let supported_flags = BitFlags::from_bits_truncate(param.get_u32_le());
-                let max_adv_data_len = param.get_u8();
-                let max_scan_rsp_len = param.get_u8();
-                let max_instances = param.get_u8();
-                let num_instances = param.get_u8();
-                let instances = param.split_to(num_instances as usize).to_vec();
-
                 Ok(AdvertisingFeaturesInfo {
-                    supported_flags,
-                    max_adv_data_len,
-                    max_scan_rsp_len,
-                    max_instances,
-                    instances,
+                    supported_flags: param.get_flags_u32_le(),
+                    max_adv_data_len: param.get_u8(),
+                    max_scan_rsp_len: param.get_u8(),
+                    max_instances: param.get_u8(),
+                    instances: {
+                        let num_instances = param.get_u8() as usize;
+                        param.split_to(num_instances).to_vec()
+                    },
                 })
             },
         )
@@ -184,7 +179,7 @@ impl<'a> BlueZClient<'a> {
                 let mut param = param.unwrap();
                 Ok(AdvertisingSizeInfo {
                     instance: param.get_u8(),
-                    flags: BitFlags::from_bits_truncate(param.get_u32_le()),
+                    flags: param.get_flags_u32_le(),
                     max_adv_data_len: param.get_u8(),
                     max_scan_rsp_len: param.get_u8(),
                 })

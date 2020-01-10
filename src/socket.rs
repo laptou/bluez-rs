@@ -4,13 +4,13 @@ use std::u16;
 use async_std::io::{self};
 use async_std::os::unix::io::{FromRawFd, RawFd};
 use async_std::os::unix::net::UnixStream;
-use bytes::*;
 use bytes::buf::BufExt;
+use bytes::*;
 use futures::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
 use libc;
 
-use crate::Error;
 use crate::interface::{Request, Response};
+use crate::Error;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

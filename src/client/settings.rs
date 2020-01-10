@@ -1,17 +1,17 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 
-use crate::Address;
-use crate::interface::Command;
 use crate::interface::controller::{Controller, ControllerSettings};
+use crate::interface::Command;
+use crate::Address;
 use crate::Result;
 
 use super::*;
+use crate::util::BufExt2;
 
 // use some consts for common callback patterns
 fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSettings> {
-    let mut param = param.unwrap();
-    Ok(ControllerSettings::from_bits_truncate(param.get_u32_le()))
+    Ok(param.unwrap().get_flags_u32_le())
 }
 
 impl<'a> BlueZClient<'a> {
@@ -68,10 +68,7 @@ impl<'a> BlueZClient<'a> {
             |_, param| {
                 let mut param = param.unwrap();
 
-                Ok((
-                    CString::new(param.split_to(249).to_vec()).unwrap(),
-                    CString::new(param.to_vec()).unwrap(),
-                ))
+                Ok((param.split_to(249).get_c_string(), param.get_c_string()))
             },
         )
         .await
@@ -711,10 +708,7 @@ impl<'a> BlueZClient<'a> {
             Command::SetExternalConfig,
             controller,
             Some(param.to_bytes()),
-            |_, param| {
-                let mut param = param.unwrap();
-                Ok(BitFlags::from_bits_truncate(param.get_u32_le()))
-            },
+            settings_callback,
         )
         .await
     }
@@ -756,10 +750,7 @@ impl<'a> BlueZClient<'a> {
             Command::SetPublicAddress,
             controller,
             Some(param.to_bytes()),
-            |_, param| {
-                let mut param = param.unwrap();
-                Ok(BitFlags::from_bits_truncate(param.get_u32_le()))
-            },
+            settings_callback,
         )
         .await
     }

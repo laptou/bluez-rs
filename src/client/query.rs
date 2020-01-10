@@ -1,5 +1,3 @@
-use enumflags2::BitFlags;
-
 use crate::interface::class::from_bytes as class_from_bytes;
 use crate::interface::controller::ControllerInfoExt;
 use crate::util::BufExt2;
@@ -75,11 +73,11 @@ impl<'a> BlueZClient<'a> {
             let mut param = param.unwrap();
 
             Ok(ControllerInfo {
-                address: Address::from_slice(param.split_to(6).as_ref()),
+                address: param.get_address(),
                 bluetooth_version: param.get_u8(),
                 manufacturer: param.get_u16_le(),
-                supported_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
-                current_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
+                supported_settings: param.get_flags_u32_le(),
+                current_settings: param.get_flags_u32_le(),
                 class_of_device: class_from_bytes(param.split_to(3).to_bytes()),
                 name: param.split_to(249).get_c_string(),
                 short_name: param.get_c_string(),
@@ -173,8 +171,8 @@ impl<'a> BlueZClient<'a> {
             |_, param| {
                 let mut param = param.unwrap();
 
-                let address = Address::from_slice(param.split_to(6).as_ref());
-                let address_type = FromPrimitive::from_u8(param.get_u8()).unwrap();
+                let address = param.get_address();
+                let address_type = param.get_primitive_u8();
                 let local_clock = param.get_u32_le();
 
                 let mut piconet_clock = None;
@@ -271,9 +269,9 @@ impl<'a> BlueZClient<'a> {
             |_, param| {
                 let mut param = param.unwrap();
                 Ok(ControllerConfigInfo {
-                    manufacturer: param.split_to(2).as_ref().try_into().unwrap(),
-                    supported_options: BitFlags::from_bits_truncate(param.get_u32_le()),
-                    missing_options: BitFlags::from_bits_truncate(param.get_u32_le()),
+                    manufacturer: param.get_u16_le(),
+                    supported_options: param.get_flags_u32_le(),
+                    missing_options: param.get_flags_u32_le(),
                 })
             },
         )
@@ -311,8 +309,8 @@ impl<'a> BlueZClient<'a> {
                 for _ in 0..count {
                     index.push((
                         Controller(param.get_u16_le()),
-                        FromPrimitive::from_u8(param.get_u8()).unwrap(),
-                        FromPrimitive::from_u8(param.get_u8()).unwrap(),
+                        param.get_primitive_u8(),
+                        param.get_primitive_u8(),
                     ));
                 }
                 Ok(index)
@@ -352,11 +350,11 @@ impl<'a> BlueZClient<'a> {
                 let mut param = param.unwrap();
 
                 Ok(ControllerInfoExt {
-                    address: Address::from_slice(param.split_to(6).as_ref()),
+                    address: param.get_address(),
                     bluetooth_version: param.get_u8(),
-                    manufacturer: param.split_to(2).as_ref().try_into().unwrap(),
-                    supported_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
-                    current_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
+                    manufacturer: param.get_u16_le(),
+                    supported_settings: param.get_flags_u32_le(),
+                    current_settings: param.get_flags_u32_le(),
                     eir_data: {
                         let len = param.get_u16_le();
                         param.split_to(len as usize)
@@ -377,9 +375,9 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(Command::GetPhyConfig, controller, None, |_, param| {
             let mut param = param.unwrap();
             Ok(PhyConfig {
-                supported_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
-                configurable_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
-                selected_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
+                supported_phys: param.get_flags_u32_le(),
+                configurable_phys: param.get_flags_u32_le(),
+                selected_phys: param.get_flags_u32_le(),
             })
         })
         .await

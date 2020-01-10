@@ -1,14 +1,12 @@
 use super::*;
+use crate::util::BufExt2;
 
 pub(crate) fn address_callback(
     _: Controller,
     param: Option<Bytes>,
 ) -> Result<(Address, AddressType)> {
     let mut param = param.unwrap();
-    Ok((
-        Address::from_slice(param.split_to(6).as_ref()),
-        FromPrimitive::from_u8(param.get_u8()).unwrap(),
-    ))
+    Ok((param.get_address(), param.get_primitive_u8()))
 }
 
 pub(crate) fn address_bytes(address: Address, address_type: AddressType) -> Bytes {
@@ -26,7 +24,7 @@ pub(crate) fn address_bytes_with_u8(
     let mut param = BytesMut::with_capacity(8);
     param.put_slice(address.as_ref());
     param.put_u8(address_type as u8);
-    param.put_u8(extra as u8);
+    param.put_u8(extra);
     param.to_bytes()
 }
 

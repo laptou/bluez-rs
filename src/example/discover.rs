@@ -23,7 +23,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     // find the first controller we can power on
     let (controller, info) = controllers
         .into_iter()
-        .filter_map( |controller| {
+        .filter_map(|controller| {
             let info = block_on(client.get_controller_info(controller)).ok()?;
 
             if info.supported_settings.contains(ControllerSetting::Powered) {
@@ -49,10 +49,6 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             AddressTypeFlag::BREDR | AddressTypeFlag::LEPublic | AddressTypeFlag::LERandom,
         )
         .await?;
-
-    client.set_handler(|controller, event| {
-
-    });
 
     // just wait for discovery forever
     loop {
