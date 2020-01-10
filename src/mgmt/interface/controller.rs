@@ -45,6 +45,15 @@ pub struct ControllerInfoExt {
     pub manufacturer: [u8; 2],
     pub supported_settings: ControllerSettings,
     pub current_settings: ControllerSettings,
+
+    /// Contains information about class of device,
+    ///	local name and other values. Not all of them might be present. For
+    ///	example a Low Energy only device does not contain class of device
+    ///	information.
+    ///
+    ///	When any of the values in the `eir_data` field changes, the event
+    ///	Extended Controller Information Changed will be used to inform
+    ///	clients about the updated information.
     pub eir_data: Bytes,
 }
 

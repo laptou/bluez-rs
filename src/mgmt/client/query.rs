@@ -1,6 +1,7 @@
 use enumflags2::BitFlags;
 
 use crate::mgmt::interface::class::from_bytes as class_from_bytes;
+use crate::mgmt::interface::controller::ControllerInfoExt;
 use crate::util::bytes_to_c_str;
 
 use super::*;
@@ -87,6 +88,40 @@ impl ManagementClient {
                     name: bytes_to_c_str(param.split_to(249)),
                     short_name: bytes_to_c_str(param),
                 })
+            },
+        )
+        .await
+    }
+
+    ///	This command is used to retrieve a list of currently connected
+    ///	devices.
+    ///
+    ///	For devices using resolvable random addresses with a known
+    ///	identity resolving key, the `address` and `address_type` will
+    ///	contain the identity information.
+    ///
+    ///	This command can only be used when the controller is powered.
+    pub async fn get_connections(
+        &mut self,
+        controller: Controller,
+    ) -> Result<Vec<(Address, AddressType)>> {
+        self.exec_command(
+            ManagementCommand::GetConnections,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.unwrap();
+                let count = param.get_u16_le() as usize;
+                let mut connections = Vec::with_capacity(count);
+
+                for _ in 0..count {
+                    connections.push((
+                        Address::from_slice(param.split_to(6).as_ref()),
+                        FromPrimitive::from_u8(param.get_u8()).unwrap(),
+                    ));
+                }
+
+                Ok(connections)
             },
         )
         .await
@@ -299,12 +334,50 @@ impl ManagementClient {
         .await
     }
 
-    ///	by this command.
+    /// This command is used to retrieve the current state and basic
+    ///	information of a controller. It is typically used right after
+    ///	getting the response to the Read Controller Index List command
+    ///	or an Index Added event (or its extended counterparts).
+    ///
+    ///	The Address parameter describes the controllers public address
+    ///	and it can be expected that it is set. However in case of single
+    ///	mode Low Energy only controllers it can be 00:00:00:00:00:00. To
+    ///	power on the controller in this case, it is required to configure
+    ///	a static address using Set Static Address command first.
+    ///
+    ///	If the public address is set, then it will be used as identity
+    ///	address for the controller. If no public address is available,
+    ///	then the configured static address will be used as identity
+    ///	address.
+    ///
+    ///	In the case of a dual-mode controller with public address that
+    ///	is configured as Low Energy only device (BR/EDR switched off),
+    ///	the static address is used when set and public address otherwise.
     pub async fn get_ext_controller_info(
         &mut self,
         controller: Controller,
-    ) -> Result<Vec<(Controller, ControllerType, ControllerBus)>> {
-        todo!()
+    ) -> Result<ControllerInfoExt> {
+        self.exec_command(
+            ManagementCommand::ReadExtendedControllerInfo,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.unwrap();
+
+                Ok(ControllerInfoExt {
+                    address: Address::from_slice(param.split_to(6).as_ref()),
+                    bluetooth_version: param.get_u8(),
+                    manufacturer: param.split_to(2).as_ref().try_into().unwrap(),
+                    supported_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
+                    current_settings: ControllerSettings::from_bits_truncate(param.get_u32_le()),
+                    eir_data: {
+                        let len = param.get_u16_le();
+                        param.split_to(len as usize)
+                    },
+                })
+            },
+        )
+        .await
     }
 
     /// If BR/EDR is supported, then BR 1M 1-Slot is supported by
@@ -321,9 +394,9 @@ impl ManagementClient {
             |_, param| {
                 let mut param = param.unwrap();
                 Ok(PhyConfig {
-                    supported_phys: BitFlags::from_bits_truncate(param.get_u16_le()),
-                    configurable_phys: BitFlags::from_bits_truncate(param.get_u16_le()),
-                    selected_phys: BitFlags::from_bits_truncate(param.get_u16_le()),
+                    supported_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
+                    configurable_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
+                    selected_phys: BitFlags::from_bits_truncate(param.get_u32_le()),
                 })
             },
         )
