@@ -1,10 +1,10 @@
 [package]
 name = "bluez"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Ibiyemi Abiodun <ibiyemi@intulon.com>"]
 edition = "2018"
 description = "Control Bluetooth on Linux."
-license = "CC-BY-NC-SA-4.0"
+license = "MIT"
 
 [dependencies]
 libc = "0.2"

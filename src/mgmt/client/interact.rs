@@ -1,6 +1,9 @@
 use super::*;
 
-fn address_callback(_: Controller, param: Option<Bytes>) -> Result<(Address, AddressType)> {
+pub(crate) fn address_callback(
+    _: Controller,
+    param: Option<Bytes>,
+) -> Result<(Address, AddressType)> {
     let mut param = param.unwrap();
     Ok((
         Address::from_slice(param.split_to(6).as_ref()),
@@ -8,14 +11,18 @@ fn address_callback(_: Controller, param: Option<Bytes>) -> Result<(Address, Add
     ))
 }
 
-fn address_bytes(address: Address, address_type: AddressType) -> Bytes {
+pub(crate) fn address_bytes(address: Address, address_type: AddressType) -> Bytes {
     let mut param = BytesMut::with_capacity(7);
     param.put_slice(address.as_ref());
     param.put_u8(address_type as u8);
     param.to_bytes()
 }
 
-fn address_bytes_with_u8(address: Address, address_type: AddressType, extra: u8) -> Bytes {
+pub(crate) fn address_bytes_with_u8(
+    address: Address,
+    address_type: AddressType,
+    extra: u8,
+) -> Bytes {
     let mut param = BytesMut::with_capacity(8);
     param.put_slice(address.as_ref());
     param.put_u8(address_type as u8);
@@ -23,7 +30,10 @@ fn address_bytes_with_u8(address: Address, address_type: AddressType, extra: u8)
     param.to_bytes()
 }
 
-impl ManagementClient {
+impl<H> ManagementClient<H>
+where
+    H: FnMut(Controller, ManagementEvent) -> (),
+{
     ///	This command is only valid during device discovery and is
     ///	expected for each Device Found event with the Confirm Name
     ///	flag set.

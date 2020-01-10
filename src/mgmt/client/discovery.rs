@@ -2,7 +2,10 @@ use enumflags2::BitFlags;
 
 use super::*;
 
-impl ManagementClient {
+impl<H> ManagementClient<H>
+where
+    H: FnMut(Controller, ManagementEvent) -> (),
+{
     ///	This command is used to start the process of discovering remote
     ///	devices. A Device Found event will be sent for each discovered
     ///	device.

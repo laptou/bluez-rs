@@ -14,7 +14,10 @@ fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSe
     Ok(ControllerSettings::from_bits_truncate(param.get_u32_le()))
 }
 
-impl ManagementClient {
+impl<H> ManagementClient<H>
+where
+    H: FnMut(Controller, ManagementEvent) -> (),
+{
     /// This command is used to set the local name of a controller. The
     ///	command parameters also include a short name which will be used
     ///	in case the full name doesn't fit within EIR/AD data.
@@ -471,9 +474,9 @@ impl ManagementClient {
     ///	The Source parameter selects the organization that assigned the
     ///	Vendor parameter:
     ///
-    ///		`0x0000`	Disable Device ID
-    ///		`0x0001`	Bluetooth SIG
-    ///		`0x0002`	USB Implementer's Forum
+    ///	 - `0x0000`	Disable Device ID
+    ///	 - `0x0001`	Bluetooth SIG
+    ///	 - `0x0002`	USB Implementer's Forum
     ///
     ///	The information is put into the EIR data. If the controller does
     ///	not support EIR or if SSP is disabled, this command will still

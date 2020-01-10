@@ -4,14 +4,20 @@ use std::error::Error;
 
 use async_std::task;
 
-use bluez::mgmt;
+use bluez::client::ManagementClient;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     task::block_on(main_async())
 }
 
 pub async fn main_async() -> Result<(), Box<dyn Error>> {
-    let mut client = mgmt::client::ManagementClient::new();
+    let mut client = ManagementClient::new(|controller, event| {
+        println!(
+            "recieved event {:?} from controller {:?}",
+            event, controller
+        )
+    })
+    .unwrap();
 
     let version = client.get_mgmt_version().await?;
     println!(

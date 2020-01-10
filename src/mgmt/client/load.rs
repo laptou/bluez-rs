@@ -1,6 +1,9 @@
 use super::*;
 
-impl ManagementClient {
+impl<H> ManagementClient<H>
+where
+    H: FnMut(Controller, ManagementEvent) -> (),
+{
     /// This command is used to feed the kernel with currently known
     ///	link keys. The command does not need to be called again upon the
     ///	receipt of New Link Key events since the kernel updates its list

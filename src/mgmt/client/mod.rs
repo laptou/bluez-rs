@@ -25,16 +25,23 @@ mod params;
 mod query;
 mod settings;
 
-pub struct ManagementClient {
+pub struct ManagementClient<H>
+where
+    H: FnMut(Controller, ManagementEvent) -> (),
+{
     socket: ManagementSocket,
+    handler: H,
 }
 
-impl ManagementClient {
-    pub fn new() -> Self {
-        // todo: fix that unwrap()
-        ManagementClient {
-            socket: ManagementSocket::open().unwrap(),
-        }
+impl<H> ManagementClient<H>
+where
+    H: FnMut(Controller, ManagementEvent) -> (),
+{
+    pub fn new(handler: H) -> Result<Self> {
+        Ok(ManagementClient {
+            socket: ManagementSocket::open()?,
+            handler,
+        })
     }
 
     #[inline]
@@ -86,7 +93,7 @@ impl ManagementClient {
                         _ => Err(ManagementError::CommandError { opcode, status }),
                     }
                 }
-                _ => (),
+                _ => (self.handler)(response.controller, response.event),
             }
         }
     }
