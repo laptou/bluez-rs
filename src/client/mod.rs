@@ -25,14 +25,12 @@ mod params;
 mod query;
 mod settings;
 
-type BlueZClientHandler = dyn FnMut(Controller, &Event) -> ();
-
-pub struct BlueZClient {
+pub struct BlueZClient<'a> {
     socket: ManagementSocket,
-    handler: Option<Box<BlueZClientHandler>>,
+    handler: Option<Box<dyn (FnMut(Controller, &Event) -> ()) + Send + 'a>>,
 }
 
-impl BlueZClient {
+impl<'a> BlueZClient<'a> {
     pub fn new() -> Result<Self> {
         Ok(BlueZClient {
             socket: ManagementSocket::open()?,
@@ -40,10 +38,12 @@ impl BlueZClient {
         })
     }
 
-    pub fn new_with_handler(handler: Box<BlueZClientHandler>) -> Result<Self> {
+    pub fn new_with_handler<H: (FnMut(Controller, &Event) -> ()) + Send + 'a>(
+        handler: H,
+    ) -> Result<Self> {
         Ok(BlueZClient {
             socket: ManagementSocket::open()?,
-            handler: Some(handler),
+            handler: Some(Box::new(handler)),
         })
     }
 
@@ -51,16 +51,18 @@ impl BlueZClient {
     /// an event. CommandComplete and CommandStatus events will NOT reach this handler;
     /// instead their contents can be accessed as the return value of the method
     /// that you called.
-    pub fn set_handler(&mut self, handler: Option<Box<BlueZClientHandler>>) {
-        self.handler = handler;
+    pub fn set_handler<H: (FnMut(Controller, &Event) -> ()) + Send + 'a>(&mut self, handler: H) {
+        self.handler = Some(Box::new(handler));
+    }
+
+    /// Removes whatever handler is currently attached to this client.
+    pub fn clear_handler(&mut self) {
+        self.handler = None;
     }
 
     /// Tells the client to check if any new data has been sent in by the kernel.
     /// If you do not call this method, you will not recieve any events except
-    /// when you happen to issue a command. If `block` is true, this method
-    /// will block until there is a response to read. If `block` is false,
-    /// this method will either return a pending response or return `Err(ManagementError::NoData)`,
-    /// which in most cases can be safely ignored.
+    /// when you happen to issue a command.
     pub async fn process(&mut self) -> Result<Response> {
         let response = self.socket.receive().await?;
 

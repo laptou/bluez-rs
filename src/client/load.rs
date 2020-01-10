@@ -1,6 +1,6 @@
 use super::*;
 
-impl BlueZClient {
+impl<'a> BlueZClient<'a> {
     /// This command is used to feed the kernel with currently known
     ///	link keys. The command does not need to be called again upon the
     ///	receipt of New Link Key events since the kernel updates its list

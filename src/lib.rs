@@ -43,7 +43,7 @@
 //! # #[async_std::main]
 //! # pub async fn main() -> Result<(), Box<dyn Error>> {
 //! #    let mut client = BlueZClient::new().unwrap();
-//! client.set_handler(Some(Box::new(|controller, event| match event {
+//! client.set_handler(|controller, event| match event {
 //!     Event::DeviceFound {
 //!         address,
 //!         address_type,
@@ -59,7 +59,7 @@
 //!         println!("\trssi: {:?}", rssi);
 //!     }
 //!     _ => (),
-//! })));
+//! });
 //!
 //! client
 //!     .start_discovery(
@@ -89,7 +89,7 @@
 //! just calls [`process()`][process] repeatedly until a relevant Command Status event appears, and
 //! [`process()`][process] will call your handler.
 //!
-//! # Pitfalls
+//! # Pitfall
 //! Commands that just query information, such as
 //! [`BlueZClient::get_controller_info`](crate::client::BlueZClient::get_controller_info),
 //! will usually work. However, commands that try to change any settings, such as
@@ -111,6 +111,6 @@ pub mod client;
 pub mod interface;
 pub mod result;
 
-mod socket;
 mod address;
+mod socket;
 mod util;

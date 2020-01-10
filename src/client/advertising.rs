@@ -2,7 +2,7 @@ use enumflags2::BitFlags;
 
 use super::*;
 
-impl BlueZClient {
+impl<'a> BlueZClient<'a> {
     ///	This command is used to read the advertising features supported
     ///	by the controller and stack. The `max_adv_data_len` and `max_scan_rsp_len` provides extra
     ///	information about the maximum length of the data fields. For

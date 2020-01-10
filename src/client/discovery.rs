@@ -2,7 +2,7 @@ use enumflags2::BitFlags;
 
 use super::*;
 
-impl BlueZClient {
+impl<'a> BlueZClient<'a> {
     ///	This command is used to start the process of discovering remote
     ///	devices. A Device Found event will be sent for each discovered
     ///	device.
