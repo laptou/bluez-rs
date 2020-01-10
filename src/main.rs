@@ -11,12 +11,12 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 }
 
 pub async fn main_async() -> Result<(), Box<dyn Error>> {
-    let mut client = ManagementClient::new(|controller, event| {
+    let mut client = ManagementClient::new_with_handler(Box::new(|controller, event| {
         println!(
             "recieved event {:?} from controller {:?}",
             event, controller
         )
-    })
+    }))
     .unwrap();
 
     let version = client.get_mgmt_version().await?;

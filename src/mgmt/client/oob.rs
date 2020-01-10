@@ -3,10 +3,7 @@ use enumflags2::BitFlags;
 use super::*;
 use super::interact::{address_bytes, address_callback};
 
-impl<H> ManagementClient<H>
-where
-    H: FnMut(Controller, ManagementEvent) -> (),
-{
+impl ManagementClient {
     /// This command is used to read the local Out of Band data.
     ///
     ///	This command can only be used when the controller is powered.

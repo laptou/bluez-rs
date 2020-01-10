@@ -6,10 +6,7 @@ use crate::util::bytes_to_c_str;
 
 use super::*;
 
-impl<H> ManagementClient<H>
-where
-    H: FnMut(Controller, ManagementEvent) -> (),
-{
+impl ManagementClient {
     /// This command returns the Management version and revision.
     ///	Besides, being informational the information can be used to
     ///	determine whether certain behavior has changed or bugs fixed

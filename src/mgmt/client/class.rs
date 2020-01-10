@@ -2,10 +2,7 @@ use crate::mgmt::interface::class::from_bytes as class_from_bytes;
 
 use super::*;
 
-impl<H> ManagementClient<H>
-where
-    H: FnMut(Controller, ManagementEvent) -> (),
-{
+impl ManagementClient {
     /// This command is used to set the major and minor device class for
     ///	BR/EDR capable controllers.
     ///

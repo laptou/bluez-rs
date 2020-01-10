@@ -25,23 +25,33 @@ mod params;
 mod query;
 mod settings;
 
-pub struct ManagementClient<H>
-where
-    H: FnMut(Controller, ManagementEvent) -> (),
-{
+pub struct ManagementClient {
     socket: ManagementSocket,
-    handler: H,
+    handler: Option<Box<dyn FnMut(Controller, ManagementEvent) -> ()>>,
 }
 
-impl<H> ManagementClient<H>
-where
-    H: FnMut(Controller, ManagementEvent) -> (),
-{
-    pub fn new(handler: H) -> Result<Self> {
+impl ManagementClient {
+    pub fn new() -> Result<Self> {
         Ok(ManagementClient {
             socket: ManagementSocket::open()?,
-            handler,
+            handler: None,
         })
+    }
+
+    pub fn new_with_handler(
+        handler: Box<dyn FnMut(Controller, ManagementEvent) -> ()>,
+    ) -> Result<Self> {
+        Ok(ManagementClient {
+            socket: ManagementSocket::open()?,
+            handler: Some(handler),
+        })
+    }
+
+    pub fn set_handler(
+        &mut self,
+        handler: Option<Box<dyn FnMut(Controller, ManagementEvent) -> ()>>,
+    ) {
+        self.handler = handler;
     }
 
     #[inline]
@@ -93,7 +103,11 @@ where
                         _ => Err(ManagementError::CommandError { opcode, status }),
                     }
                 }
-                _ => (self.handler)(response.controller, response.event),
+                _ => {
+                    if let Some(handler) = &mut self.handler {
+                        (handler)(response.controller, response.event)
+                    }
+                }
             }
         }
     }

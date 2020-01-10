@@ -14,10 +14,7 @@ fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSe
     Ok(ControllerSettings::from_bits_truncate(param.get_u32_le()))
 }
 
-impl<H> ManagementClient<H>
-where
-    H: FnMut(Controller, ManagementEvent) -> (),
-{
+impl ManagementClient {
     /// This command is used to set the local name of a controller. The
     ///	command parameters also include a short name which will be used
     ///	in case the full name doesn't fit within EIR/AD data.
