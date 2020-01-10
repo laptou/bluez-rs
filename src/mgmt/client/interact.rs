@@ -44,10 +44,14 @@ impl ManagementClient {
         self.exec_command(
             ManagementCommand::ConfirmName,
             controller,
-            Some(address_bytes_with_u8(address, address_type, name_known as u8)),
+            Some(address_bytes_with_u8(
+                address,
+                address_type,
+                name_known as u8,
+            )),
             address_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to add a device to the list of devices
@@ -76,7 +80,7 @@ impl ManagementClient {
             Some(address_bytes(address, address_type)),
             address_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to remove a device from the list of blocked
@@ -98,13 +102,13 @@ impl ManagementClient {
             Some(address_bytes(address, address_type)),
             address_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to force the disconnection of a currently
-   ///	connected device.
-   ///
-   ///	This command can only be used when the controller is powered.
+    ///	connected device.
+    ///
+    ///	This command can only be used when the controller is powered.
     pub async fn disconnect(
         &mut self,
         controller: Controller,
@@ -117,7 +121,7 @@ impl ManagementClient {
             Some(address_bytes(address, address_type)),
             address_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to retrieve a list of currently connected
@@ -151,7 +155,7 @@ impl ManagementClient {
                 Ok(connections)
             },
         )
-            .await
+        .await
     }
 
     ///	This command is used to respond to a PIN Code request event.
@@ -183,36 +187,31 @@ impl ManagementClient {
             param.put_u8(address_type as u8);
         }
 
-        self.exec_command(
-            opcode,
-            controller,
-            Some(param.to_bytes()),
-            address_callback,
-        )
+        self.exec_command(opcode, controller, Some(param.to_bytes()), address_callback)
             .await
     }
 
     ///	This command is used to trigger pairing with a remote device.
-  ///	The IO_Capability command parameter is used to temporarily (for
-  ///	this pairing event only) override the global IO Capability (set
-  ///	using the Set IO Capability command).
-  ///
-  ///	Passing a value 4 (KeyboardDisplay) will cause the kernel to
-  ///	convert it to 1 (DisplayYesNo) in the case of a BR/EDR
-  ///	connection (as KeyboardDisplay is specific to SMP).
-  ///
-  ///	The `address` and `address_type` of the return parameters will
-  ///	return the identity address if known. In case of resolvable
-  ///	random address given as command parameters and the remote
-  ///	provides an identity resolving key, the return parameters
-  ///	will provide the resolved address.
-  ///
-  ///	To allow tracking of which resolvable random address changed
-  ///	into which identity address, the New Identity Resolving Key
-  ///	event will be sent before receiving Command Complete event
-  ///	for this command.
-  ///
-  ///	This command can only be used when the controller is powered.
+    ///	The IO_Capability command parameter is used to temporarily (for
+    ///	this pairing event only) override the global IO Capability (set
+    ///	using the Set IO Capability command).
+    ///
+    ///	Passing a value 4 (KeyboardDisplay) will cause the kernel to
+    ///	convert it to 1 (DisplayYesNo) in the case of a BR/EDR
+    ///	connection (as KeyboardDisplay is specific to SMP).
+    ///
+    ///	The `address` and `address_type` of the return parameters will
+    ///	return the identity address if known. In case of resolvable
+    ///	random address given as command parameters and the remote
+    ///	provides an identity resolving key, the return parameters
+    ///	will provide the resolved address.
+    ///
+    ///	To allow tracking of which resolvable random address changed
+    ///	into which identity address, the New Identity Resolving Key
+    ///	event will be sent before receiving Command Complete event
+    ///	for this command.
+    ///
+    ///	This command can only be used when the controller is powered.
     pub async fn pair_device(
         &mut self,
         controller: Controller,
@@ -223,10 +222,14 @@ impl ManagementClient {
         self.exec_command(
             ManagementCommand::PairDevice,
             controller,
-            Some(address_bytes_with_u8(address, address_type, io_capability as u8)),
+            Some(address_bytes_with_u8(
+                address,
+                address_type,
+                io_capability as u8,
+            )),
             address_callback,
         )
-            .await
+        .await
     }
 
     ///	The `address` and `address_type` parameters should match what was
@@ -245,7 +248,7 @@ impl ManagementClient {
             Some(address_bytes(address, address_type)),
             address_callback,
         )
-            .await
+        .await
     }
 
     ///	Removes all keys associated with the remote device.
@@ -274,10 +277,14 @@ impl ManagementClient {
         self.exec_command(
             ManagementCommand::UnpairDevice,
             controller,
-            Some(address_bytes_with_u8(address, address_type, disconnect as u8)),
+            Some(address_bytes_with_u8(
+                address,
+                address_type,
+                disconnect as u8,
+            )),
             address_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to respond to a User Confirmation Request
@@ -299,7 +306,7 @@ impl ManagementClient {
             Some(address_bytes(address, address_type)),
             address_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to respond to a User Passkey Request
@@ -328,48 +335,43 @@ impl ManagementClient {
             param.put_u8(address_type as u8);
         }
 
-        self.exec_command(
-            opcode,
-            controller,
-            Some(param.to_bytes()),
-            address_callback,
-        )
+        self.exec_command(opcode, controller, Some(param.to_bytes()), address_callback)
             .await
     }
 
     ///	This command is used to provide Out of Band data for a remote
-   ///	device.
-   ///
-   ///	Provided Out Of Band data is persistent over power down/up toggles.
-   ///
-   ///	This command also accept optional P-256 versions of hash and
-   ///	randomizer. If they are not provided, then they are set to
-   ///	zero value.
-   ///
-   ///	The P-256 versions of both can also be provided when the
-   ///	support for Secure Connections is not enabled. However in
-   ///	that case they will never be used.
-   ///
-   ///	To only provide the P-256 versions of hash and randomizer,
-   ///	it is valid to leave both P-192 fields as zero values. If
-   ///	Secure Connections is disabled, then of course this is the
-   ///	same as not providing any data at all.
-   ///
-   ///	When providing data for remote LE devices, then the Hash_192 and
-   ///	and Randomizer_192 fields are not used and shell be set to zero.
-   ///
-   ///	The Hash_256 and Randomizer_256 fields can be used for LE secure
-   ///	connections Out Of Band data. If only LE secure connections data
-   ///	is provided the Hash_P192 and Randomizer_P192 fields can be set
-   ///	to zero. Currently there is no support for providing the Security
-   ///	Manager TK Value for LE legacy pairing.
-   ///
-   ///	If Secure Connections Only mode has been enabled, then providing
-   ///	Hash_P192 and Randomizer_P192 is not allowed. They are required
-   ///	to be set to zero values.
-   ///
-   ///	This command can be used when the controller is not powered and
-   ///	all settings will be programmed once powered.
+    ///	device.
+    ///
+    ///	Provided Out Of Band data is persistent over power down/up toggles.
+    ///
+    ///	This command also accept optional P-256 versions of hash and
+    ///	randomizer. If they are not provided, then they are set to
+    ///	zero value.
+    ///
+    ///	The P-256 versions of both can also be provided when the
+    ///	support for Secure Connections is not enabled. However in
+    ///	that case they will never be used.
+    ///
+    ///	To only provide the P-256 versions of hash and randomizer,
+    ///	it is valid to leave both P-192 fields as zero values. If
+    ///	Secure Connections is disabled, then of course this is the
+    ///	same as not providing any data at all.
+    ///
+    ///	When providing data for remote LE devices, then the Hash_192 and
+    ///	and Randomizer_192 fields are not used and shell be set to zero.
+    ///
+    ///	The Hash_256 and Randomizer_256 fields can be used for LE secure
+    ///	connections Out Of Band data. If only LE secure connections data
+    ///	is provided the Hash_P192 and Randomizer_P192 fields can be set
+    ///	to zero. Currently there is no support for providing the Security
+    ///	Manager TK Value for LE legacy pairing.
+    ///
+    ///	If Secure Connections Only mode has been enabled, then providing
+    ///	Hash_P192 and Randomizer_P192 is not allowed. They are required
+    ///	to be set to zero values.
+    ///
+    ///	This command can be used when the controller is not powered and
+    ///	all settings will be programmed once powered.
     pub async fn add_remote_oob_data(
         &mut self,
         controller: Controller,
@@ -396,7 +398,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             address_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to remove data added using the Add Remote
@@ -419,7 +421,7 @@ impl ManagementClient {
             Some(address_bytes(address, address_type)),
             address_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to add a device to the action list. The
@@ -455,7 +457,7 @@ impl ManagementClient {
         controller: Controller,
         address: Address,
         address_type: AddressType,
-        action: AddDeviceAction
+        action: AddDeviceAction,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
             ManagementCommand::AddDevice,
@@ -463,7 +465,7 @@ impl ManagementClient {
             Some(address_bytes_with_u8(address, address_type, action as u8)),
             address_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to remove a device from the action list
@@ -486,6 +488,6 @@ impl ManagementClient {
             Some(address_bytes(address, address_type)),
             address_callback,
         )
-            .await
+        .await
     }
 }

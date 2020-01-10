@@ -32,7 +32,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, param| Ok(class_from_bytes(param.unwrap())),
         )
-            .await
+        .await
     }
 
     ///	This command is used to add a UUID to be published in EIR data.
@@ -62,7 +62,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, param| Ok(class_from_bytes(param.unwrap())),
         )
-            .await
+        .await
     }
 
     ///	This command is used to remove a UUID previously added using the
@@ -90,6 +90,6 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, param| Ok(class_from_bytes(param.unwrap())),
         )
-            .await
+        .await
     }
 }

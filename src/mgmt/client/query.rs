@@ -1,3 +1,5 @@
+use enumflags2::BitFlags;
+
 use crate::mgmt::interface::class::from_bytes as class_from_bytes;
 use crate::util::bytes_to_c_str;
 
@@ -5,9 +7,9 @@ use super::*;
 
 impl ManagementClient {
     /// This command returns the Management version and revision.
-       ///	Besides, being informational the information can be used to
-       ///	determine whether certain behavior has changed or bugs fixed
-       ///	when interacting with the kernel.
+    ///	Besides, being informational the information can be used to
+    ///	determine whether certain behavior has changed or bugs fixed
+    ///	when interacting with the kernel.
     pub async fn get_mgmt_version(&mut self) -> Result<ManagementVersion> {
         self.exec_command(
             ManagementCommand::ReadVersionInfo,
@@ -21,7 +23,7 @@ impl ManagementClient {
                 })
             },
         )
-            .await
+        .await
     }
 
     /// This command returns the list of currently known controllers.
@@ -43,7 +45,7 @@ impl ManagementClient {
                 Ok(controllers)
             },
         )
-            .await
+        .await
     }
 
     /// This command is used to retrieve the current state and basic
@@ -87,13 +89,16 @@ impl ManagementClient {
                 })
             },
         )
-            .await
+        .await
     }
 
     /// This command is used to get connection information.
-    pub async fn get_connection_info(&mut self, controller: Controller,
-                                     address: Address,
-                                     address_type: AddressType) -> Result<ConnectionInfo> {
+    pub async fn get_connection_info(
+        &mut self,
+        controller: Controller,
+        address: Address,
+        address_type: AddressType,
+    ) -> Result<ConnectionInfo> {
         let mut param = BytesMut::with_capacity(7);
         param.put_slice(address.as_ref());
         param.put_u8(address_type as u8);
@@ -108,19 +113,34 @@ impl ManagementClient {
                 Ok(ConnectionInfo {
                     address: Address::from_slice(param.split_to(6).as_ref()),
                     address_type: FromPrimitive::from_u8(param.get_u8()).unwrap(),
-                    rssi: if param[0] != 127 { Some(param.get_u8()) } else { None },
-                    tx_power: if param[0] != 127 { Some(param.get_u8()) } else { None },
-                    max_tx_power: if param[0] != 127 { Some(param.get_u8()) } else { None },
+                    rssi: if param[0] != 127 {
+                        Some(param.get_u8())
+                    } else {
+                        None
+                    },
+                    tx_power: if param[0] != 127 {
+                        Some(param.get_u8())
+                    } else {
+                        None
+                    },
+                    max_tx_power: if param[0] != 127 {
+                        Some(param.get_u8())
+                    } else {
+                        None
+                    },
                 })
             },
         )
-            .await
+        .await
     }
 
     /// This command is used to get local and piconet clock information.
-    pub async fn get_clock_info(&mut self, controller: Controller,
-                                address: Address,
-                                address_type: AddressType) -> Result<ClockInfo> {
+    pub async fn get_clock_info(
+        &mut self,
+        controller: Controller,
+        address: Address,
+        address_type: AddressType,
+    ) -> Result<ClockInfo> {
         let mut param = BytesMut::with_capacity(7);
         param.put_slice(address.as_ref());
         param.put_u8(address_type as u8);
@@ -156,7 +176,7 @@ impl ManagementClient {
                 })
             },
         )
-            .await
+        .await
     }
 
     ///	This command returns the list of currently unconfigured controllers.
@@ -187,6 +207,55 @@ impl ManagementClient {
                 Ok(controllers)
             },
         )
-            .await
+        .await
+    }
+
+    ///	This command is used to retrieve the supported configuration
+    ///	options of a controller and the missing configuration options.
+    ///
+    ///	The missing options are required to be configured before the
+    ///	controller is considered fully configured and ready for standard
+    ///	operation. The command is typically used right after getting the
+    ///	response to Read Unconfigured Controller Index List command or
+    ///	Unconfigured Index Added event.
+    ///
+    ///	Supported_Options and Missing_Options is a bitmask with currently
+    ///	the following available bits:
+    ///
+    ///		0	External configuration
+    ///		1	Bluetooth public address configuration
+    ///
+    ///	It is valid to call this command on controllers that do not
+    ///	require any configuration. It is possible that a fully configured
+    ///	controller offers additional support for configuration.
+    ///
+    ///	For example a controller may contain a valid Bluetooth public
+    ///	device address, but also allows to configure it from the host
+    ///	stack. In this case the general support for configurations will
+    ///	be indicated by the Controller Configuration settings. For
+    ///	controllers where no configuration options are available that
+    ///	setting option will not be present.
+    ///
+    ///	When all configurations have been completed and as a result the
+    ///	Missing_Options mask would become empty, then the now ready
+    ///	controller will be announced via Index Added event.
+    pub async fn get_controller_config_info(
+        &mut self,
+        controller: Controller,
+    ) -> Result<ControllerConfigInfo> {
+        self.exec_command(
+            ManagementCommand::ReadControllerConfigInfo,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.unwrap();
+                Ok(ControllerConfigInfo {
+                    manufacturer: param.split_to(2).as_ref().try_into().unwrap(),
+                    supported_options: BitFlags::from_bits_truncate(param.get_u32_le()),
+                    missing_options: BitFlags::from_bits_truncate(param.get_u32_le()),
+                })
+            },
+        )
+        .await
     }
 }

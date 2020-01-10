@@ -1,12 +1,12 @@
 use std::os::raw::c_ushort;
 use std::u16;
 
-use futures::io::{ReadHalf, WriteHalf, BufReader, AsyncReadExt, AsyncWriteExt};
 use async_std::io::{self};
 use async_std::os::unix::io::{FromRawFd, RawFd};
 use async_std::os::unix::net::UnixStream;
 use bytes::*;
 use bytes::buf::BufExt;
+use futures::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
 use libc;
 
 use crate::mgmt::interface::{ManagementRequest, ManagementResponse};

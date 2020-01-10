@@ -2,20 +2,20 @@ use super::*;
 
 impl ManagementClient {
     /// This command is used to feed the kernel with currently known
-       ///	link keys. The command does not need to be called again upon the
-       ///	receipt of New Link Key events since the kernel updates its list
-       ///	automatically.
-       ///
-       ///	The debug parameter is used to tell the kernel whether to
-       ///	accept the usage of debug keys or not. The allowed values for
-       ///	this parameter are `0x00` and `0x01`. All other values will return
-       ///	an Invalid Parameters response.
-       ///
-       ///	Usage of the debug parameter is deprecated and has been
-       ///	replaced with the Set Debug Keys command. When setting the
-       ///	debug option via Load Link Keys command it has the same
-       ///	affect as setting it via Set Debug Keys and applies to all
-       ///	keys in the system.
+    ///	link keys. The command does not need to be called again upon the
+    ///	receipt of New Link Key events since the kernel updates its list
+    ///	automatically.
+    ///
+    ///	The debug parameter is used to tell the kernel whether to
+    ///	accept the usage of debug keys or not. The allowed values for
+    ///	this parameter are `0x00` and `0x01`. All other values will return
+    ///	an Invalid Parameters response.
+    ///
+    ///	Usage of the debug parameter is deprecated and has been
+    ///	replaced with the Set Debug Keys command. When setting the
+    ///	debug option via Load Link Keys command it has the same
+    ///	affect as setting it via Set Debug Keys and applies to all
+    ///	keys in the system.
     pub async fn load_link_keys(
         &mut self,
         controller: Controller,
@@ -40,7 +40,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, _| Ok(()),
         )
-            .await
+        .await
     }
 
     ///	This command is used to feed the kernel with currently known
@@ -80,7 +80,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, _| Ok(()),
         )
-            .await
+        .await
     }
 
     ///	This command is used to feed the kernel with currently known
@@ -115,7 +115,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, _| Ok(()),
         )
-            .await
+        .await
     }
 
     ///	This command is used to load connection parameters from several
@@ -153,6 +153,6 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, _| Ok(()),
         )
-            .await
+        .await
     }
 }

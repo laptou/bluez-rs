@@ -1,4 +1,5 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use enumflags2::BitFlags;
 
 use crate::Address;
 use crate::mgmt::interface::controller::{Controller, ControllerSettings};
@@ -73,7 +74,7 @@ impl ManagementClient {
                 ))
             },
         )
-            .await
+        .await
     }
 
     /// This command is used to power on or off a controller.
@@ -104,7 +105,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to set the discoverable property of a
@@ -143,7 +144,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to set the connectable property of a
@@ -185,7 +186,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to set the controller into a connectable
@@ -215,7 +216,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to set the bondable (pairable) property of an
@@ -242,7 +243,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to either enable or disable link level
@@ -268,7 +269,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to enable/disable Secure Simple Pairing
@@ -297,7 +298,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to enable/disable Bluetooth High Speed
@@ -331,7 +332,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to enable/disable Low Energy support for a
@@ -359,7 +360,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to enable LE advertising on a controller
@@ -410,7 +411,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to enable or disable BR/EDR support
@@ -436,7 +437,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to set the IO Capability used for pairing.
@@ -461,7 +462,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, _| Ok(()),
         )
-            .await
+        .await
     }
 
     /// This command can be used when the controller is not powered and
@@ -498,7 +499,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, _| Ok(()),
         )
-            .await
+        .await
     }
 
     /// This command allows for setting the Low Energy scan parameters
@@ -520,7 +521,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             |_, _| Ok(()),
         )
-            .await
+        .await
     }
 
     ///	This command allows for setting the static random address. It is
@@ -559,7 +560,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to enable/disable Secure Connections
@@ -592,7 +593,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     /// This command is used to tell the kernel whether to accept the
@@ -626,7 +627,7 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
     }
 
     ///	This command is used to enable Low Energy Privacy feature using
@@ -679,6 +680,87 @@ impl ManagementClient {
             Some(param.to_bytes()),
             settings_callback,
         )
-            .await
+        .await
+    }
+
+    ///	This command allows to change external configuration option to
+    ///	indicate that a controller is now configured or unconfigured.
+    ///
+    ///	The value false sets unconfigured state and the value true sets
+    ///	configured state of the controller.
+    ///
+    ///	It is not mandatory that this configuration option is provided
+    ///	by a controller. If it is provided, the configuration has to
+    ///	happen externally using user channel operation or via vendor
+    ///	specific methods.
+    ///
+    ///	Setting this option and when Missing_Options returns zero, this
+    ///	means that the controller will switch to configured state and it
+    ///	can be expected that it will be announced via Index Added event.
+    ///
+    ///	Wrongly configured controllers might still cause an error when
+    ///	trying to power them via Set Powered command.
+    pub async fn set_external_config(
+        &mut self,
+        controller: Controller,
+        config: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::from([config as u8].as_ref() as &[u8]);
+
+        self.exec_command(
+            ManagementCommand::SetExternalConfig,
+            controller,
+            Some(param.to_bytes()),
+            |_, param| {
+                let mut param = param.unwrap();
+                Ok(BitFlags::from_bits_truncate(param.get_u32_le()))
+            },
+        )
+        .await
+    }
+
+    ///	This command allows configuration of public address. Since a vendor
+    ///	specific procedure is required, this command might not be supported
+    ///	by all controllers. Actually most likely only a handful embedded
+    ///	controllers will offer support for this command.
+    ///
+    ///	When the support for Bluetooth public address configuration is
+    ///	indicated in the supported options mask, then this command
+    ///	can be used to configure the public address.
+    ///
+    ///	It is only possible to configure the public address when the
+    ///	controller is powered off.
+    ///
+    ///	For an unconfigured controller and when this function returns
+    ///	an empty mask, this means that a Index Added event for the now
+    ///	fully configured controller can be expected.
+    ///
+    ///	For a fully configured controller, the current controller index
+    ///	will become invalid and an Unconfigured Index Removed event will
+    ///	be sent. Once the address has been successfully changed an Index
+    ///	Added event will be sent. There is no guarantee that the controller
+    ///	index stays the same.
+    ///
+    ///	All previous configured parameters and settings are lost when
+    ///	this command succeeds. The controller has to be treated as new
+    ///	one. Use this command for a fully configured controller only when
+    ///	you really know what you are doing.
+    pub async fn set_public_address(
+        &mut self,
+        controller: Controller,
+        address: Address,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::from(address.as_ref());
+
+        self.exec_command(
+            ManagementCommand::SetExternalConfig,
+            controller,
+            Some(param.to_bytes()),
+            |_, param| {
+                let mut param = param.unwrap();
+                Ok(BitFlags::from_bits_truncate(param.get_u32_le()))
+            },
+        )
+        .await
     }
 }

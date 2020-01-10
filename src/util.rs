@@ -1,5 +1,6 @@
-use bytes::Bytes;
 use std::ffi::CString;
+
+use bytes::Bytes;
 
 pub(crate) fn bytes_to_c_str(bytes: Bytes) -> CString {
     let iterator = bytes.into_iter();

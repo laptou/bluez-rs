@@ -9,21 +9,20 @@ pub use settings::*;
 
 use crate::Address;
 use crate::mgmt::{ManagementError, Result};
-use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus, ManagementRequest,
-};
+use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus, ManagementRequest};
 use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
 use crate::mgmt::interface::controller::{Controller, ControllerInfo, ControllerSettings};
 use crate::mgmt::interface::event::ManagementEvent;
 use crate::mgmt::socket::ManagementSocket;
 
-mod query;
+mod advertising;
 mod class;
 mod discovery;
-mod oob;
-mod load;
-mod advertising;
 mod interact;
+mod load;
+mod oob;
 mod params;
+mod query;
 mod settings;
 
 pub struct ManagementClient {
@@ -91,7 +90,4 @@ impl ManagementClient {
             }
         }
     }
-
-
-
 }

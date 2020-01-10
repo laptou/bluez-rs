@@ -25,9 +25,9 @@ pub enum ManagementError {
     #[error("The socket received invalid data.")]
     InvalidData,
     #[error(
-    "The name {} is too long; the maximum length is {} bytes.",
-    name,
-    max_len
+        "The name {} is too long; the maximum length is {} bytes.",
+        name,
+        max_len
     )]
     NameTooLong { name: String, max_len: u32 },
     #[error("A string was supplied that contained a null byte: {}", source)]

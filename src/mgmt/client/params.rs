@@ -42,14 +42,11 @@ pub enum LeAdvertisingMode {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
-pub enum DiscoveryAddressTypes {
-    /// BR/EDR
-    BrEdr = 1,
-    /// LE (public & random)
-    LE = 6,
-    /// BR/EDR/LE (interleaved discovery)
-    BrEdrLE = 7,
+#[derive(Debug, Copy, Clone, Eq, PartialEq, BitFlags)]
+pub enum AddressTypeFlag {
+    BrEdr = 1 << 0,
+    LePublic = 1 << 1,
+    LeRandom = 1 << 2,
 }
 
 #[derive(Debug)]
@@ -157,7 +154,7 @@ pub struct ClockInfo {
 #[derive(Debug, Copy, Clone, BitFlags, Eq, PartialEq)]
 pub enum DeviceFlags {
     ConfirmName = 1 << 0,
-    LegacyPairing = 1 << 1
+    LegacyPairing = 1 << 1,
 }
 
 #[repr(u8)]
@@ -166,7 +163,7 @@ pub enum DisconnectionReason {
     Unspecified = 0,
     Timeout = 1,
     TerminatedLocal = 2,
-    TerminatedRemote = 3
+    TerminatedRemote = 3,
 }
 
 #[repr(u8)]
@@ -187,4 +184,16 @@ pub struct ConnectionParameters {
     pub supervision_timeout: u16,
 }
 
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, BitFlags)]
+pub enum ControllerConfigOptions {
+    External = 1 << 0,
+    BluetoothPublicAddr = 1 << 1,
+}
 
+#[derive(Debug)]
+pub struct ControllerConfigInfo {
+    pub manufacturer: [u8; 2],
+    pub supported_options: BitFlags<ControllerConfigOptions>,
+    pub missing_options: BitFlags<ControllerConfigOptions>,
+}

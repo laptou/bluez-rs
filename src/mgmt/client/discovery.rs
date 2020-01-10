@@ -1,3 +1,5 @@
+use enumflags2::BitFlags;
+
 use super::*;
 
 impl ManagementClient {
@@ -22,18 +24,18 @@ impl ManagementClient {
     pub async fn start_discovery(
         &mut self,
         controller: Controller,
-        address_types: DiscoveryAddressTypes,
-    ) -> Result<DiscoveryAddressTypes> {
+        address_types: BitFlags<AddressTypeFlag>,
+    ) -> Result<BitFlags<AddressTypeFlag>> {
         let mut param = BytesMut::with_capacity(1);
-        param.put_u8(address_types as u8);
+        param.put_u8(address_types.bits());
 
         self.exec_command(
             ManagementCommand::StartDiscovery,
             controller,
             Some(param.to_bytes()),
-            |_, param| Ok(FromPrimitive::from_u8(param.unwrap().get_u8()).unwrap()),
+            |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),
         )
-            .await
+        .await
     }
 
     /// This command is used to stop the discovery process started using
@@ -43,17 +45,17 @@ impl ManagementClient {
     pub async fn stop_discovery(
         &mut self,
         controller: Controller,
-        address_types: DiscoveryAddressTypes,
-    ) -> Result<DiscoveryAddressTypes> {
+        address_types: BitFlags<AddressTypeFlag>,
+    ) -> Result<BitFlags<AddressTypeFlag>> {
         let mut param = BytesMut::with_capacity(1);
-        param.put_u8(address_types as u8);
+        param.put_u8(address_types.bits());
 
         self.exec_command(
             ManagementCommand::StopDiscovery,
             controller,
             Some(param.to_bytes()),
-            |_, param| Ok(FromPrimitive::from_u8(param.unwrap().get_u8()).unwrap()),
+            |_, param| Ok(BitFlags::from_bits_truncate(param.unwrap().get_u8())),
         )
-            .await
+        .await
     }
 }

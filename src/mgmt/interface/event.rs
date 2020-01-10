@@ -1,12 +1,12 @@
-use std::ffi::{CString};
+use std::ffi::CString;
 
 use bytes::Bytes;
 
 use crate::Address;
 use crate::mgmt::client::{AddressType, DeviceFlags, DisconnectionReason};
 use crate::mgmt::interface::{ManagementCommand, ManagementCommandStatus};
+use crate::mgmt::interface::class::{DeviceClass, ServiceClasses};
 use crate::mgmt::interface::controller::ControllerSettings;
-use crate::mgmt::interface::class::{ServiceClasses, DeviceClass};
 
 #[derive(Debug)]
 pub enum ManagementEvent {
@@ -33,9 +33,7 @@ pub enum ManagementEvent {
 
     /// This event maps straight to the HCI Hardware Error event and is
     ///	used to indicate something wrong with the controller hardware.
-    ControllerError {
-        code: u8,
-    },
+    ControllerError { code: u8 },
 
     /// This event indicates that a new controller has been added to the
     ///	system. It is usually followed by a Read Controller Information
@@ -48,9 +46,7 @@ pub enum ManagementEvent {
 
     /// This event indicates that one or more of the settings for a
     ///	controller has changed.
-    NewSettings {
-        settings: ControllerSettings,
-    },
+    NewSettings { settings: ControllerSettings },
 
     /// This event indicates that the Class of Device value for the
     ///	controller has changed. When the controller is powered off the
@@ -61,10 +57,7 @@ pub enum ManagementEvent {
 
     /// This event indicates that the local name of the controller has
     ///	changed.
-    LocalNameChanged {
-        name: CString,
-        short_name: CString,
-    },
+    LocalNameChanged { name: CString, short_name: CString },
 
     /// This event indicates that a new link key has bee generated for a
     ///	remote device. The `store_hint` parameter indicates whether the
