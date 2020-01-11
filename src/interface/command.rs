@@ -90,7 +90,6 @@ pub enum Command {
     ReadLocalOutOfBandExtended,
     ReadExtendedControllerIndexList,
     ReadAdvertisingFeatures,
-    // this much left!
     AddAdvertising,
     RemoveAdvertising,
     GetAdvertisingSizeInfo,
