@@ -5,9 +5,9 @@ A library for controlling Bluetooth on Linux.
 [![crates.io](https://img.shields.io/crates/l/bluez.svg?style=for-the-badge)](https://github.com/laptou/bluez-rs/blob/master/LICENSE)
 
 [Documentation](https://docs.rs/bluez)
-[Example](https://github.com/laptou/bluez-rs/blob/master/src/example/discover.rs)
+[Examples](https://github.com/laptou/bluez-rs/blob/master/src/example/)
 
-To run the example, clone this repository, `cargo build`, and then `sudo target/debug/discover`.
+Some of the examples require elevated permissions. For example, to run the `discover` example, clone this repository, `cargo build`, and then `sudo target/debug/discover`.
 `sudo` is necessary because many of the functions of this crate are not possible without the `CAP_NET_RAW` capability.
 
 ## License

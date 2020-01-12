@@ -1,5 +1,6 @@
 use super::*;
 use crate::util::BufExt2;
+use enumflags2::BitFlags;
 
 impl<'a> BlueZClient<'a> {
     ///	This command is used to read the advertising features supported
@@ -187,4 +188,131 @@ impl<'a> BlueZClient<'a> {
         )
         .await
     }
+}
+
+pub struct AdvertisingFeaturesInfo {
+    pub supported_flags: BitFlags<AdvertisingFlags>,
+    pub max_adv_data_len: u8,
+    pub max_scan_rsp_len: u8,
+    pub max_instances: u8,
+    pub instances: Vec<u8>,
+}
+
+pub struct AdvertisingSizeInfo {
+    pub instance: u8,
+    pub flags: BitFlags<AdvertisingFlags>,
+    pub max_adv_data_len: u8,
+    pub max_scan_rsp_len: u8,
+}
+
+pub struct AdvertisingParams {
+    pub instance: u8,
+
+    ///	When the `EnterConnectable` flag is not set, then the controller will
+    ///	use advertising based on the connectable setting. When using
+    ///	non-connectable or scannable advertising, the controller will
+    ///	be programmed with a non-resolvable random address. When the
+    ///	system is connectable, then the identity address or resolvable
+    ///	private address will be used.
+    ///
+    ///	Using the `EnterConnectable` flag is useful for peripheral mode support
+    ///	where BR/EDR (and/or LE) is controlled by Add Device. This allows
+    ///	making the peripheral connectable without having to interfere
+    ///	with the global connectable setting.
+    pub flags: BitFlags<AdvertisingFlags>,
+
+    /// Configures the length of an Instance. The
+    ///	value is in seconds.
+    ///
+    ///	A value of 0 indicates a default value is chosen for the
+    ///	`duration`. The default is 2 seconds.
+    pub duration: u16,
+
+    /// Configures the life-time of an Instance. In
+    ///	case the value 0 is used it indicates no expiration time. If a
+    ///	timeout value is provided, then the advertising Instance will be
+    ///	automatically removed when the timeout passes. The value for the
+    ///	timeout is in seconds. Powering down a controller will invalidate
+    ///	all advertising Instances and it is not possible to add a new
+    ///	Instance with a timeout when the controller is powered down.
+    pub timeout: u16,
+    pub adv_data: Vec<u8>,
+
+    ///	If `scan_rsp` is empty and connectable flag is not set and
+    ///	the global connectable setting is off, then non-connectable
+    ///	advertising is used. If `scan_rsp` is not empty
+    ///	connectable flag is not set and the global advertising is off,
+    ///	then scannable advertising is used. This small difference is
+    ///	supported to provide less air traffic for devices implementing
+    ///	broadcaster role.
+    pub scan_rsp: Vec<u8>,
+}
+
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, BitFlags)]
+pub enum AdvertisingFlags {
+    /// Indicates support for connectable advertising
+    ///	and for switching to connectable advertising independent of the
+    ///	connectable global setting. When this flag is not supported, then
+    ///	the global connectable setting determines if undirected connectable,
+    ///	undirected scannable or undirected non-connectable advertising is
+    ///	used. It also determines the use of non-resolvable random address
+    ///	versus identity address or resolvable private address.
+    EnterConnectable = 1 << 0,
+
+    /// Indicates support for advertising with discoverable
+    ///	mode enabled. Users of this flag will decrease the `max_adv_data_len`
+    ///	by 3. In this case the advertising data flags are managed
+    ///	and added in front of the provided advertising data.
+    AdvertiseDiscoverable = 1 << 1,
+
+    /// Indicates support for advertising with limited
+    ///	discoverable mode enabled. Users of this flag will decrease the
+    ///	`max_adv_data_len` by 3. In this case the advertising data
+    ///	flags are managed and added in front of the provided advertising
+    ///	data.
+    AdvertiseLimitedDiscoverable = 1 << 2,
+
+    /// Indicates support for automatically keeping the
+    ///	Flags field of the advertising data updated. Users of this flag
+    ///	will decrease the `max_adv_data_len` by 3 and need to keep
+    ///	that in mind. The Flags field will be added in front of the
+    ///	advertising data provided by the user. Note that with `AdvertiseDiscoverable`
+    /// and `AdvertiseLimitedDiscoverable`, this one will be implicitly used even if it is
+    ///	not marked as supported.
+    AutoUpdateFlags = 1 << 3,
+
+    /// Indicates support for automatically adding the
+    ///	TX Power value to the advertising data. Users of this flag will
+    ///	decrease the `max_adv_data_len` by 3. The `tx_power` field will
+    ///	be added at the end of the user provided advertising data. If the
+    ///	controller does not support TX Power information, then this bit will
+    ///	not be set.
+    AutoUpdateTxPower = 1 << 4,
+
+    /// indicates support for automatically adding the
+    ///	Appearance value to the scan response data. Users of this flag
+    ///	will decrease the `max_scan_rsp_len` by 4. The `appearance`
+    ///	field will be added in front of the scan response data provided
+    ///	by the user. If the appearance value is not supported, then this
+    ///	bit will not be set.
+    AutoUpdateAppearance = 1 << 5,
+
+    /// Indicates support for automatically adding the
+    ///	Local Name value to the scan response data. This flag indicates
+    ///	an opportunistic approach for the Local Name. If enough space
+    ///	in the scan response data is available, it will be added. If the
+    ///	space is limited a short version or no name information. The
+    ///	Local Name will be added at the end of the scan response data.
+    AutoUpdateLocalName = 1 << 6,
+
+    /// Indicates support for advertising in secondary channel in LE 1M PHY.
+    SecondaryChannelLE1M = 1 << 7,
+
+    /// Indicates support for advertising in secondary channel in LE 2M PHY.
+    /// Primary channel would be on 1M.
+    SecondaryChannelLE2M = 1 << 8,
+
+    /// Indicates support for advertising in secondary channel in LE CODED PHY.
+    SecondaryChannelLECoded = 1 << 9,
 }

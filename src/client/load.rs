@@ -185,3 +185,74 @@ impl<'a> BlueZClient<'a> {
         .await
     }
 }
+
+#[derive(Debug)]
+pub struct LinkKey {
+    pub address: Address,
+    pub address_type: AddressType,
+    pub key_type: LinkKeyType,
+    pub value: [u8; 16],
+    pub pin_length: u8,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
+#[repr(u8)]
+pub enum LinkKeyType {
+    Combination = 0x00,
+    LocalUnit = 0x01,
+    RemoteUnit = 0x02,
+    DebugCombination = 0x03,
+    UnauthenticatedCombinationP192 = 0x04,
+    AuthenticatedCombinationP192 = 0x05,
+    ChangedCombination = 0x06,
+    UnauthenticatedCombinationP256 = 0x07,
+    AuthenticatedCombinationP256 = 0x08,
+}
+
+#[derive(Debug)]
+pub struct LongTermKey {
+    pub address: Address,
+    pub address_type: AddressType,
+    pub key_type: LongTermKeyType,
+    pub master: u8,
+    pub encryption_size: u8,
+    pub encryption_diversifier: u16,
+    pub random_number: u64,
+    pub value: [u8; 16],
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
+#[repr(u8)]
+pub enum LongTermKeyType {
+    Unauthenticated = 0x00,
+    Authenticated = 0x01,
+}
+
+#[derive(Debug)]
+pub struct IdentityResolvingKey {
+    pub address: Address,
+    pub address_type: AddressType,
+    pub value: [u8; 16],
+}
+
+pub struct BlockedKey {
+    pub key_type: BlockedKeyType,
+    pub value: [u8; 16],
+}
+
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
+pub enum BlockedKeyType {
+    LinkKey = 1 << 0,
+    LongTermKey = 1 << 1,
+    IdentityResolvingKey = 1 << 2,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
+#[repr(u8)]
+pub enum SignatureResolvingKeyType {
+    UnauthenticatedLocalCSRK = 0x00,
+    UnauthenticatedRemoteCSRK = 0x01,
+    AuthenticatedLocalCSRK = 0x02,
+    AuthenticatedRemoteCSRK,
+}

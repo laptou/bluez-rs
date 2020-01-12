@@ -150,3 +150,11 @@ impl<'a> BlueZClient<'a> {
         .await
     }
 }
+
+#[derive(Debug)]
+pub struct OutOfBandData {
+    pub hash_192: [u8; 16],
+    pub randomizer_192: [u8; 16],
+    pub hash_256: Option<[u8; 16]>,
+    pub randomizer_256: Option<[u8; 16]>,
+}
