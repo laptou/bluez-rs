@@ -50,16 +50,17 @@ impl<'a> BlueZClient<'a> {
                 });
             }
         }
+        let short_name = short_name.unwrap_or("");
 
         let mut param = BytesMut::with_capacity(260);
         param.resize(260, 0); // initialize w/ zeros
 
         CString::new(name)?
             .as_bytes_with_nul()
-            .copy_to_slice(&mut param[..249]);
-        CString::new(short_name.unwrap_or(""))?
+            .copy_to_slice(&mut param[..=name.len()]);
+        CString::new(short_name)?
             .as_bytes_with_nul()
-            .copy_to_slice(&mut param[249..]);
+            .copy_to_slice(&mut param[249..][..=short_name.len()]);
 
         self.exec_command(
             Command::SetLocalName,
