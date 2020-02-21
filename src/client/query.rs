@@ -241,8 +241,8 @@ impl<'a> BlueZClient<'a> {
     ///	Supported_Options and Missing_Options is a bitmask with currently
     ///	the following available bits:
     ///
-    ///		0	External configuration
-    ///		1	Bluetooth public address configuration
+    ///	0	External configuration
+    ///	1	Bluetooth public address configuration
     ///
     ///	It is valid to call this command on controllers that do not
     ///	require any configuration. It is possible that a fully configured

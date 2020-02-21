@@ -43,6 +43,10 @@
 //! # #[async_std::main]
 //! # pub async fn main() -> Result<(), Box<dyn Error>> {
 //! #    let mut client = BlueZClient::new().unwrap();
+//!
+//! let controllers = client.get_controller_list().await?;
+//! let controller = controllers.first().expect("no bluetooth controllers available");
+//!
 //! client.set_handler(|controller, event| match event {
 //!     Event::DeviceFound {
 //!         address,
@@ -63,12 +67,12 @@
 //!
 //! client
 //!     .start_discovery(
-//!         controller,
+//!         *controller,
 //!         AddressTypeFlag::BREDR | AddressTypeFlag::LEPublic | AddressTypeFlag::LERandom,
 //!     )
 //!     .await?;
 //!
-//! for _ in 0..5000 {
+//! for _ in 0usize..5000usize {
 //!     client.process().await?;
 //!     std::thread::sleep(Duration::from_millis(50));
 //! }

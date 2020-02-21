@@ -11,15 +11,15 @@ impl<'a> BlueZClient<'a> {
     ///	Possible values for the `address_type` parameter are a bit-wise or
     ///	of the following bits:
     ///
-    ///		0	BR/EDR
-    ///		1	LE Public
-    ///		2	LE Random
+    ///	0	BR/EDR
+    ///	1	LE Public
+    ///	2	LE Random
     ///
     ///	By combining these e.g. the following values are possible:
     ///
-    ///		1	BR/EDR
-    ///		6	LE (public & random)
-    ///		7	BR/EDR/LE (interleaved discovery)
+    ///	1	BR/EDR
+    ///	6	LE (public & random)
+    ///	7	BR/EDR/LE (interleaved discovery)
     ///
     ///	This command can only be used when the controller is powered.
     pub async fn start_discovery(
