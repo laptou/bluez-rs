@@ -62,7 +62,7 @@ pub enum AddressTypeFlag {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum IoCapability {
-    DisplayOnly = 1,
+    DisplayOnly = 0,
     DisplayYesNo,
     KeyboardOnly,
     NoInputNoOutput,
