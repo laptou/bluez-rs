@@ -2,11 +2,11 @@ use std::ffi::CString;
 
 use bytes::*;
 
+pub use advertising::*;
+pub use load::*;
+pub use oob::*;
 pub use params::*;
 pub use settings::*;
-pub use advertising::*;
-pub use oob::*;
-pub use load::*;
 
 use crate::interface::class::{DeviceClass, ServiceClasses};
 use crate::interface::controller::{Controller, ControllerInfo};

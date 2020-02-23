@@ -224,8 +224,11 @@ pub struct LongTermKey {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
 #[repr(u8)]
 pub enum LongTermKeyType {
-    Unauthenticated = 0x00,
-    Authenticated = 0x01,
+    UnauthenticatedLegacy = 0x00,
+    AuthenticatedLegacy,
+    UnauthenticatedP256,
+    AuthenticatedP256,
+    DebugP256,
 }
 
 #[derive(Debug)]
