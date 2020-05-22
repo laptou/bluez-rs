@@ -23,11 +23,11 @@ async-std = { version = "1.4", features = ["attributes"] }
 
 [[bin]]
 name = "discover"
-path = "src/example/discover.rs"
+path = "examples/discover.rs"
 doc = false
 
 [[bin]]
 name = "list"
-path = "src/example/list.rs"
+path = "examples/list.rs"
 doc = false
 
