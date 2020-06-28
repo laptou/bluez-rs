@@ -32,7 +32,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
         println!("\t\tname: {:?}", info.name);
         println!("\t\tshort name: {:?}", info.short_name);
-        println!("\t\taddress: {:?}", info.address);
+        println!("\t\taddress: {}", info.address);
         println!("\t\tsupported settings: {:?}", info.supported_settings);
         println!("\t\tcurrent settings: {:?}", info.current_settings);
         println!("\t\tmanufacturer: 0x{:04x}", info.manufacturer);
