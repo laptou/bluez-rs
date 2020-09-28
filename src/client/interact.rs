@@ -369,7 +369,7 @@ impl<'a> BlueZClient<'a> {
         address_type: AddressType,
     ) -> Result<(Address, AddressType)> {
         self.exec_command(
-            Command::AddDevice,
+            Command::RemoveDevice,
             controller,
             Some(address_bytes(address, address_type)),
             address_callback,
