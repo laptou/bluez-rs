@@ -2,7 +2,7 @@ use std::ffi::CString;
 
 use bytes::Buf;
 use enumflags2::BitFlags;
-use enumflags2::_internal::RawBitFlags;
+use enumflags2::RawBitFlags;
 use num_traits::FromPrimitive;
 
 use crate::Address;

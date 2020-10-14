@@ -70,8 +70,8 @@ dependencies = [
  "async-std 1.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitvec 0.17.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "enumflags2 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "enumflags2_derive 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "enumflags2 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "enumflags2_derive 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.71 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-derive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -132,15 +132,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "enumflags2"
-version = "0.6.2"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "enumflags2_derive 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "enumflags2_derive 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "enumflags2_derive"
-version = "0.6.2"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "proc-macro2 1.0.18 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -625,8 +625,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum concurrent-queue 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f83c06aff61f2d899eb87c379df3cbf7876f14471dcab474e0b6dc90ab96c080"
 "checksum crossbeam-utils 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)" = "c3c7c73a2d1e9fc0886a08b93e98eb643461230d5f1925e4036204d5f2e261a8"
 "checksum either 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
-"checksum enumflags2 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "33121c8782ba948ba332dab29311b026a8716dc65a1599e5b88f392d38496af8"
-"checksum enumflags2_derive 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ecf634c5213044b8d54a46dd282cf5dd1f86bb5cb53e92c409cb4680a7fb9894"
+"checksum enumflags2 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)" = "83c8d82922337cd23a15f88b70d8e4ef5f11da38dd7cdb55e84dd5de99695da0"
+"checksum enumflags2_derive 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)" = "946ee94e3dbf58fdd324f9ce245c7b238d46a66f00e86a020b71996349e46cce"
 "checksum fastrand 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b90eb1dec02087df472ab9f0db65f27edaa654a746830042688bcc2eaf68090f"
 "checksum futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "1e05b85ec287aac0dc34db7d4a569323df697f9c55b99b15d6b4ef8cde49f613"
 "checksum futures-channel 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "f366ad74c28cca6ba456d95e6422883cfb4b252a83bed929c83abfdbbf2967d5"
