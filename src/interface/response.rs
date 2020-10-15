@@ -219,7 +219,7 @@ impl Response {
                 0x0026 => Event::PhyConfigChanged {
                     selected_phys: BitFlags::from_bits_truncate(buf.get_u32_le()),
                 },
-                _ => todo!("throw error instead of panicking"),
+                _ => return Err(Error::UnknownEventCode { evt_code }),
             },
         })
     }
