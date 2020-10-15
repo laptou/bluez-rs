@@ -13,7 +13,7 @@ pub enum Error {
         #[source]
         source: ::std::io::Error,
     },
-    #[error("Command {:?} returned {:?}.", status, opcode)]
+    #[error("Command {:?} returned {:?}.", opcode, status)]
     CommandError {
         opcode: Command,
         status: CommandStatus,
