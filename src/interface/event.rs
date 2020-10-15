@@ -8,6 +8,7 @@ use crate::interface::class::{DeviceClass, ServiceClasses};
 use crate::interface::controller::ControllerSettings;
 use crate::interface::{Command, CommandStatus};
 use crate::Address;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum Event {
@@ -433,4 +434,30 @@ pub enum Event {
     ///	The event will only be sent to management sockets other than the
     ///	one through which the command was sent.
     PhyConfigChanged { selected_phys: BitFlags<PhyFlag> },
+
+    ///	This event indicates that the status of an experimental feature
+    ///	has been changed.
+    ///
+    ///	The event will only be sent to management sockets other than the
+    ///	one through which the change was triggered.
+    ExperimentalFeatureChanged {
+        uuid: [u8; 16],
+        flags: u32,
+    },
+
+    ///	This event indicates the change of default system parameter values.
+    ///
+    /// The event will only be sent to management sockets other than the
+    ///	one through which the change was trigged. In addition it will
+    ///	only be sent to sockets that have issues the Read Default System
+    ///	Configuration command.
+    DefaultSystemConfigChanged { params: HashMap<SystemConfigParameterType, Vec<u8>> },
+
+    ///	This event indicates the change of default runtime parameter values.
+    ///
+    ///	The event will only be sent to management sockets other than the
+    ///	one through which the change was trigged. In addition it will
+    ///	only be sent to sockets that have issues the Read Default Runtime
+    ///	Configuration command.
+    DefaultRuntimeConfigChanged { params: HashMap<RuntimeConfigParameterType, Vec<u8>> },
 }

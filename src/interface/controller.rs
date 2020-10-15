@@ -77,6 +77,8 @@ pub enum ControllerSetting {
     Privacy = 1 << 13,
     Configuration = 1 << 14,
     StaticAddress = 1 << 15,
+    PhyConfiguration = 1 << 16,
+    WidebandSpeech = 1 << 17,
 }
 
 pub type ControllerSettings = BitFlags<ControllerSetting>;

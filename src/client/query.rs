@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::interface::class::from_bytes as class_from_bytes;
 use crate::interface::controller::ControllerInfoExt;
 use crate::util::BufExt2;
@@ -379,6 +381,35 @@ impl<'a> BlueZClient<'a> {
                 configurable_phys: param.get_flags_u32_le(),
                 selected_phys: param.get_flags_u32_le(),
             })
+        })
+        .await
+    }
+
+    /// Currently no Parameter_Type values are defined and an empty list
+    /// will be returned.
+    ///
+    /// This command can be used at any time and will return a list of
+    /// supported default parameters as well as their current value.
+    pub async fn get_default_runtime_config(
+        &mut self,
+        controller: Controller,
+    ) -> Result<HashMap<RuntimeConfigParameterType, Vec<u8>>> {
+        self.exec_command(Command::ReadDefaultRuntimeConfig, controller, None, |_, param| {
+            let mut param = param.unwrap();
+            Ok(param.get_tlv_map())
+        })
+        .await
+    }
+
+    /// This command can be used at any time and will return a list of
+    /// supported default parameters as well as their current value.
+    pub async fn get_default_system_config(
+        &mut self,
+        controller: Controller,
+    ) -> Result<HashMap<SystemConfigParameterType, Vec<u8>>> {
+        self.exec_command(Command::ReadDefaultSystemConfig, controller, None, |_, param| {
+            let mut param = param.unwrap();
+            Ok(param.get_tlv_map())
         })
         .await
     }
