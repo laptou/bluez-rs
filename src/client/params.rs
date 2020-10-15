@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use enumflags2::BitFlags;
 
 use crate::Address;
@@ -199,3 +201,41 @@ pub enum PhyFlag {
     LECodedTx = 1 << 13,
     LECodedRx = 1 << 14,
 }
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, FromPrimitive)]
+#[repr(u16)]
+pub enum SystemConfigParameterType {
+    BREDRPageScanType = 0x0000,
+    BREDRPageScanInterval,
+    BREDRPageScanWindow,
+    BREDRInquiryScanType,
+    BREDRInquiryScanInterval,
+    BREDRInquiryScanWindow,
+    BREDRLinkSupervisionTimeout,
+    BREDRPageTimeout,
+    BREDRMinSniffInterval,
+    BREDRMaxSniffInterval,
+    LEAdvertisementMinInterval,
+    LEAdvertisementMaxInterval,
+    LEMultiAdvertisementRotationInterval,
+    LEScanningIntervalForAutoConnect,
+    LEScanningWindowForAutoConnect,
+    LEScanningIntervalForWakeScenarios,
+    LEScanningWindowForWakeScenarios,
+    LEScanningIntervalForDiscovery,
+    LEScanningWindowForDiscovery,
+    LEScanningIntervalForAdvMonitoring,
+    LEScanningWindowForAdvMonitoring,
+    LEScanningIntervalForConnect,
+    LEScanningWindowForConnect,
+    LEMinConnectionInterval,
+    LEMaxConnectionInterval,
+    LEConnectionLatency,
+    LEConnectionSupervisionTimeout,
+    LEAutoconnectTimeout,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, FromPrimitive)]
+//#[repr(u16)] once there are known variants
+#[non_exhaustive]
+pub enum RuntimeConfigParameterType {}

@@ -13,7 +13,7 @@ pub enum Error {
         #[source]
         source: ::std::io::Error,
     },
-    #[error("Command {:?} returned {:?}.", status, opcode)]
+    #[error("Command {:?} returned {:?}.", opcode, status)]
     CommandError {
         opcode: Command,
         status: CommandStatus,
@@ -22,6 +22,8 @@ pub enum Error {
     UnknownOpcode { opcode: u16 },
     #[error("Unknown command status: {:x}.", status)]
     UnknownStatus { status: u8 },
+    #[error("Unknown event code: {:x}.", evt_code)]
+    UnknownEventCode { evt_code: u16 },
     #[error("Timed out.")]
     TimedOut,
     #[error("The socket received invalid data.")]

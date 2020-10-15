@@ -796,4 +796,94 @@ impl<'a> BlueZClient<'a> {
         )
         .await
     }
+
+    /// This command is used to enable/disable Wideband Speech
+    /// support for a controller.
+    ///
+    /// This command is only available for BR/EDR capable controllers and
+    /// require controller specific support.
+    ///
+    /// This command can be used when the controller is not powered and
+    /// all settings will be programmed once powered.
+    ///
+    /// In case the controller does not support Wideband Speech
+    /// the command will fail regardless with Not Supported error.
+    pub async fn set_wideband_speech(
+        &mut self,
+        controller: Controller,
+        enabled: bool,
+    ) -> Result<ControllerSettings> {
+        let mut param = BytesMut::with_capacity(1);
+        param.put_u8(enabled as u8);
+
+        self.exec_command(
+            Command::SetWidebandSpeech,
+            controller,
+            Some(param.to_bytes()),
+            settings_callback,
+        )
+        .await
+    }
+
+    /// This command is used to set a list of default runtime parameters.
+    ///
+    /// This command can be used at any time and will change the runtime
+    /// default. Changes however will not apply to existing connections or
+    /// currently active operations.
+    ///
+    /// When providing unsupported values or invalid values, no parameter
+    /// value will be changed and all values discarded.
+    pub async fn set_default_runtime_config(
+        &mut self,
+        controller: Controller,
+        params: &[(RuntimeConfigParameterType, Vec<u8>)],
+    ) -> Result<()> {
+        let size = params.iter().fold(0, |acc, (_, value)| acc + 3 + value.len());
+        let mut param = BytesMut::with_capacity(size);
+
+        #[allow(unreachable_code,unused_variables)] // until we have constants in RuntimeConfigParameterType
+        for (parameter_type, value) in params {
+            param.put_u16_le(unimplemented!("*parameter_type as u16"));
+            param.put_u8(value.len() as u8);
+            param.put_slice(value);
+        }
+
+        self.exec_command(
+            Command::SetDefaultSystemConfig,
+            controller,
+            Some(param.to_bytes()),
+            |_, _| Ok(()),
+        )
+        .await
+    }
+
+    /// This command is used to set a list of default controller parameters.
+    ///
+    /// This command can be used when the controller is not powered and
+    /// all supported parameters will be programmed once powered.
+    ///
+    /// When providing unsupported values or invalid values, no parameter
+    /// value will be changed and all values discarded.
+    pub async fn set_default_system_config(
+        &mut self,
+        controller: Controller,
+        params: &[(SystemConfigParameterType, Vec<u8>)],
+    ) -> Result<()> {
+        let size = params.iter().fold(0, |acc, (_, value)| acc + 3 + value.len());
+        let mut param = BytesMut::with_capacity(size);
+
+        for (parameter_type, value) in params {
+            param.put_u16_le(*parameter_type as u16);
+            param.put_u8(value.len() as u8);
+            param.put_slice(value);
+        }
+
+        self.exec_command(
+            Command::SetDefaultSystemConfig,
+            controller,
+            Some(param.to_bytes()),
+            |_, _| Ok(()),
+        )
+        .await
+    }
 }

@@ -219,7 +219,17 @@ impl Response {
                 0x0026 => Event::PhyConfigChanged {
                     selected_phys: BitFlags::from_bits_truncate(buf.get_u32_le()),
                 },
-                _ => todo!("throw error instead of panicking"),
+                0x0027 => Event::ExperimentalFeatureChanged {
+                    uuid: buf.get_u8x16(),
+                    flags: buf.get_u32_le(),
+                },
+                0x0028 => Event::DefaultSystemConfigChanged {
+                    params: buf.get_tlv_map()
+                },
+                0x0029 => Event::DefaultRuntimeConfigChanged {
+                    params: buf.get_tlv_map()
+                },
+                _ => return Err(Error::UnknownEventCode { evt_code }),
             },
         })
     }

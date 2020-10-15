@@ -1,4 +1,6 @@
+use std::collections::HashMap;
 use std::ffi::CString;
+use std::hash::Hash;
 
 use bytes::Buf;
 use enumflags2::BitFlags;
@@ -18,6 +20,12 @@ pub(crate) trait BufExt2: Buf {
         let mut arr = [0u8; 16];
         self.copy_to_slice(&mut arr[..]);
         arr
+    }
+
+    fn get_vec_u8(&mut self, len: usize) -> Vec<u8> {
+        let mut ret = vec![0; len];
+        self.copy_to_slice(ret.as_mut_slice());
+        ret
     }
 
     fn get_bool(&mut self) -> bool {
@@ -52,6 +60,34 @@ pub(crate) trait BufExt2: Buf {
             current = self.get_u8();
         }
         return unsafe { CString::from_vec_unchecked(bytes) };
+    }
+
+    /// Parses a list of Type/Length/Value entries into a map keyed by type
+    ///
+    /// This parses a list of mgmt_tlv entries (as defined in mgmt.h) and converts them
+    /// into a map of Type => Vec<u8>.
+    ///
+    /// # Bytes layout
+    ///
+    /// The layout as described in the mgmt-api documentation is:
+    /// ```plain
+    ///   Parameter1 {
+    ///       Parameter_Type (2 Octet)
+    ///       Value_Length (1 Octet)
+    ///       Value (0-255 Octets)
+    ///   }
+    ///   Parameter2 { }
+    ///   ...
+    /// ```
+    ///
+    fn get_tlv_map<T : FromPrimitive + Eq + Hash>(&mut self) -> HashMap<T, Vec<u8>> {
+        let mut parameters = HashMap::new();
+        while self.has_remaining() {
+            let parameter_type: T = self.get_primitive_u16_le();
+            let value_size = self.get_u8() as usize;
+            parameters.insert(parameter_type, self.get_vec_u8(value_size));
+        }
+        parameters
     }
 }
 

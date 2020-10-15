@@ -99,6 +99,19 @@ pub enum Command {
     GetPhyConfig,
     SetPhyConfig,
     LoadBlockedKeys,
+    SetWidebandSpeech,
+    ReadSecurityInfo,
+    ReadExperimentalFeaturesInfo,
+    SetExperimentalFeature,
+    ReadDefaultSystemConfig,
+    SetDefaultSystemConfig,
+    ReadDefaultRuntimeConfig,
+    SetDefaultRuntimeConfig,
+    GetDeviceFlags,
+    SetDeviceFlags,
+    ReadAdvertisementMonitorFeatures,
+    AddAdvertisementPatternsMonitor,
+    RemoveAdvertisementMonitor,
 }
 
 impl fmt::LowerHex for CommandStatus {
