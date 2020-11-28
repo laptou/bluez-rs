@@ -1,14 +1,21 @@
-use bytes::*;
+//! This module provides functionality to parse Extended Inquiry Response (EIR) Data.
+//!
+//! This code follows Bluetooth Core Specification (CS) v5.2 and Core
+//! Specification Supplement (CSS) v9
+//! (https://www.bluetooth.com/specifications/bluetooth-core-specification/).
+
 use bytes::buf::BufExt;
+use bytes::*;
 use enumflags2::BitFlags;
-use num_derive::FromPrimitive;    
+use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use thiserror::Error;
 
+/// See CSS v9 Part A 1.3.2 for flag meaning.
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, BitFlags, Eq, PartialEq)]
 pub enum EIRFlags {
-    LELimitedDiscoverableMode  = 1 << 0,
+    LELimitedDiscoverableMode = 1 << 0,
     LEGeneralDiscoverableMode = 1 << 1,
     BREDRNotSupported = 1 << 2,
     ControllerSimultaneousLEBREDR = 1 << 3,
@@ -76,15 +83,14 @@ pub enum EIRError {
     #[error("More than one name block found.")]
     RepeatedName,
     #[error("Unexpected data length {}.", len)]
-    UnexpectedDataLength {
-        len: usize,
-    },
+    UnexpectedDataLength { len: usize },
     #[error("UTF-8 encoding error in URI.")]
     InvalidURI,
 }
 
 #[repr(u8)]
 #[derive(FromPrimitive)]
+#[non_exhaustive]
 enum EIRDataTypes {
     Flags = 0x01,
     UUID16Incomplete = 0x02,
@@ -100,6 +106,10 @@ enum EIRDataTypes {
     ManufacturerSpecificData = 0xFF,
 }
 
+/// Parses Extended Inquiry Response (EIR) Data.
+///
+/// This will silently skip any unknown data types or URIs using
+/// encoded schemes.
 pub fn parse_eir<T: Buf>(mut buf: T) -> Result<EIR, EIRError> {
     let mut eir = EIR::new();
 
@@ -124,51 +134,61 @@ pub fn parse_eir<T: Buf>(mut buf: T) -> Result<EIR, EIRError> {
         // Core Specification Supplement
         // EIRDataType values https://www.bluetooth.com/specifications/assigned-numbers/generic-access-profile/
         match FromPrimitive::from_u8(data_type) {
-            Some(EIRDataTypes::Flags) => { // Flags
+            Some(EIRDataTypes::Flags) => {
                 if eir.flags.is_some() {
                     return Err(EIRError::RepeatedFlag);
                 }
                 eir.flags = Some(BitFlags::from_bits_truncate(data.get_u8()));
-            },
-            Some(EIRDataTypes::UUID16Incomplete)|Some(EIRDataTypes::UUID16Complete) => {
+            }
+            Some(EIRDataTypes::UUID16Incomplete) | Some(EIRDataTypes::UUID16Complete) => {
                 if data.remaining() % 2 != 0 {
-                    return Err(EIRError::UnexpectedDataLength { len:data.remaining() });
+                    return Err(EIRError::UnexpectedDataLength {
+                        len: data.remaining(),
+                    });
                 }
                 while data.has_remaining() {
                     eir.uuid16.push(data.get_u16_le());
                 }
-            },
-            Some(EIRDataTypes::UUID32Incomplete)|Some(EIRDataTypes::UUID32Complete) => {
+            }
+            Some(EIRDataTypes::UUID32Incomplete) | Some(EIRDataTypes::UUID32Complete) => {
                 if data.remaining() % 4 != 0 {
-                    return Err(EIRError::UnexpectedDataLength { len:data.remaining() });
+                    return Err(EIRError::UnexpectedDataLength {
+                        len: data.remaining(),
+                    });
                 }
                 while data.has_remaining() {
                     eir.uuid32.push(data.get_u32_le());
                 }
-            },
-            Some(EIRDataTypes::UUID128Incomplete)|Some(EIRDataTypes::UUID128Complete) => {
+            }
+            Some(EIRDataTypes::UUID128Incomplete) | Some(EIRDataTypes::UUID128Complete) => {
                 if data.remaining() % 16 != 0 {
-                    return Err(EIRError::UnexpectedDataLength { len:data.remaining() });                    
+                    return Err(EIRError::UnexpectedDataLength {
+                        len: data.remaining(),
+                    });
                 }
                 while data.has_remaining() {
                     eir.uuid128.push(data.get_u128_le());
                 }
-            },
+            }
             Some(EIRDataTypes::NameShort) => {
                 if eir.name.is_some() {
                     return Err(EIRError::RepeatedName);
                 }
-                eir.name = Some(EIRName::short_name(String::from_utf8_lossy(data.bytes()).to_string()));
-            },
+                eir.name = Some(EIRName::short_name(
+                    String::from_utf8_lossy(data.bytes()).to_string(),
+                ));
+            }
             Some(EIRDataTypes::NameComplete) => {
                 if eir.name.is_some() {
                     return Err(EIRError::RepeatedName);
                 }
-                eir.name = Some(EIRName::complete_name(String::from_utf8_lossy(data.bytes()).to_string()));
-            },
+                eir.name = Some(EIRName::complete_name(
+                    String::from_utf8_lossy(data.bytes()).to_string(),
+                ));
+            }
             Some(EIRDataTypes::TxPowerLevel) => {
                 eir.tx_power_level.push(data.get_i8());
-            },
+            }
             Some(EIRDataTypes::URI) => {
                 let uri_scheme = data.get_u8();
                 if uri_scheme == 0x01 {
@@ -180,21 +200,22 @@ pub fn parse_eir<T: Buf>(mut buf: T) -> Result<EIR, EIRError> {
                 } else {
                     // TODO: URI scheme translation. Skip for now.
                 }
-            },
+            }
             Some(EIRDataTypes::ManufacturerSpecificData) => {
                 if data.remaining() < 2 {
-                    return Err(EIRError::UnexpectedDataLength { len:data.remaining() });
+                    return Err(EIRError::UnexpectedDataLength {
+                        len: data.remaining(),
+                    });
                 }
-                eir.manufacturer_specific_data.push(
-                    ManufacturerSpecificData {
+                eir.manufacturer_specific_data
+                    .push(ManufacturerSpecificData {
                         company_identifier_code: data.get_u16_le(),
                         data: Bytes::copy_from_slice(data.bytes()),
-                    }
-                );
-            },
+                    });
+            }
             _ => {
                 // Skip unknown data
-            },
+            }
         }
         data.advance(data.remaining());
         buf = data.into_inner();
@@ -234,7 +255,10 @@ mod tests {
         let eir = eir.unwrap();
         assert!(eir.flags.is_some());
         let flags = eir.flags.unwrap();
-        assert_eq!(flags, EIRFlags::BREDRNotSupported | EIRFlags::LEGeneralDiscoverableMode);
+        assert_eq!(
+            flags,
+            EIRFlags::BREDRNotSupported | EIRFlags::LEGeneralDiscoverableMode
+        );
         assert!(!eir.uuid16.is_empty());
         assert_eq!(eir.uuid16, vec![0xACAB]);
         assert!(eir.uuid32.is_empty());
