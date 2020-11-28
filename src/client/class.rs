@@ -82,7 +82,7 @@ impl<'a> BlueZClient<'a> {
         controller: Controller,
         uuid: [u8; 16],
     ) -> Result<(DeviceClass, ServiceClasses)> {
-        let mut param = BytesMut::from(&uuid[..]);
+        let param = BytesMut::from(&uuid[..]);
 
         self.exec_command(
             Command::RemoveUUID,

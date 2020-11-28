@@ -1,5 +1,5 @@
-use bitvec::prelude as bv;
-use bitvec::prelude::{BitField, AsBits};
+use bitvec::{view::BitView, prelude as bv};
+use bitvec::prelude::{BitField};
 use bytes::{Buf, Bytes};
 use enumflags2::BitFlags;
 
@@ -164,7 +164,7 @@ pub fn from_array(class: [u8; 3]) -> (DeviceClass, ServiceClasses) {
 pub fn from_u32(class: u32) -> (DeviceClass, ServiceClasses) {
     let service_classes = ServiceClasses::from_bits_truncate(class);
 
-    let class_bits = class.bits::<bv::Lsb0>();
+    let class_bits = class.view_bits::<bv::Lsb0>();
     let device_class: DeviceClass;
 
     // major device class encoded in bits 8-12

@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use bytes::*;
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
