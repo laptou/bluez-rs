@@ -48,7 +48,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::ReadLocalOutOfBandExtended,
             controller,
-            Some(BytesMut::from([address_types.bits() as u8].as_ref() as &[u8]).to_bytes()),
+            Some(Bytes::copy_from_slice(&[address_types.bits() as u8])),
             |_, param| {
                 let mut param = param.unwrap();
                 Ok((
@@ -121,7 +121,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::AddRemoteOutOfBand,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             address_callback,
         )
         .await

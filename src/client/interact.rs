@@ -13,7 +13,7 @@ pub(crate) fn address_bytes(address: Address, address_type: AddressType) -> Byte
     let mut param = BytesMut::with_capacity(7);
     param.put_slice(address.as_ref());
     param.put_u8(address_type as u8);
-    param.to_bytes()
+    param.freeze()
 }
 
 pub(crate) fn address_bytes_with_u8(
@@ -25,7 +25,7 @@ pub(crate) fn address_bytes_with_u8(
     param.put_slice(address.as_ref());
     param.put_u8(address_type as u8);
     param.put_u8(extra);
-    param.to_bytes()
+    param.freeze()
 }
 
 impl<'a> BlueZClient<'a> {
@@ -158,7 +158,7 @@ impl<'a> BlueZClient<'a> {
             param.put_u8(address_type as u8);
         }
 
-        self.exec_command(opcode, controller, Some(param.to_bytes()), address_callback)
+        self.exec_command(opcode, controller, Some(param.freeze()), address_callback)
             .await
     }
 
@@ -306,7 +306,7 @@ impl<'a> BlueZClient<'a> {
             param.put_u8(address_type as u8);
         }
 
-        self.exec_command(opcode, controller, Some(param.to_bytes()), address_callback)
+        self.exec_command(opcode, controller, Some(param.freeze()), address_callback)
             .await
     }
 

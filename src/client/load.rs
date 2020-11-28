@@ -37,7 +37,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::LoadLinkKeys,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await
@@ -77,7 +77,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::LoadLongTermKeys,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await
@@ -112,7 +112,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::LoadIdentityResolvingKeys,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await
@@ -150,7 +150,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::LoadConnectionParameters,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await
@@ -179,7 +179,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::LoadBlockedKeys,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await

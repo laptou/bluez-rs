@@ -112,7 +112,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::AddAdvertising,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| Ok(param.unwrap().get_u8()),
         )
         .await
@@ -145,7 +145,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::RemoveAdvertising,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| Ok(param.unwrap().get_u8()),
         )
         .await
@@ -175,7 +175,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::GetAdvertisingSizeInfo,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| {
                 let mut param = param.unwrap();
                 Ok(AdvertisingSizeInfo {

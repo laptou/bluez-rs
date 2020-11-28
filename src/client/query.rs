@@ -80,7 +80,7 @@ impl<'a> BlueZClient<'a> {
                 manufacturer: param.get_u16_le(),
                 supported_settings: param.get_flags_u32_le(),
                 current_settings: param.get_flags_u32_le(),
-                class_of_device: class_from_bytes(param.split_to(3).to_bytes()),
+                class_of_device: class_from_bytes(param.split_to(3)),
                 name: param.split_to(249).get_c_string(),
                 short_name: param.get_c_string(),
             })
@@ -128,7 +128,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::GetConnectionInfo,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| {
                 let mut param = param.unwrap();
                 Ok(ConnectionInfo {
@@ -169,7 +169,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::GetClockInfo,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| {
                 let mut param = param.unwrap();
 

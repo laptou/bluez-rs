@@ -21,7 +21,6 @@ impl Response {
         let evt_code = buf.get_u16_le();
         let controller = Controller(buf.get_u16_le());
         buf.advance(2); // we already know param length
-        let mut buf = buf.to_bytes();
 
         Ok(Response {
             controller,
@@ -39,7 +38,7 @@ impl Response {
                         Event::CommandComplete {
                             opcode,
                             status,
-                            param: buf.to_bytes(),
+                            param: buf.copy_to_bytes(buf.remaining()),
                         }
                     } else {
                         Event::CommandStatus { opcode, status }
@@ -52,80 +51,84 @@ impl Response {
                     settings: BitFlags::from_bits_truncate(buf.get_u32_le()),
                 },
                 0x0007 => Event::ClassOfDeviceChanged {
-                    class: crate::interface::class::from_bytes(buf),
+                    class: crate::interface::class::from_buf(&mut buf),
                 },
                 0x0008 => {
-                    let name = buf.split_to(249).get_c_string();
+                    let name = {
+                        let mut arr = [0u8; 249];
+                        buf.copy_to_slice(&mut arr[..]);
+                        (&arr[..]).get_c_string()
+                    };
                     let short_name = buf.get_c_string();
 
                     Event::LocalNameChanged { name, short_name }
                 }
                 0x0009 => Event::NewLinkKey {
                     store_hint: buf.get_bool(),
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     key_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                    value: buf.split_to(16).as_ref().try_into().unwrap(),
+                    value: buf.get_u8x16(),
                     pin_length: buf.get_u8(),
                 },
                 0x000A => Event::NewLongTermKey {
                     store_hint: buf.get_bool(),
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     key_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     master: buf.get_u8(),
                     encryption_size: buf.get_u8(),
                     encryption_diversifier: buf.get_u16_le(),
                     random_number: buf.get_u64_le(),
-                    value: buf.split_to(16).as_ref().try_into().unwrap(),
+                    value: buf.get_u8x16(),
                 },
                 0x000B => Event::DeviceConnected {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     flags: BitFlags::from_bits_truncate(buf.get_u32_le()),
                     eir_data: {
                         let len = buf.get_u16_le() as usize;
-                        buf.split_to(len)
+                        buf.copy_to_bytes(len)
                     },
                 },
                 0x000C => Event::DeviceDisconnected {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     reason: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                 },
                 0x000D => Event::ConnectFailed {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     status: buf.get_u8(),
                 },
                 0x000E => Event::PinCodeRequest {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     secure: buf.get_bool(),
                 },
                 0x000F => Event::UserConfirmationRequest {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     confirm_hint: buf.get_bool(),
                     value: buf.get_u32_le(),
                 },
                 0x0010 => Event::UserPasskeyRequest {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                 },
                 0x0011 => Event::AuthenticationFailed {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     status: buf.get_u8(),
                 },
                 0x0012 => Event::DeviceFound {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     rssi: buf.get_i8(),
                     flags: BitFlags::from_bits_truncate(buf.get_u32_le()),
                     eir_data: {
                         let len = buf.get_u16_le() as usize;
-                        buf.split_to(len)
+                        buf.copy_to_bytes(len)
                     },
                 },
                 0x0013 => Event::Discovering {
@@ -133,19 +136,19 @@ impl Response {
                     discovering: buf.get_bool(),
                 },
                 0x0014 => Event::DeviceBlocked {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                 },
                 0x0015 => Event::DeviceUnblocked {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                 },
                 0x0016 => Event::DeviceUnpaired {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                 },
                 0x0017 => Event::PasskeyNotify {
-                    address: Address::from_slice(buf.split_to(6).as_ref()),
+                    address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
                     passkey: buf.get_u32_le(),
                     entered: buf.get_u8(),
@@ -201,7 +204,7 @@ impl Response {
                     address_type: buf.get_primitive_u8(),
                     eir_data: {
                         let len = buf.get_u16_le() as usize;
-                        buf.split_to(len)
+                        buf.copy_to_bytes(len)
                     },
                 },
                 0x0023 => Event::AdvertisingAdded {
@@ -213,7 +216,7 @@ impl Response {
                 0x0025 => Event::ExtControllerInfoChanged {
                     eir_data: {
                         let len = buf.get_u16_le() as usize;
-                        buf.split_to(len)
+                        buf.copy_to_bytes(len)
                     },
                 },
                 0x0026 => Event::PhyConfigChanged {

@@ -4,7 +4,6 @@ use std::u16;
 use async_std::io::{self};
 use async_std::os::unix::io::{FromRawFd, RawFd};
 use async_std::os::unix::net::UnixStream;
-use bytes::buf::BufExt;
 use bytes::*;
 use futures::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
 use libc;
@@ -113,6 +112,6 @@ impl ManagementSocket {
         self.reader.read_exact(&mut body[..]).await?;
 
         // make buffer by chaining header and body
-        Response::parse(BufExt::chain(&header[..], &body[..]))
+        Response::parse(Buf::chain(&header[..], &body[..]))
     }
 }

@@ -1,6 +1,6 @@
 use bitvec::prelude as bv;
 use bitvec::prelude::{BitField, AsBits};
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use enumflags2::BitFlags;
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
@@ -148,6 +148,12 @@ pub enum HealthDeviceClass {
 pub fn from_bytes(class: Bytes) -> (DeviceClass, ServiceClasses) {
     let bits = class[0] as u32 | ((class[1] as u32) << 8) | ((class[2] as u32) << 16);
     from_u32(bits)
+}
+
+pub fn from_buf<B: Buf>(class: &mut B) -> (DeviceClass, ServiceClasses) {
+    let mut items = [0u8; 3];
+    class.copy_to_slice(&mut items[..]);
+    from_array(items)
 }
 
 pub fn from_array(class: [u8; 3]) -> (DeviceClass, ServiceClasses) {
