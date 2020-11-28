@@ -20,15 +20,14 @@ enumflags2_derive = "0.6.4"
 bytes = "0.6"
 bitvec = "0.19"
 futures = "0.3"
-async-std = { version = "1.6", features = ["attributes"] }
+smol = "1.2"
 
-[[bin]]
+[dev-dependencies]
+async-std = { version = "1.7", features = ["attributes"] }
+
+[[example]]
 name = "discover"
-path = "examples/discover.rs"
-doc = false
 
-[[bin]]
+[[example]]
 name = "list"
-path = "examples/list.rs"
-doc = false
 
