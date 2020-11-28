@@ -1,11 +1,27 @@
 use std::fmt::{Display, Formatter};
 
+use bytes::Buf;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Address {
     bytes: [u8; 6],
 }
 
 impl Address {
+    pub const fn new(bytes: [u8; 6]) -> Address {
+        Address { bytes }
+    }
+
+    pub fn from_buf<B: Buf>(buf: &mut B) -> Address {
+        if buf.remaining() < 6 {
+            panic!("bluetooth address is 6 bytes");
+        }
+
+        let mut arr = [0u8; 6];
+        buf.copy_to_slice(&mut arr[..]);
+        Address::new(arr)
+    }
+
     pub fn from_slice(bytes: &[u8]) -> Address {
         if bytes.len() != 6 {
             panic!("bluetooth address is 6 bytes");
@@ -13,7 +29,7 @@ impl Address {
 
         let mut arr = [0u8; 6];
         arr.copy_from_slice(bytes);
-        Address { bytes: arr }
+        Address::new(arr)
     }
 
     pub const fn zero() -> Address {

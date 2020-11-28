@@ -1,10 +1,8 @@
 use std::os::raw::c_ushort;
 use std::u16;
 
-use async_std::io::{self};
-use async_std::os::unix::io::{FromRawFd, RawFd};
-use async_std::os::unix::net::UnixStream;
-use bytes::buf::BufExt;
+use std::os::unix::io::{FromRawFd, RawFd};
+use smol::net::unix::UnixStream;
 use bytes::*;
 use futures::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
 use libc;
@@ -49,7 +47,7 @@ pub struct ManagementSocket {
 }
 
 impl ManagementSocket {
-    pub fn open() -> Result<Self, io::Error> {
+    pub fn open() -> Result<Self, smol::io::Error> {
         let fd: RawFd = unsafe {
             libc::socket(
                 libc::AF_BLUETOOTH,
@@ -59,7 +57,7 @@ impl ManagementSocket {
         };
 
         if fd < 0 {
-            return Err(io::Error::last_os_error());
+            return Err(smol::io::Error::last_os_error());
         }
 
         let addr = SockAddrHci {
@@ -76,7 +74,7 @@ impl ManagementSocket {
             )
         } < 0
         {
-            let err = io::Error::last_os_error();
+            let err = std::io::Error::last_os_error();
 
             unsafe {
                 libc::close(fd);
@@ -85,7 +83,9 @@ impl ManagementSocket {
             return Err(err);
         }
 
-        let stream = unsafe { UnixStream::from_raw_fd(fd) };
+        let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(fd) };
+        let stream = smol::Async::new(stream)?;
+        let stream = UnixStream::from(stream);
         let (read_stream, write_stream) = stream.split();
 
         Ok(ManagementSocket {
@@ -95,7 +95,7 @@ impl ManagementSocket {
     }
 
     /// Returns either an error or the number of bytes that were sent.
-    pub async fn send(&mut self, request: Request) -> Result<usize, io::Error> {
+    pub async fn send(&mut self, request: Request) -> Result<usize, smol::io::Error> {
         let buf: Bytes = request.into();
         self.writer.write(&buf).await
     }
@@ -113,6 +113,6 @@ impl ManagementSocket {
         self.reader.read_exact(&mut body[..]).await?;
 
         // make buffer by chaining header and body
-        Response::parse(BufExt::chain(&header[..], &body[..]))
+        Response::parse(Buf::chain(&header[..], &body[..]))
     }
 }

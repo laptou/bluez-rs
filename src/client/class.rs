@@ -29,7 +29,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetDeviceClass,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| Ok(class_from_bytes(param.unwrap())),
         )
         .await
@@ -59,7 +59,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::AddUUID,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| Ok(class_from_bytes(param.unwrap())),
         )
         .await
@@ -82,12 +82,12 @@ impl<'a> BlueZClient<'a> {
         controller: Controller,
         uuid: [u8; 16],
     ) -> Result<(DeviceClass, ServiceClasses)> {
-        let mut param = BytesMut::from(&uuid[..]);
+        let param = BytesMut::from(&uuid[..]);
 
         self.exec_command(
             Command::RemoveUUID,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| Ok(class_from_bytes(param.unwrap())),
         )
         .await

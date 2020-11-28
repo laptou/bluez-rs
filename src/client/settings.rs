@@ -65,7 +65,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetLocalName,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| {
                 let mut param = param.unwrap();
 
@@ -100,7 +100,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetPowered,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -139,7 +139,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetDiscoverable,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -181,7 +181,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetConnectable,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -211,7 +211,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetFastConnectable,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -238,7 +238,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetPairable,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -264,7 +264,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetLinkSecurity,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -293,7 +293,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetSecureSimplePairing,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -327,7 +327,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetHighSpeed,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -355,7 +355,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetLowEnergy,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -406,7 +406,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetAdvertising,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -432,7 +432,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetBREDR,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -457,7 +457,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetIOCapability,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await
@@ -494,7 +494,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetDeviceID,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await
@@ -516,7 +516,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetScanParameters,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await
@@ -550,12 +550,12 @@ impl<'a> BlueZClient<'a> {
         controller: Controller,
         address: Address,
     ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::from(address.as_ref());
+        let param = BytesMut::from(address.as_ref());
 
         self.exec_command(
             Command::SetStaticAddress,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -588,7 +588,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetSecureConnections,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -622,7 +622,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetDebugKeys,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -675,7 +675,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetPrivacy,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -703,12 +703,12 @@ impl<'a> BlueZClient<'a> {
         controller: Controller,
         config: bool,
     ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::from([config as u8].as_ref() as &[u8]);
+        let param = BytesMut::from([config as u8].as_ref() as &[u8]);
 
         self.exec_command(
             Command::SetExternalConfig,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -745,12 +745,12 @@ impl<'a> BlueZClient<'a> {
         controller: Controller,
         address: Address,
     ) -> Result<ControllerSettings> {
-        let mut param = BytesMut::from(address.as_ref());
+        let param = BytesMut::from(address.as_ref());
 
         self.exec_command(
             Command::SetPublicAddress,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -773,7 +773,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetAppearance,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await
@@ -791,7 +791,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetPhyConfig,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await
@@ -819,7 +819,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetWidebandSpeech,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             settings_callback,
         )
         .await
@@ -851,7 +851,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetDefaultSystemConfig,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await
@@ -881,7 +881,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::SetDefaultSystemConfig,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, _| Ok(()),
         )
         .await

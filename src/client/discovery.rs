@@ -33,7 +33,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::StartDiscovery,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| Ok(param.unwrap().get_flags_u8()),
         )
         .await
@@ -54,7 +54,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::StopDiscovery,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| Ok(param.unwrap().get_flags_u8()),
         )
         .await
@@ -102,7 +102,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::StartServiceDiscovery,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| Ok(param.unwrap().get_flags_u8()),
         )
         .await
@@ -132,7 +132,7 @@ impl<'a> BlueZClient<'a> {
         self.exec_command(
             Command::StartLimitedDiscovery,
             controller,
-            Some(param.to_bytes()),
+            Some(param.freeze()),
             |_, param| Ok(param.unwrap().get_flags_u8()),
         )
         .await
