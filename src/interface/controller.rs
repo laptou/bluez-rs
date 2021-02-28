@@ -2,7 +2,7 @@ use std::ffi::CString;
 use std::fmt::{Display, Formatter};
 
 use bytes::Bytes;
-use enumflags2::BitFlags;
+use enumflags2::{BitFlags, bitflags};
 
 use crate::interface::class::{DeviceClass, ServiceClasses};
 use crate::Address;
@@ -58,7 +58,8 @@ pub struct ControllerInfoExt {
     pub eir_data: Bytes,
 }
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u32)]
 pub enum ControllerSetting {
     Powered = 1 << 0,

@@ -1,6 +1,6 @@
 use super::*;
 use crate::util::BufExt2;
-use enumflags2::BitFlags;
+use enumflags2::{BitFlags, bitflags};
 
 impl<'a> BlueZClient<'a> {
     ///	This command is used to read the advertising features supported
@@ -249,7 +249,8 @@ pub struct AdvertisingParams {
 }
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, BitFlags)]
+#[bitflags]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum AdvertisingFlags {
     /// Indicates support for connectable advertising
     ///	and for switching to connectable advertising independent of the

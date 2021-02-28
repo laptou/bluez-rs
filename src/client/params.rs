@@ -1,6 +1,6 @@
 use std::hash::Hash;
 
-use enumflags2::BitFlags;
+use enumflags2::{BitFlags, bitflags};
 
 use crate::Address;
 
@@ -54,7 +54,8 @@ pub enum LeAdvertisingMode {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, BitFlags)]
+#[bitflags]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum AddressTypeFlag {
     BREDR = 1 << 0,
     LEPublic = 1 << 1,
@@ -106,7 +107,8 @@ pub struct ClockInfo {
 }
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, BitFlags, Eq, PartialEq)]
+#[bitflags]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum DeviceFlag {
     ConfirmName = 1 << 0,
     LegacyPairing = 1 << 1,
@@ -140,7 +142,8 @@ pub struct ConnectionParams {
 }
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, BitFlags)]
+#[bitflags]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ControllerConfigOptions {
     External = 1 << 0,
     BluetoothPublicAddr = 1 << 1,
@@ -183,7 +186,8 @@ pub struct PhyConfig {
 }
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, BitFlags)]
+#[bitflags]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum PhyFlag {
     BR1M1Slot = 1 << 0,
     BR1M3Slot = 1 << 1,

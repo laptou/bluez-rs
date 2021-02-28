@@ -3,8 +3,7 @@ use std::ffi::CString;
 use std::hash::Hash;
 
 use bytes::Buf;
-use enumflags2::BitFlags;
-use enumflags2::RawBitFlags;
+use enumflags2::{BitFlag, BitFlags};
 use num_traits::FromPrimitive;
 
 use crate::Address;
@@ -40,15 +39,15 @@ pub(crate) trait BufExt2: Buf {
         FromPrimitive::from_u16(self.get_u16_le()).unwrap()
     }
 
-    fn get_flags_u8<T: RawBitFlags<Type = u8>>(&mut self) -> BitFlags<T> {
-        BitFlags::from_bits_truncate(self.get_u8())
+    fn get_flags_u8<T: BitFlag<Numeric = u8>>(&mut self) -> BitFlags<T> {
+        BitFlags::<T, u8>::from_bits_truncate(self.get_u8())
     }
 
-    fn get_flags_u16_le<T: RawBitFlags<Type = u16>>(&mut self) -> BitFlags<T> {
+    fn get_flags_u16_le<T: BitFlag<Numeric = u16>>(&mut self) -> BitFlags<T> {
         BitFlags::from_bits_truncate(self.get_u16_le())
     }
 
-    fn get_flags_u32_le<T: RawBitFlags<Type = u32>>(&mut self) -> BitFlags<T> {
+    fn get_flags_u32_le<T: BitFlag<Numeric = u32>>(&mut self) -> BitFlags<T> {
         BitFlags::from_bits_truncate(self.get_u32_le())
     }
 

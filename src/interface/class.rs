@@ -1,10 +1,11 @@
 use bitvec::{view::BitView, prelude as bv};
 use bitvec::prelude::{BitField};
 use bytes::{Buf, Bytes};
-use enumflags2::BitFlags;
+use enumflags2::{BitFlags, bitflags};
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
 #[repr(u32)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ServiceClass {
     Positioning = 1 << 16,
     Networking = 1 << 17,
