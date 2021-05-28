@@ -1,5 +1,4 @@
-use bitvec::{view::BitView, prelude as bv};
-use bitvec::prelude::{BitField};
+use bitvec::{view::BitView, field::BitField, prelude as bv};
 use bytes::{Buf, Bytes};
 use enumflags2::{BitFlags, bitflags};
 
