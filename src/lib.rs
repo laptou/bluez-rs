@@ -113,6 +113,7 @@ pub use address::Address;
 pub use result::{Error, Result};
 
 pub mod client;
+pub mod eir;
 pub mod interface;
 pub mod result;
 
