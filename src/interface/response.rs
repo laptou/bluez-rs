@@ -5,7 +5,7 @@ use num_traits::FromPrimitive;
 use crate::client::ConnectionParams;
 use crate::interface::controller::Controller;
 use crate::interface::event::Event;
-use crate::util::BufExt2;
+use crate::util::BufExtBlueZ;
 use crate::Address;
 use crate::Error;
 

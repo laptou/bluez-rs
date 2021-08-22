@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::interface::class::from_bytes as class_from_bytes;
 use crate::interface::controller::ControllerInfoExt;
-use crate::util::BufExt2;
+use crate::util::BufExtBlueZ;
 
 use super::*;
 

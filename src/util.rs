@@ -8,7 +8,7 @@ use num_traits::FromPrimitive;
 
 use crate::Address;
 
-pub(crate) trait BufExt2: Buf {
+pub(crate) trait BufExtBlueZ: Buf {
     fn get_address(&mut self) -> Address {
         let mut arr = [0u8; 6];
         self.copy_to_slice(&mut arr[..]);
@@ -90,4 +90,4 @@ pub(crate) trait BufExt2: Buf {
     }
 }
 
-impl<T: Buf> BufExt2 for T {}
+impl<T: Buf> BufExtBlueZ for T {}

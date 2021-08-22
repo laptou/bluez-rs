@@ -1,5 +1,5 @@
 use super::*;
-use crate::util::BufExt2;
+use crate::util::BufExtBlueZ;
 
 pub(crate) fn address_callback(
     _: Controller,

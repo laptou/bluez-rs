@@ -2,7 +2,7 @@ use enumflags2::BitFlags;
 
 use super::interact::{address_bytes, address_callback};
 use super::*;
-use crate::util::BufExt2;
+use crate::util::BufExtBlueZ;
 
 impl<'a> ManagementClient<'a> {
     /// This command is used to read the local Out of Band data.

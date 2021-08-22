@@ -28,8 +28,10 @@ mod settings;
 
 pub struct ManagementClient<'a> {
     socket: ManagementSocket,
-    handler: Option<Box<dyn (FnMut(Controller, &Event) -> ()) + Send + 'a>>,
+    handler: Option<ManagementEventHandler<'a>>,
 }
+
+pub type ManagementEventHandler<'a> = Box<dyn (FnMut(Controller, &Event) -> ()) + Send + 'a>;
 
 impl<'a> ManagementClient<'a> {
     pub fn new() -> Result<Self> {
@@ -39,12 +41,12 @@ impl<'a> ManagementClient<'a> {
         })
     }
 
-    pub fn new_with_handler<H: (FnMut(Controller, &Event) -> ()) + Send + 'a>(
-        handler: H,
+    pub fn new_with_handler(
+        handler: ManagementEventHandler<'a>,
     ) -> Result<Self> {
         Ok(ManagementClient {
             socket: ManagementSocket::open()?,
-            handler: Some(Box::new(handler)),
+            handler: Some(handler),
         })
     }
 
@@ -52,13 +54,8 @@ impl<'a> ManagementClient<'a> {
     /// an event. CommandComplete and CommandStatus events will NOT reach this handler;
     /// instead their contents can be accessed as the return value of the method
     /// that you called.
-    pub fn set_handler<H: (FnMut(Controller, &Event) -> ()) + Send + 'a>(&mut self, handler: H) {
-        self.handler = Some(Box::new(handler));
-    }
-
-    /// Removes whatever handler is currently attached to this client.
-    pub fn clear_handler(&mut self) {
-        self.handler = None;
+    pub fn set_handler(&mut self, handler: Option<ManagementEventHandler<'a>>) {
+        self.handler = handler;
     }
 
     /// Tells the client to check if any new data has been sent in by the kernel.
