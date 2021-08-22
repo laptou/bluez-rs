@@ -145,23 +145,23 @@ pub enum HealthDeviceClass {
     Unknown,
 }
 
-pub fn from_bytes(class: Bytes) -> (DeviceClass, ServiceClasses) {
+pub fn device_class_from_bytes(class: Bytes) -> (DeviceClass, ServiceClasses) {
     let bits = class[0] as u32 | ((class[1] as u32) << 8) | ((class[2] as u32) << 16);
-    from_u32(bits)
+    device_class_from_u32(bits)
 }
 
-pub fn from_buf<B: Buf>(class: &mut B) -> (DeviceClass, ServiceClasses) {
+pub fn device_class_from_buf<B: Buf>(class: &mut B) -> (DeviceClass, ServiceClasses) {
     let mut items = [0u8; 3];
     class.copy_to_slice(&mut items[..]);
-    from_array(items)
+    device_class_from_array(items)
 }
 
-pub fn from_array(class: [u8; 3]) -> (DeviceClass, ServiceClasses) {
+pub fn device_class_from_array(class: [u8; 3]) -> (DeviceClass, ServiceClasses) {
     let bits = class[0] as u32 | ((class[1] as u32) << 8) | ((class[2] as u32) << 16);
-    from_u32(bits)
+    device_class_from_u32(bits)
 }
 
-pub fn from_u32(class: u32) -> (DeviceClass, ServiceClasses) {
+pub fn device_class_from_u32(class: u32) -> (DeviceClass, ServiceClasses) {
     let service_classes = ServiceClasses::from_bits_truncate(class);
 
     let class_bits = class.view_bits::<bv::Lsb0>();
@@ -445,7 +445,7 @@ mod tests {
         let c = DeviceClass::Computer(ComputerDeviceClass::Laptop);
         let b: u16 = c.into();
         println!("{:000000000000b} (0x{:x})", b, b);
-        let (c1, _) = from_u32(b as u32);
+        let (c1, _) = device_class_from_u32(b as u32);
         assert_eq!(c, c1);
     }
 }

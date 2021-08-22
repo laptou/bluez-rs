@@ -1,5 +1,3 @@
-use crate::interface::class::from_bytes as class_from_bytes;
-
 use super::*;
 
 impl<'a> ManagementClient<'a> {
@@ -30,7 +28,7 @@ impl<'a> ManagementClient<'a> {
             Command::SetDeviceClass,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(class_from_bytes(param.unwrap())),
+            |_, param| Ok(device_class_from_bytes(param.unwrap())),
         )
         .await
     }
@@ -60,7 +58,7 @@ impl<'a> ManagementClient<'a> {
             Command::AddUUID,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(class_from_bytes(param.unwrap())),
+            |_, param| Ok(device_class_from_bytes(param.unwrap())),
         )
         .await
     }
@@ -88,7 +86,7 @@ impl<'a> ManagementClient<'a> {
             Command::RemoveUUID,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(class_from_bytes(param.unwrap())),
+            |_, param| Ok(device_class_from_bytes(param.unwrap())),
         )
         .await
     }

@@ -2,12 +2,12 @@ use bytes::*;
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 
-use crate::management::ConnectionParams;
-use crate::interface::controller::Controller;
-use crate::interface::event::Event;
+use crate::management::client::ConnectionParams;
+use crate::management::interface::controller::Controller;
+use crate::management::interface::event::Event;
+use crate::management::Error;
 use crate::util::BufExtBlueZ;
 use crate::Address;
-use crate::Error;
 
 pub struct Response {
     pub event: Event,
@@ -49,7 +49,7 @@ impl Response {
                     settings: BitFlags::from_bits_truncate(buf.get_u32_le()),
                 },
                 0x0007 => Event::ClassOfDeviceChanged {
-                    class: crate::interface::class::from_buf(&mut buf),
+                    class: super::device_class_from_buf(&mut buf),
                 },
                 0x0008 => {
                     let name = {

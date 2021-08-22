@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use bytes::Bytes;
 use enumflags2::{BitFlags, bitflags};
 
-use crate::interface::class::{DeviceClass, ServiceClasses};
+use crate::management::interface::class::{DeviceClass, ServiceClasses};
 use crate::Address;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]

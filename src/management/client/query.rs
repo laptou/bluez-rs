@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use crate::interface::class::from_bytes as class_from_bytes;
-use crate::interface::controller::ControllerInfoExt;
+use crate::management::interface::controller::ControllerInfoExt;
 use crate::util::BufExtBlueZ;
 
 use super::*;
@@ -80,7 +79,7 @@ impl<'a> ManagementClient<'a> {
                 manufacturer: param.get_u16_le(),
                 supported_settings: param.get_flags_u32_le(),
                 current_settings: param.get_flags_u32_le(),
-                class_of_device: class_from_bytes(param.split_to(3)),
+                class_of_device: device_class_from_bytes(param.split_to(3)),
                 name: param.split_to(249).get_c_string(),
                 short_name: param.get_c_string(),
             })

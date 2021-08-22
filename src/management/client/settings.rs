@@ -1,10 +1,10 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 
-use crate::interface::controller::{Controller, ControllerSettings};
-use crate::interface::Command;
+use crate::management::interface::controller::{Controller, ControllerSettings};
+use crate::management::interface::Command;
+use crate::management::Result;
 use crate::Address;
-use crate::Result;
 
 use super::*;
 use crate::util::BufExtBlueZ;

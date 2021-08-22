@@ -1,7 +1,7 @@
 use bytes::*;
 
-use crate::interface::command::Command;
-use crate::interface::controller::Controller;
+use crate::management::interface::command::Command;
+use crate::management::interface::controller::Controller;
 
 #[derive(Debug)]
 pub struct Request {

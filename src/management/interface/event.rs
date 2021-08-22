@@ -3,10 +3,10 @@ use std::ffi::CString;
 use bytes::Bytes;
 use enumflags2::BitFlags;
 
-use crate::management::*;
-use crate::interface::class::{DeviceClass, ServiceClasses};
-use crate::interface::controller::ControllerSettings;
-use crate::interface::{Command, CommandStatus};
+use crate::management::client::*;
+use crate::management::interface::class::{DeviceClass, ServiceClasses};
+use crate::management::interface::controller::ControllerSettings;
+use crate::management::interface::{Command, CommandStatus};
 use crate::Address;
 use std::collections::HashMap;
 

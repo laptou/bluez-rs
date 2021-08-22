@@ -110,12 +110,8 @@ extern crate num_derive;
 extern crate thiserror;
 
 pub use address::Address;
-pub use result::{Error, Result};
 
 pub mod management;
-pub mod interface;
-pub mod result;
 
 mod address;
-mod socket;
 mod util;

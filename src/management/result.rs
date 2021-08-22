@@ -1,4 +1,4 @@
-use crate::interface::{Command, CommandStatus};
+use crate::management::interface::{Command, CommandStatus};
 
 pub type Result<T> = std::result::Result<T, Error>;
 

@@ -7,8 +7,8 @@ use bytes::*;
 use futures::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
 use libc;
 
-use crate::interface::{Request, Response};
-use crate::Error;
+use crate::management::interface::{Request, Response};
+use crate::management::Error;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
