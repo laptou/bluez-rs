@@ -3,7 +3,7 @@ use std::ffi::CString;
 use bytes::Bytes;
 use enumflags2::BitFlags;
 
-use crate::client::*;
+use crate::management::*;
 use crate::interface::class::{DeviceClass, ServiceClasses};
 use crate::interface::controller::ControllerSettings;
 use crate::interface::{Command, CommandStatus};

@@ -7,7 +7,7 @@ extern crate bluez;
 
 use std::error::Error;
 
-use bluez::client::*;
+use bluez::management::*;
 
 #[async_std::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {

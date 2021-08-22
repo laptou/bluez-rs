@@ -1,14 +1,14 @@
 //! # Getting Started
-//! The most important type in this crate is the [`BlueZClient`](crate::client::BlueZClient), which
+//! The most important type in this crate is the [`ManagementClient`](crate::management::ManagementClient), which
 //! is used to issue commands to and listen for events from the Bluetooth controller(s). It's
 //! fully decked out in `async`/`.await` bling, too.
 //!
 //! ```no_run
 //! # use std::error::Error;
-//! # use bluez::client::BlueZClient;
+//! # use bluez::management::ManagementClient;
 //! # #[async_std::main]
 //! # pub async fn main() -> Result<(), Box<dyn Error>> {
-//! let mut client = BlueZClient::new().unwrap();
+//! let mut client = ManagementClient::new().unwrap();
 //!
 //! let version = client.get_mgmt_version().await?;
 //! println!(
@@ -38,11 +38,11 @@
 //! ```no_run
 //! # use std::error::Error;
 //! # use std::time::Duration;
-//! # use bluez::client::*;
+//! # use bluez::management::*;
 //! # use bluez::interface::event::Event;
 //! # #[async_std::main]
 //! # pub async fn main() -> Result<(), Box<dyn Error>> {
-//! #    let mut client = BlueZClient::new().unwrap();
+//! #    let mut client = ManagementClient::new().unwrap();
 //!
 //! let controllers = client.get_controller_list().await?;
 //! let controller = controllers.first().expect("no bluetooth controllers available");
@@ -96,12 +96,12 @@
 //!
 //! # Permissions
 //! Commands that just query information, such as
-//! [`BlueZClient::get_controller_info`](crate::client::BlueZClient::get_controller_info),
+//! [`ManagementClient::get_controller_info`](crate::management::ManagementClient::get_controller_info),
 //! will usually work. However, commands that try to change any settings, such as
-//! [`BlueZClient::set_powered`](crate::client::BlueZClient::set_powered) will fail with
+//! [`ManagementClient::set_powered`](crate::management::ManagementClient::set_powered) will fail with
 //! 'permission denied' errors if your process does not have the `CAP_NET_RAW` capability.
 //!
-//! [process]: crate::client::BlueZClient::process
+//! [process]: crate::management::ManagementClient::process
 //! [sample]: https://github.com/laptou/bluez-rs/tree/master/src/example/discover.rs
 
 #[macro_use]
@@ -112,7 +112,7 @@ extern crate thiserror;
 pub use address::Address;
 pub use result::{Error, Result};
 
-pub mod client;
+pub mod management;
 pub mod interface;
 pub mod result;
 

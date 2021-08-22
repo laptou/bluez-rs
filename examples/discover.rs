@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use async_std::task::{block_on, sleep};
 
-use bluez::client::*;
+use bluez::management::*;
 use bluez::interface::controller::*;
 use bluez::interface::event::Event;
 

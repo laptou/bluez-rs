@@ -2,7 +2,7 @@ use bytes::*;
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 
-use crate::client::ConnectionParams;
+use crate::management::ConnectionParams;
 use crate::interface::controller::Controller;
 use crate::interface::event::Event;
 use crate::util::BufExtBlueZ;
