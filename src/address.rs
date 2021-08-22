@@ -2,7 +2,8 @@ use std::fmt::{Display, Formatter};
 
 use bytes::Buf;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[repr(C, packed)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub struct Address {
     bytes: [u8; 6],
 }

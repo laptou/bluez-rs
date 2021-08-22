@@ -1,4 +1,4 @@
-use std::os::raw::c_ushort;
+
 use std::u16;
 
 use std::os::unix::io::{FromRawFd, RawFd};
@@ -9,36 +9,7 @@ use libc;
 
 use crate::management::interface::{Request, Response};
 use crate::management::Error;
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-struct SockAddrHci {
-    pub hci_family: c_ushort,
-    pub hci_dev: c_ushort,
-    pub hci_channel: HciChannel,
-}
-
-#[repr(u16)]
-#[allow(dead_code)]
-#[derive(Debug, Copy, Clone)]
-enum BtProto {
-    L2CAP = 0,
-    HCI = 1,
-    RFCOMM = 3,
-    AVDTP = 7,
-}
-
-#[repr(u16)]
-#[allow(dead_code)]
-#[derive(Debug, Copy, Clone)]
-enum HciChannel {
-    Raw = 0,
-    User = 1,
-    Monitor = 2,
-    Control = 3,
-}
-
-const HCI_DEV_NONE: c_ushort = 65535;
+use crate::socket::*;
 
 #[derive(Debug)]
 pub struct ManagementSocket {
