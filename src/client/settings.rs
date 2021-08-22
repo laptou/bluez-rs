@@ -14,7 +14,7 @@ fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSe
     Ok(param.unwrap().get_flags_u32_le())
 }
 
-impl<'a> BlueZClient<'a> {
+impl<'a> ManagementClient<'a> {
     /// This command is used to set the local name of a controller. The
     ///	command parameters also include a short name which will be used
     ///	in case the full name doesn't fit within EIR/AD data.

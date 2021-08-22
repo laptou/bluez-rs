@@ -28,7 +28,7 @@ pub(crate) fn address_bytes_with_u8(
     param.freeze()
 }
 
-impl<'a> BlueZClient<'a> {
+impl<'a> ManagementClient<'a> {
     ///	This command is only valid during device discovery and is
     ///	expected for each Device Found event with the Confirm Name
     ///	flag set.

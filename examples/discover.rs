@@ -16,7 +16,7 @@ use bluez::interface::event::Event;
 
 #[async_std::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
-    let mut client = BlueZClient::new().unwrap();
+    let mut client = ManagementClient::new().unwrap();
 
     let controllers = client.get_controller_list().await?;
 

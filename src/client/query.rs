@@ -6,7 +6,7 @@ use crate::util::BufExt2;
 
 use super::*;
 
-impl<'a> BlueZClient<'a> {
+impl<'a> ManagementClient<'a> {
     /// This command returns the Management version and revision.
     ///	Besides, being informational the information can be used to
     ///	determine whether certain behavior has changed or bugs fixed

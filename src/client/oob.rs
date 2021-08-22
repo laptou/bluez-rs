@@ -4,7 +4,7 @@ use super::interact::{address_bytes, address_callback};
 use super::*;
 use crate::util::BufExt2;
 
-impl<'a> BlueZClient<'a> {
+impl<'a> ManagementClient<'a> {
     /// This command is used to read the local Out of Band data.
     ///
     ///	This command can only be used when the controller is powered.

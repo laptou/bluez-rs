@@ -11,7 +11,7 @@ use bluez::client::*;
 
 #[async_std::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
-    let mut client = BlueZClient::new().unwrap();
+    let mut client = ManagementClient::new().unwrap();
 
     let version = client.get_mgmt_version().await?;
     println!(

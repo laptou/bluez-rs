@@ -3,7 +3,7 @@ use enumflags2::BitFlags;
 use super::*;
 use crate::util::BufExt2;
 
-impl<'a> BlueZClient<'a> {
+impl<'a> ManagementClient<'a> {
     ///	This command is used to start the process of discovering remote
     ///	devices. A Device Found event will be sent for each discovered
     ///	device.
