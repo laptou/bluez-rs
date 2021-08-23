@@ -10,14 +10,20 @@ use std::sync::Arc;
 use async_std::io::stdin;
 use bluez::communication::socket::L2capListener;
 use bluez::management::client::*;
-use bluez::Address;
-use futures::AsyncReadExt;
 use smol::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
 use smol::Async;
 
 #[async_std::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
-    let listener = L2capListener::bind(Address::zero(), AddressType::BREDR, 0x1011)?;
+    let mut mgmt = ManagementClient::new()?;
+    let controllers = mgmt.get_controller_list().await?;
+    if controllers.len() < 1 {
+        panic!("there are no bluetooth controllers on this device")
+    }
+
+    let controller_info = mgmt.get_controller_info(controllers[0]).await?;
+
+    let listener = L2capListener::bind(controller_info.address, AddressType::BREDR, 0)?;
     let (addr, port) = listener.local_addr()?;
 
     println!("l2cap server listening at {} on port {}", addr, port);
