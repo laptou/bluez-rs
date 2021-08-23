@@ -10,9 +10,9 @@ use std::time::Duration;
 
 use async_std::task::{block_on, sleep};
 
-use bluez::management::*;
-use bluez::interface::controller::*;
-use bluez::interface::event::Event;
+use bluez::management::client::*;
+use bluez::management::interface::controller::*;
+use bluez::management::interface::event::Event;
 
 #[async_std::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
