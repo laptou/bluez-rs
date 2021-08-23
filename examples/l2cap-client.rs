@@ -23,8 +23,10 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     stdin().read_line(&mut line).await?;
 
     let octets = line
+        .trim()
         .split(':')
-        .map(|octet| u8::from_str_radix(octet, 8))
+        .map(|octet| u8::from_str_radix(octet, 16))
+        .rev()
         .collect::<Result<Vec<_>, _>>()?;
 
     let address = Address::from_slice(&octets[..]);
@@ -34,11 +36,11 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     let mut line = String::new();
     stdin().read_line(&mut line).await?;
 
-    let port = line.parse()?;
+    let port = line.trim().parse()?;
 
     let stream = L2capStream::connect(address, AddressType::BREDR, port)?;
 
-    println!("l2cap client connected to {:?} on port {}", address, port);
+    println!("l2cap client connected to {} on port {}", address, port);
 
     let stream = Arc::new(Async::new(stream)?);
 
@@ -66,7 +68,9 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             loop {
                 stdin.read_line(&mut line).await?;
                 writer.write(line.as_bytes()).await?;
+                writer.flush().await?;
                 println!("< {}", line);
+                line.clear();
             }
 
             std::io::Result::Ok(())

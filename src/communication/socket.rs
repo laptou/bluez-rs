@@ -191,7 +191,7 @@ impl L2capStream {
         let fd: RawFd = check_error(unsafe {
             libc::socket(
                 libc::AF_BLUETOOTH,
-                libc::SOCK_CLOEXEC | libc::SOCK_NONBLOCK | libc::SOCK_SEQPACKET,
+                libc::SOCK_CLOEXEC | libc::SOCK_SEQPACKET,
                 BtProto::L2CAP as libc::c_int,
             )
         })?;

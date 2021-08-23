@@ -17,10 +17,10 @@ use smol::Async;
 
 #[async_std::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
-    let listener = L2capListener::bind(Address::any(), AddressType::BREDR, 0)?;
+    let listener = L2capListener::bind(Address::zero(), AddressType::BREDR, 0x1011)?;
     let (addr, port) = listener.local_addr()?;
 
-    println!("l2cap server listening at {:?} on port {}", addr, port);
+    println!("l2cap server listening at {} on port {}", addr, port);
 
     let listener = Async::new(listener)?;
 
@@ -28,7 +28,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
         let (sock, (addr, port)) = listener.read_with(|l| l.accept()).await?;
 
         println!(
-            "l2cap server got connection from {:?} on port {}",
+            "l2cap server got connection from {} on port {}",
             addr, port
         );
 
@@ -58,6 +58,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 loop {
                     stdin.read_line(&mut line).await?;
                     writer.write(line.as_bytes()).await?;
+                    writer.flush().await?;
                     println!("< {}", line);
                 }
 
