@@ -91,3 +91,11 @@ pub(crate) trait BufExtBlueZ: Buf {
 }
 
 impl<T: Buf> BufExtBlueZ for T {}
+
+pub(crate) fn check_error(value: libc::c_int) -> Result<libc::c_int, std::io::Error> {
+    if value < 0 {
+        Err(std::io::Error::last_os_error())
+    } else {
+        Ok(value)
+    }
+}

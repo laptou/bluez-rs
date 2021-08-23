@@ -1,20 +1,18 @@
+use std::io::{Read, Write};
 use std::mem::MaybeUninit;
-use std::u16;
+use std::os::unix::net::{UnixListener, UnixStream};
+use std::os::unix::prelude::IntoRawFd;
 
-use bytes::*;
-use futures::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
-use libc;
-use smol::net::unix::UnixStream;
-use std::os::unix::io::{FromRawFd, RawFd};
+use libc::{self, c_int};
+use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
 
 use crate::management::client::AddressType;
-use crate::management::interface::{Request, Response};
-use crate::management::Error;
+use crate::util::check_error;
 use crate::{socket::*, Address};
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct SockAddrL2 {
+struct SockAddrL2 {
     pub l2_family: i16,
     pub l2_psm: u16,
     pub l2_bdaddr: Address,
@@ -42,30 +40,21 @@ struct L2capOptions {
     mode: u8,
 }
 
-#[derive(Debug)]
-pub struct L2capSocket {
-    fd: i32,
-    reader: BufReader<ReadHalf<UnixStream>>,
-    writer: WriteHalf<UnixStream>,
+pub const SOL_L2CAP: c_int = 6;
+
+pub struct L2capListener {
+    inner: UnixListener,
 }
 
-impl L2capSocket {
-    pub fn connect(
-        addr: Address,
-        addr_type: AddressType,
-        port: u16,
-    ) -> Result<Self, smol::io::Error> {
-        let fd: RawFd = unsafe {
+impl L2capListener {
+    pub fn bind(addr: Address, addr_type: AddressType, port: u16) -> Result<Self, std::io::Error> {
+        let fd: RawFd = check_error(unsafe {
             libc::socket(
                 libc::AF_BLUETOOTH,
                 libc::SOCK_CLOEXEC | libc::SOCK_NONBLOCK | libc::SOCK_SEQPACKET,
                 BtProto::L2CAP as libc::c_int,
             )
-        };
-
-        if fd < 0 {
-            return Err(smol::io::Error::last_os_error());
-        }
+        })?;
 
         let addr = SockAddrL2 {
             l2_family: libc::AF_BLUETOOTH as i16,
@@ -75,16 +64,141 @@ impl L2capSocket {
             ..Default::default()
         };
 
-        if unsafe {
+        if let Err(err) = check_error(unsafe {
+            libc::bind(
+                fd,
+                &addr as *const SockAddrL2 as *const libc::sockaddr,
+                std::mem::size_of::<SockAddrL2>() as u32,
+            )
+        }) {
+            unsafe {
+                libc::close(fd);
+            }
+
+            return Err(err);
+        }
+
+        let listener = unsafe { UnixListener::from_raw_fd(fd) };
+
+        Ok(L2capListener { inner: listener })
+    }
+
+    pub fn accept(&self) -> Result<(L2capStream, (Address, u16)), std::io::Error> {
+        let mut addr: SockAddrL2 = Default::default();
+        let mut addr_size = std::mem::size_of::<SockAddrL2>() as u32;
+
+        let fd = check_error(unsafe {
+            libc::accept(
+                self.inner.as_raw_fd(),
+                &mut addr as *mut _ as *mut _,
+                &mut addr_size,
+            )
+        })?;
+
+        let addr = (addr.l2_bdaddr, addr.l2_psm);
+        let sock = unsafe { L2capStream::from_raw_fd(fd) };
+
+        Ok((sock, addr))
+    }
+
+    pub fn local_addr(&self) -> Result<(Address, u16), std::io::Error> {
+        let mut addr: SockAddrL2 = Default::default();
+        let mut addr_size = std::mem::size_of::<SockAddrL2>() as u32;
+
+        check_error(unsafe {
+            libc::getsockname(
+                self.inner.as_raw_fd(),
+                &mut addr as *mut _ as *mut _,
+                &mut addr_size,
+            )
+        })?;
+
+        Ok((addr.l2_bdaddr, addr.l2_psm))
+    }
+
+    pub fn incoming(&self) -> Incoming<'_> {
+        Incoming { listener: self }
+    }
+}
+
+impl AsRawFd for L2capListener {
+    fn as_raw_fd(&self) -> RawFd {
+        self.inner.as_raw_fd()
+    }
+}
+
+impl FromRawFd for L2capListener {
+    unsafe fn from_raw_fd(fd: RawFd) -> L2capListener {
+        let listener = UnixListener::from_raw_fd(fd);
+        L2capListener { inner: listener }
+    }
+}
+
+impl IntoRawFd for L2capListener {
+    fn into_raw_fd(self) -> RawFd {
+        self.inner.into_raw_fd()
+    }
+}
+
+impl<'a> IntoIterator for &'a L2capListener {
+    type Item = std::io::Result<L2capStream>;
+    type IntoIter = Incoming<'a>;
+
+    fn into_iter(self) -> Incoming<'a> {
+        self.incoming()
+    }
+}
+
+pub struct Incoming<'a> {
+    listener: &'a L2capListener,
+}
+
+impl<'a> Iterator for Incoming<'a> {
+    type Item = std::io::Result<L2capStream>;
+
+    fn next(&mut self) -> Option<std::io::Result<L2capStream>> {
+        Some(self.listener.accept().map(|s| s.0))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (usize::MAX, None)
+    }
+}
+
+#[derive(Debug)]
+pub struct L2capStream {
+    inner: UnixStream,
+}
+
+impl L2capStream {
+    pub fn connect(
+        addr: Address,
+        addr_type: AddressType,
+        port: u16,
+    ) -> Result<Self, smol::io::Error> {
+        let fd: RawFd = check_error(unsafe {
+            libc::socket(
+                libc::AF_BLUETOOTH,
+                libc::SOCK_CLOEXEC | libc::SOCK_NONBLOCK | libc::SOCK_SEQPACKET,
+                BtProto::L2CAP as libc::c_int,
+            )
+        })?;
+
+        let addr = SockAddrL2 {
+            l2_family: libc::AF_BLUETOOTH as i16,
+            l2_bdaddr: addr,
+            l2_bdaddr_type: addr_type,
+            l2_psm: port,
+            ..Default::default()
+        };
+
+        if let Err(err) = check_error(unsafe {
             libc::connect(
                 fd,
                 &addr as *const SockAddrL2 as *const libc::sockaddr,
                 std::mem::size_of::<SockAddrL2>() as u32,
             )
-        } < 0
-        {
-            let err = std::io::Error::last_os_error();
-
+        }) {
             unsafe {
                 libc::close(fd);
             }
@@ -93,76 +207,94 @@ impl L2capSocket {
         }
 
         let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(fd) };
-        let stream = smol::Async::new(stream)?;
-        let stream = UnixStream::from(stream);
-        let (read_stream, write_stream) = stream.split();
 
-        Ok(L2capSocket {
-            fd,
-            reader: BufReader::new(read_stream),
-            writer: write_stream,
-        })
+        Ok(L2capStream { inner: stream })
     }
 
     pub fn set_mtu(&mut self, mtu: u16) -> std::io::Result<()> {
         let mut options = std::mem::MaybeUninit::<L2capOptions>::uninit();
         let mut len = std::mem::size_of::<L2capOptions>() as u32;
 
-        let err = unsafe {
+        check_error(unsafe {
             libc::getsockopt(
-                self.fd,
+                self.inner.as_raw_fd(),
                 SOL_L2CAP,
                 0x01, /* L2CAP_OPTIONS */
-                &mut options as *mut MaybeUninit<L2capOptions> as *mut libc::c_void,
+                &mut options as *mut MaybeUninit<L2capOptions> as *mut _,
                 &mut len,
             )
-        };
-
-        if err < 0 {
-            return Err(std::io::Error::last_os_error());
-        }
+        })?;
 
         let mut options = unsafe { options.assume_init() };
 
         options.omtu = mtu;
         options.imtu = mtu;
 
-        let err = unsafe {
+        check_error(unsafe {
             libc::setsockopt(
-                self.fd,
+                self.inner.as_raw_fd(),
                 SOL_L2CAP,
                 0x01, /* L2CAP_OPTIONS */
                 &options as *const L2capOptions as *const libc::c_void,
                 len,
             )
-        };
-
-        if err < 0 {
-            return Err(std::io::Error::last_os_error());
-        }
+        })?;
 
         Ok(())
     }
 
-    /// Returns either an error or the number of bytes that were sent.
-    pub async fn send(&mut self, request: Request) -> Result<usize, smol::io::Error> {
-        let buf: Bytes = request.into();
-        self.writer.write(&buf).await
+    pub fn set_nonblocking(&self, nonblocking: bool) -> std::io::Result<()> {
+        self.inner.set_nonblocking(nonblocking)
+    }
+}
+
+impl AsRawFd for L2capStream {
+    fn as_raw_fd(&self) -> RawFd {
+        self.inner.as_raw_fd()
+    }
+}
+
+impl FromRawFd for L2capStream {
+    unsafe fn from_raw_fd(fd: RawFd) -> Self {
+        let stream = UnixStream::from_raw_fd(fd);
+        L2capStream { inner: stream }
+    }
+}
+
+impl IntoRawFd for L2capStream {
+    fn into_raw_fd(self) -> RawFd {
+        self.inner.into_raw_fd()
+    }
+}
+
+impl Read for L2capStream {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.inner.read(buf)
+    }
+}
+
+impl<'a> Read for &'a L2capStream {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        (&(*self).inner).read(buf)
+    }
+}
+
+impl Write for L2capStream {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.inner.write(buf)
     }
 
-    pub async fn receive(&mut self) -> Result<Response, Error> {
-        // read 6 byte header
-        let mut header = [0u8; 6];
-        self.reader.read_exact(&mut header).await?;
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
 
-        // this ugliness forces a &[u8] into [u8; 2]
-        let param_size = u16::from_le_bytes([header[4], header[5]]) as usize;
+impl<'a> Write for &'a L2capStream {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        (&(*self).inner).write(buf)
+    }
 
-        // read rest of message
-        let mut body = vec![0u8; param_size];
-        self.reader.read_exact(&mut body[..]).await?;
-
-        // make buffer by chaining header and body
-        Response::parse(Buf::chain(&header[..], &body[..]))
+    fn flush(&mut self) -> std::io::Result<()> {
+        (&(*self).inner).flush()
     }
 }

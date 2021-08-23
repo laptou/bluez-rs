@@ -5,11 +5,32 @@ use std::os::unix::io::{FromRawFd, RawFd};
 use smol::net::unix::UnixStream;
 use bytes::*;
 use futures::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
-use libc;
+use libc::{self, c_ushort};
 
 use crate::management::interface::{Request, Response};
 use crate::management::Error;
 use crate::socket::*;
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+struct SockAddrHci {
+    pub hci_family: c_ushort,
+    pub hci_dev: c_ushort,
+    pub hci_channel: HciChannel,
+}
+
+
+#[repr(u16)]
+#[allow(dead_code)]
+#[derive(Debug, Copy, Clone)]
+pub enum HciChannel {
+    Raw = 0,
+    User = 1,
+    Monitor = 2,
+    Control = 3,
+}
+
+pub const HCI_DEV_NONE: c_ushort = 65535;
 
 #[derive(Debug)]
 pub struct ManagementSocket {
