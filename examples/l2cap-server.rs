@@ -27,10 +27,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     loop {
         let (sock, (addr, port)) = listener.read_with(|l| l.accept()).await?;
 
-        println!(
-            "l2cap server got connection from {} on port {}",
-            addr, port
-        );
+        println!("l2cap server got connection from {} on port {}", addr, port);
 
         let sock = Arc::new(Async::new(sock)?);
 
@@ -39,9 +36,11 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             async move {
                 let mut reader = BufReader::new(sock.as_ref());
                 let mut line = String::new();
+
                 loop {
                     reader.read_line(&mut line).await?;
                     println!("> {}", line);
+                    line.clear();
                 }
 
                 std::io::Result::Ok(())
@@ -55,11 +54,13 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 let mut writer = BufWriter::new(sock.as_ref());
                 let mut line = String::new();
                 let stdin = stdin();
+
                 loop {
                     stdin.read_line(&mut line).await?;
                     writer.write(line.as_bytes()).await?;
                     writer.flush().await?;
                     println!("< {}", line);
+                    line.clear();
                 }
 
                 std::io::Result::Ok(())

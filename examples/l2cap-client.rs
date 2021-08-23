@@ -52,6 +52,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             loop {
                 reader.read_line(&mut line).await?;
                 println!("> {}", line);
+                line.clear();
             }
 
             std::io::Result::Ok(())
