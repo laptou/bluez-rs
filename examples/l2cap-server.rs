@@ -8,7 +8,7 @@ use std::error::Error;
 use std::sync::Arc;
 
 use async_std::io::stdin;
-use bluez::communication::socket::L2capListener;
+use bluez::communication::socket::BluetoothListener;
 use bluez::management::client::*;
 use smol::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
 use smol::Async;
@@ -23,7 +23,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
     let controller_info = mgmt.get_controller_info(controllers[0]).await?;
 
-    let listener = L2capListener::bind(controller_info.address, AddressType::BREDR, 0)?;
+    let listener = BluetoothListener::bind(controller_info.address, AddressType::BREDR, 0)?;
     let (addr, port) = listener.local_addr()?;
 
     println!("l2cap server listening at {} on port {}", addr, port);

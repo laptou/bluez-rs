@@ -8,7 +8,7 @@ use std::error::Error;
 use std::sync::Arc;
 
 use async_std::io::{stdin, stdout};
-use bluez::communication::socket::{L2capListener, L2capStream};
+use bluez::communication::socket::{BluetoothListener, BluetoothStream};
 use bluez::management::client::*;
 use bluez::Address;
 use futures::AsyncReadExt;
@@ -38,7 +38,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
     let port = line.trim().parse()?;
 
-    let stream = L2capStream::connect(address, AddressType::BREDR, port)?;
+    let stream = BluetoothStream::connect(address, AddressType::BREDR, port)?;
 
     println!("l2cap client connected to {} on port {}", address, port);
 
