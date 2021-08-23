@@ -51,7 +51,7 @@ impl L2capListener {
         let fd: RawFd = check_error(unsafe {
             libc::socket(
                 libc::AF_BLUETOOTH,
-                libc::SOCK_CLOEXEC | libc::SOCK_NONBLOCK | libc::SOCK_SEQPACKET,
+                libc::SOCK_CLOEXEC | libc::SOCK_SEQPACKET,
                 BtProto::L2CAP as libc::c_int,
             )
         })?;
@@ -77,6 +77,18 @@ impl L2capListener {
 
             return Err(err);
         }
+
+        if let Err(err) = check_error(unsafe {
+            libc::listen(
+                fd, 128
+            )
+        }) {
+            unsafe {
+                libc::close(fd);
+            }
+
+            return Err(err);
+        }   
 
         let listener = unsafe { UnixListener::from_raw_fd(fd) };
 
@@ -245,6 +257,36 @@ impl L2capStream {
 
     pub fn set_nonblocking(&self, nonblocking: bool) -> std::io::Result<()> {
         self.inner.set_nonblocking(nonblocking)
+    }
+
+    pub fn local_addr(&self) -> Result<(Address, u16), std::io::Error> {
+        let mut addr: SockAddrL2 = Default::default();
+        let mut addr_size = std::mem::size_of::<SockAddrL2>() as u32;
+
+        check_error(unsafe {
+            libc::getsockname(
+                self.inner.as_raw_fd(),
+                &mut addr as *mut _ as *mut _,
+                &mut addr_size,
+            )
+        })?;
+
+        Ok((addr.l2_bdaddr, addr.l2_psm))
+    }
+
+    pub fn peer_addr(&self) -> Result<(Address, u16), std::io::Error> {
+        let mut addr: SockAddrL2 = Default::default();
+        let mut addr_size = std::mem::size_of::<SockAddrL2>() as u32;
+
+        check_error(unsafe {
+            libc::getpeername(
+                self.inner.as_raw_fd(),
+                &mut addr as *mut _ as *mut _,
+                &mut addr_size,
+            )
+        })?;
+
+        Ok((addr.l2_bdaddr, addr.l2_psm))
     }
 }
 

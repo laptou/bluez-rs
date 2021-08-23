@@ -36,6 +36,10 @@ impl Address {
     pub const fn zero() -> Address {
         Address { bytes: [0u8; 6] }
     }
+
+    pub const fn any() -> Address {
+        Address { bytes: [0xFFu8; 6] }
+    }
 }
 
 impl From<[u8; 6]> for Address {
