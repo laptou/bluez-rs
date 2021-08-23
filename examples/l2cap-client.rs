@@ -11,6 +11,7 @@ use async_std::io::{stdin, stdout};
 use bluez::communication::socket::{BluetoothListener, BluetoothStream};
 use bluez::management::client::*;
 use bluez::Address;
+use bluez::socket::BtProto;
 use futures::AsyncReadExt;
 use smol::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
 use smol::Async;
@@ -38,7 +39,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
     let port = line.trim().parse()?;
 
-    let stream = BluetoothStream::connect(address, AddressType::BREDR, port)?;
+    let stream = BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, port)?;
 
     println!("l2cap client connected to {} on port {}", address, port);
 

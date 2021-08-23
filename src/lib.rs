@@ -113,7 +113,7 @@ pub use address::Address;
 
 pub mod management;
 pub mod communication;
+pub mod socket;
 
 mod address;
 mod util;
-mod socket;
