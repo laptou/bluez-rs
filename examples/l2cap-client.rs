@@ -7,7 +7,7 @@ extern crate bluez;
 use std::error::Error;
 use std::sync::Arc;
 
-use async_std::io::stdin;
+use async_std::io::{stdin, stdout};
 use bluez::communication::socket::{L2capListener, L2capStream};
 use bluez::management::client::*;
 use bluez::Address;
@@ -18,6 +18,7 @@ use smol::Async;
 #[async_std::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
     print!("enter l2cap server address: ");
+    stdout().flush().await?;
     let mut line = String::new();
     stdin().read_line(&mut line).await?;
 
@@ -29,6 +30,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     let address = Address::from_slice(&octets[..]);
 
     print!("enter l2cap server port: ");
+    stdout().flush().await?;
     let mut line = String::new();
     stdin().read_line(&mut line).await?;
 
