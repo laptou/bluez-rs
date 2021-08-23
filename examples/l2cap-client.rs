@@ -36,7 +36,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
     let stream = L2capStream::connect(address, AddressType::BREDR, port)?;
 
-    println!("l2cap client connected to {:?} on port {}", addr, port);
+    println!("l2cap client connected to {:?} on port {}", address, port);
 
     let stream = Arc::new(Async::new(stream)?);
 
