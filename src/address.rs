@@ -2,7 +2,6 @@ use std::fmt::{Display, Formatter};
 
 use bytes::Buf;
 
-#[repr(C, packed)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub struct Address {
     bytes: [u8; 6],
@@ -47,6 +46,18 @@ impl From<[u8; 6]> for Address {
 impl Into<[u8; 6]> for Address {
     fn into(self) -> [u8; 6] {
         self.bytes
+    }
+}
+
+impl Into<bluetooth_sys::bdaddr_t> for Address {
+    fn into(self) -> bluetooth_sys::bdaddr_t {
+        bluetooth_sys::bdaddr_t { b: self.bytes }
+    }
+}
+
+impl From<bluetooth_sys::bdaddr_t> for Address {
+    fn from(bdaddr: bluetooth_sys::bdaddr_t) -> Self {
+        Address { bytes: bdaddr.b }
     }
 }
 

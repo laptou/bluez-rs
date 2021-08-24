@@ -5,32 +5,11 @@ use std::os::unix::io::{FromRawFd, RawFd};
 use smol::net::unix::UnixStream;
 use bytes::*;
 use futures::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
-use libc::{self, c_ushort};
+use libc;
 
 use crate::management::interface::{Request, Response};
 use crate::management::Error;
 use crate::socket::*;
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-struct SockAddrHci {
-    pub hci_family: c_ushort,
-    pub hci_dev: c_ushort,
-    pub hci_channel: HciChannel,
-}
-
-
-#[repr(u16)]
-#[allow(dead_code)]
-#[derive(Debug, Copy, Clone)]
-pub enum HciChannel {
-    Raw = 0,
-    User = 1,
-    Monitor = 2,
-    Control = 3,
-}
-
-pub const HCI_DEV_NONE: c_ushort = 65535;
 
 #[derive(Debug)]
 pub struct ManagementSocket {
@@ -52,17 +31,17 @@ impl ManagementSocket {
             return Err(smol::io::Error::last_os_error());
         }
 
-        let addr = SockAddrHci {
+        let addr = bluetooth_sys::sockaddr_hci {
             hci_family: libc::AF_BLUETOOTH as u16,
-            hci_dev: HCI_DEV_NONE,
-            hci_channel: HciChannel::Control,
+            hci_dev: bluetooth_sys::HCI_DEV_NONE as u16,
+            hci_channel: bluetooth_sys::HCI_CHANNEL_CONTROL as u16,
         };
 
         if unsafe {
             libc::bind(
                 fd,
-                &addr as *const SockAddrHci as *const libc::sockaddr,
-                std::mem::size_of::<SockAddrHci>() as u32,
+                &addr as *const bluetooth_sys::sockaddr_hci as *const libc::sockaddr,
+                std::mem::size_of::<bluetooth_sys::sockaddr_hci>() as u32,
             )
         } < 0
         {
