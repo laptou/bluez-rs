@@ -3,45 +3,17 @@ use std::mem::MaybeUninit;
 use std::os::unix::net::UnixStream;
 use std::os::unix::prelude::IntoRawFd;
 
-use libc::{self, c_int};
+use libc;
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
 
 use crate::management::client::AddressType;
 use crate::util::check_error;
 use crate::{socket::*, Address};
 
-#[repr(C)]
-#[derive(Copy, Clone)]
-struct SockAddrL2 {
-    pub l2_family: i16,
-    pub l2_psm: u16,
-    pub l2_bdaddr: Address,
-    pub l2_cid: u16,
-    pub l2_bdaddr_type: AddressType,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-struct SockAddrRC {
-    pub rc_family: i16,
-    pub rc_bdaddr: Address,
-    pub rc_channel: u8,
-}
-
 union SockAddr {
-    l2: SockAddrL2,
-    rc: SockAddrRC,
+    l2: bluetooth_sys::sockaddr_l2,
+    rc: bluetooth_sys::sockaddr_rc,
 }
-
-#[repr(C)]
-struct L2capOptions {
-    omtu: u16,
-    imtu: u16,
-    flush_to: u16,
-    mode: u8,
-}
-
-pub const SOL_L2CAP: c_int = 6;
 
 pub struct BluetoothListener {
     inner: RawFd,
@@ -75,25 +47,25 @@ impl BluetoothListener {
         let (addr, addr_len) = match proto {
             BtProto::L2CAP => (
                 SockAddr {
-                    l2: SockAddrL2 {
-                        l2_family: libc::AF_BLUETOOTH as i16,
-                        l2_bdaddr: addr,
-                        l2_bdaddr_type: addr_type,
+                    l2: bluetooth_sys::sockaddr_l2 {
+                        l2_family: libc::AF_BLUETOOTH as u16,
+                        l2_bdaddr: addr.into(),
+                        l2_bdaddr_type: addr_type as u8,
                         l2_psm: port,
                         l2_cid: 0,
                     },
                 },
-                std::mem::size_of::<SockAddrL2>(),
+                std::mem::size_of::<bluetooth_sys::sockaddr_l2>(),
             ),
             BtProto::RFCOMM => (
                 SockAddr {
-                    rc: SockAddrRC {
-                        rc_family: libc::AF_BLUETOOTH as i16,
-                        rc_bdaddr: addr,
+                    rc: bluetooth_sys::sockaddr_rc {
+                        rc_family: libc::AF_BLUETOOTH as u16,
+                        rc_bdaddr: addr.into(),
                         rc_channel: port as u8,
                     },
                 },
-                std::mem::size_of::<SockAddrRC>(),
+                std::mem::size_of::<bluetooth_sys::sockaddr_rc>(),
             ),
             _ => unreachable!(),
         };
@@ -126,8 +98,8 @@ impl BluetoothListener {
     pub fn accept(&self) -> Result<(BluetoothStream, (Address, u16)), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
-            BtProto::L2CAP => std::mem::size_of::<SockAddrL2>(),
-            BtProto::RFCOMM => std::mem::size_of::<SockAddrRC>(),
+            BtProto::L2CAP => std::mem::size_of::<bluetooth_sys::sockaddr_l2>(),
+            BtProto::RFCOMM => std::mem::size_of::<bluetooth_sys::sockaddr_rc>(),
             _ => unreachable!(),
         } as u32;
 
@@ -136,8 +108,8 @@ impl BluetoothListener {
         })?;
 
         let addr = match self.proto {
-            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr, addr.l2.l2_psm) },
-            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr, addr.rc.rc_channel as u16) },
+            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
+            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
             _ => unreachable!(),
         };
 
@@ -154,8 +126,8 @@ impl BluetoothListener {
     pub fn local_addr(&self) -> Result<(Address, u16), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
-            BtProto::L2CAP => std::mem::size_of::<SockAddrL2>(),
-            BtProto::RFCOMM => std::mem::size_of::<SockAddrRC>(),
+            BtProto::L2CAP => std::mem::size_of::<bluetooth_sys::sockaddr_l2>(),
+            BtProto::RFCOMM => std::mem::size_of::<bluetooth_sys::sockaddr_rc>(),
             _ => unreachable!(),
         } as u32;
 
@@ -168,8 +140,8 @@ impl BluetoothListener {
         })?;
 
         let addr = match self.proto {
-            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr, addr.l2.l2_psm) },
-            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr, addr.rc.rc_channel as u16) },
+            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
+            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
             _ => unreachable!(),
         };
 
@@ -251,25 +223,25 @@ impl BluetoothStream {
         let (addr, addr_len) = match proto {
             BtProto::L2CAP => (
                 SockAddr {
-                    l2: SockAddrL2 {
-                        l2_family: libc::AF_BLUETOOTH as i16,
-                        l2_bdaddr: addr,
-                        l2_bdaddr_type: addr_type,
+                    l2: bluetooth_sys::sockaddr_l2 {
+                        l2_family: libc::AF_BLUETOOTH as u16,
+                        l2_bdaddr: addr.into(),
+                        l2_bdaddr_type: addr_type as u8,
                         l2_psm: port,
                         l2_cid: 0,
                     },
                 },
-                std::mem::size_of::<SockAddrL2>(),
+                std::mem::size_of::<bluetooth_sys::sockaddr_l2>(),
             ),
             BtProto::RFCOMM => (
                 SockAddr {
-                    rc: SockAddrRC {
-                        rc_family: libc::AF_BLUETOOTH as i16,
-                        rc_bdaddr: addr,
+                    rc: bluetooth_sys::sockaddr_rc {
+                        rc_family: libc::AF_BLUETOOTH as u16,
+                        rc_bdaddr: addr.into(),
                         rc_channel: port as u8,
                     },
                 },
-                std::mem::size_of::<SockAddrRC>(),
+                std::mem::size_of::<bluetooth_sys::sockaddr_rc>(),
             ),
             _ => unreachable!(),
         };
@@ -297,15 +269,15 @@ impl BluetoothStream {
     }
 
     pub fn set_mtu(&mut self, mtu: u16) -> std::io::Result<()> {
-        let mut options = std::mem::MaybeUninit::<L2capOptions>::uninit();
-        let mut len = std::mem::size_of::<L2capOptions>() as u32;
+        let mut options = std::mem::MaybeUninit::<bluetooth_sys::l2cap_options>::uninit();
+        let mut len = std::mem::size_of::<bluetooth_sys::l2cap_options>() as u32;
 
         check_error(unsafe {
             libc::getsockopt(
                 self.inner.as_raw_fd(),
-                SOL_L2CAP,
+                bluetooth_sys::SOL_L2CAP as i32,
                 0x01, /* L2CAP_OPTIONS */
-                &mut options as *mut MaybeUninit<L2capOptions> as *mut _,
+                &mut options as *mut MaybeUninit<bluetooth_sys::l2cap_options> as *mut _,
                 &mut len,
             )
         })?;
@@ -318,9 +290,9 @@ impl BluetoothStream {
         check_error(unsafe {
             libc::setsockopt(
                 self.inner.as_raw_fd(),
-                SOL_L2CAP,
+                bluetooth_sys::SOL_L2CAP as i32,
                 0x01, /* L2CAP_OPTIONS */
-                &options as *const L2capOptions as *const libc::c_void,
+                &options as *const bluetooth_sys::l2cap_options as *const libc::c_void,
                 len,
             )
         })?;
@@ -335,8 +307,8 @@ impl BluetoothStream {
     pub fn local_addr(&self) -> Result<(Address, u16), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
-            BtProto::L2CAP => std::mem::size_of::<SockAddrL2>(),
-            BtProto::RFCOMM => std::mem::size_of::<SockAddrRC>(),
+            BtProto::L2CAP => std::mem::size_of::<bluetooth_sys::sockaddr_l2>(),
+            BtProto::RFCOMM => std::mem::size_of::<bluetooth_sys::sockaddr_rc>(),
             _ => unreachable!(),
         } as u32;
 
@@ -349,8 +321,8 @@ impl BluetoothStream {
         })?;
 
         let addr = match self.proto {
-            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr, addr.l2.l2_psm) },
-            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr, addr.rc.rc_channel as u16) },
+            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
+            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
             _ => unreachable!(),
         };
 
@@ -360,8 +332,8 @@ impl BluetoothStream {
     pub fn peer_addr(&self) -> Result<(Address, u16), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
-            BtProto::L2CAP => std::mem::size_of::<SockAddrL2>(),
-            BtProto::RFCOMM => std::mem::size_of::<SockAddrRC>(),
+            BtProto::L2CAP => std::mem::size_of::<bluetooth_sys::sockaddr_l2>(),
+            BtProto::RFCOMM => std::mem::size_of::<bluetooth_sys::sockaddr_rc>(),
             _ => unreachable!(),
         } as u32;
 
@@ -374,8 +346,8 @@ impl BluetoothStream {
         })?;
 
         let addr = match self.proto {
-            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr, addr.l2.l2_psm) },
-            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr, addr.rc.rc_channel as u16) },
+            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
+            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
             _ => unreachable!(),
         };
 
