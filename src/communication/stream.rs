@@ -131,7 +131,7 @@ impl BluetoothListener {
             _ => unreachable!(),
         } as u32;
 
-        let fd = check_error(unsafe {
+        check_error(unsafe {
             libc::getsockname(
                 self.inner.as_raw_fd(),
                 &mut addr as *mut _ as *mut _,
@@ -319,7 +319,7 @@ impl BluetoothStream {
             _ => unreachable!(),
         } as u32;
 
-        let fd = check_error(unsafe {
+        check_error(unsafe {
             libc::getsockname(
                 self.inner.as_raw_fd(),
                 &mut addr as *mut _ as *mut _,
@@ -344,7 +344,7 @@ impl BluetoothStream {
             _ => unreachable!(),
         } as u32;
 
-        let fd = check_error(unsafe {
+        check_error(unsafe {
             libc::getpeername(
                 self.inner.as_raw_fd(),
                 &mut addr as *mut _ as *mut _,
