@@ -1,1 +1,2 @@
-pub mod socket;
+pub mod stream;
+pub mod discovery;
