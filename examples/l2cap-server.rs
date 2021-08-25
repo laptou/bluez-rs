@@ -8,7 +8,7 @@ use std::error::Error;
 use std::sync::Arc;
 
 use async_std::io::stdin;
-use bluez::communication::socket::BluetoothListener;
+use bluez::communication::stream::BluetoothListener;
 use bluez::management::client::*;
 use bluez::socket::BtProto;
 use smol::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};

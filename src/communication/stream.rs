@@ -260,12 +260,19 @@ impl BluetoothStream {
             return Err(err);
         }
 
-        let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(fd) };
+        let stream = unsafe { UnixStream::from_raw_fd(fd) };
 
         Ok(BluetoothStream {
             inner: stream,
             proto,
         })
+    }
+
+    pub(crate) unsafe fn from_raw_fd(fd: RawFd, proto: BtProto) -> Self {
+        BluetoothStream {
+            inner: UnixStream::from_raw_fd(fd),
+            proto,
+        }
     }
 
     pub fn set_mtu(&mut self, mtu: u16) -> std::io::Result<()> {
