@@ -1,4 +1,7 @@
-use std::{borrow::Borrow, ffi::CStr, fmt::Display, iter::FromIterator, marker::PhantomData};
+use std::{
+    borrow::Borrow, ffi::CStr, fmt::Display, iter::FromIterator, marker::PhantomData,
+    mem::ManuallyDrop,
+};
 
 use enumflags2::{bitflags, BitFlags};
 
@@ -7,6 +10,8 @@ use crate::{socket::BtProto, Address};
 use super::stream::BluetoothStream;
 
 #[repr(transparent)]
+#[derive(Copy, Clone)]
+
 pub struct SdpUuid(bluetooth_sys::uuid_t);
 
 #[repr(u8)]
@@ -80,6 +85,12 @@ impl Display for SdpUuid {
     }
 }
 
+impl std::fmt::Debug for SdpUuid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(self, f)
+    }
+}
+
 #[repr(u32)]
 pub enum SdpAttributeSpecification {
     // 16bit individual identifier. They are the actual attribute identifiers in
@@ -106,7 +117,7 @@ pub enum SdpSessionFlags {
 #[repr(transparent)]
 pub struct SdpList<'a, T> {
     inner: *mut bluetooth_sys::sdp_list_t,
-    item: PhantomData<&'a mut T>,
+    _data: PhantomData<&'a mut T>,
 }
 
 impl<'a, T> SdpList<'a, T> {
@@ -115,7 +126,7 @@ impl<'a, T> SdpList<'a, T> {
             inner: unsafe {
                 bluetooth_sys::sdp_list_append(std::ptr::null_mut(), item as *const T as *mut _)
             },
-            item: PhantomData,
+            _data: PhantomData,
         }
     }
 
@@ -135,6 +146,13 @@ impl<'a, T> SdpList<'a, T> {
         SdpListIterMut {
             current: self.inner,
             _data: &PhantomData,
+        }
+    }
+
+    pub fn into_iter(self) -> SdpListIntoIter<'a, T> {
+        SdpListIntoIter {
+            current: self.inner,
+            _list: self,
         }
     }
 }
@@ -181,12 +199,32 @@ impl<'a, T> Iterator for SdpListIterMut<'a, T> {
     }
 }
 
+pub struct SdpListIntoIter<'a, T> {
+    current: *mut bluetooth_sys::sdp_list_t,
+    _list: SdpList<'a, T>,
+}
+
+impl<'a, T> Iterator for SdpListIntoIter<'a, T> {
+    type Item = *mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match unsafe { self.current.as_ref() } {
+            Some(list) => {
+                let item = list.data as *mut T;
+                self.current = list.next;
+                Some(item)
+            }
+            None => None,
+        }
+    }
+}
+
 impl<'a, T> FromIterator<&'a T> for SdpList<'a, T> {
     fn from_iter<U: IntoIterator<Item = &'a T>>(iter: U) -> Self {
         let iter = iter.into_iter();
         let mut list = SdpList {
             inner: std::ptr::null_mut(),
-            item: PhantomData,
+            _data: PhantomData,
         };
 
         for item in iter {
@@ -204,39 +242,117 @@ impl<'a, T> Drop for SdpList<'a, T> {
 }
 
 #[repr(transparent)]
-pub struct SdpRecord(*mut bluetooth_sys::sdp_record_t);
+pub struct SdpRecord<'a>(
+    *mut bluetooth_sys::sdp_record_t,
+    PhantomData<&'a bluetooth_sys::sdp_record_t>,
+);
 
-impl SdpRecord {
-    pub fn get(&self, attr_id: u16) -> &SdpData {
-        let data = unsafe { bluetooth_sys::sdp_data_get(self.0, attr_id) };
-        let data = data as *mut SdpData;
-        unsafe { &*data }
+impl<'a> SdpRecord<'a> {
+    pub fn handle(&self) -> u32 {
+        unsafe { *self.0 }.handle
     }
 
-    pub fn get_access_protos(&self) -> std::io::Result<Vec<&SdpData>> {
+    // Do not drop these SdpData instances. They are owned by.
+    pub fn get_access_protos(&self) -> std::io::Result<Vec<ManuallyDrop<SdpData<'a>>>> {
         let mut list = std::ptr::null_mut();
         let res = unsafe { bluetooth_sys::sdp_get_access_protos(self.0, &mut list) };
         if res < 0 {
             return Err(std::io::Error::from_raw_os_error(res));
         }
-        let list: &SdpList<SdpData> = unsafe { &*(list as *mut SdpList<SdpData>) };
-        let list = list.iter().collect();
+
+        let list: SdpList<bluetooth_sys::sdp_data_t> = SdpList {
+            inner: list,
+            _data: PhantomData,
+        };
+
+        let list = list
+            .into_iter()
+            .map(|data| {
+                ManuallyDrop::new(SdpData(data, PhantomData))
+            })
+            .collect();
+
         Ok(list)
     }
 }
 
-impl Drop for SdpRecord {
+impl<'a> Drop for SdpRecord<'a> {
     fn drop(&mut self) {
         unsafe { bluetooth_sys::sdp_record_free(self.0) }
     }
 }
 
 #[repr(transparent)]
-pub struct SdpData(*mut bluetooth_sys::sdp_data_t);
+pub struct SdpData<'a>(
+    *mut bluetooth_sys::sdp_data_t,
+    PhantomData<&'a bluetooth_sys::sdp_data_t>,
+);
 
-impl SdpData {}
+#[derive(Debug, Copy, Clone)]
+pub enum SdpDataValue<'a> {
+    None,
+    U8(u8),
+    I8(i8),
+    BOOL(bool),
+    U16(u16),
+    I16(i16),
+    U32(u32),
+    I32(i32),
+    I64(i64),
+    U64(u64),
+    U128(u128),
+    I128(i128),
+    Uuid(SdpUuid),
+    Url(&'a CStr),
+    Text(&'a CStr),
+    ALT8(&'a [u8]),
+    ALT16(&'a [u16]),
+    ALT32(&'a [u32]),
+    SEQ8(&'a [u8]),
+    SEQ16(&'a [u16]),
+    SEQ32(&'a [u32]),
+}
 
-impl Drop for SdpData {
+impl<'a> SdpData<'a> {
+    pub fn value(&self) -> SdpDataValue {
+        unsafe {
+            let inner = &*self.0;
+
+            match inner.dtd as u32 {
+                bluetooth_sys::SDP_DATA_NIL => SdpDataValue::None,
+                bluetooth_sys::SDP_UINT8 => SdpDataValue::U8(inner.val.uint8),
+                bluetooth_sys::SDP_INT8 => SdpDataValue::I8(inner.val.int8),
+                bluetooth_sys::SDP_BOOL => SdpDataValue::BOOL(inner.val.int8 != 0),
+                bluetooth_sys::SDP_UINT16 => SdpDataValue::U16(inner.val.uint16),
+                bluetooth_sys::SDP_INT16 => SdpDataValue::I16(inner.val.int16),
+                bluetooth_sys::SDP_UINT32 => SdpDataValue::U32(inner.val.uint32),
+                bluetooth_sys::SDP_INT32 => SdpDataValue::I32(inner.val.int32),
+                bluetooth_sys::SDP_INT64 => SdpDataValue::I64(inner.val.int64),
+                bluetooth_sys::SDP_UINT64 => SdpDataValue::U64(inner.val.uint64),
+                bluetooth_sys::SDP_UINT128 => {
+                    SdpDataValue::U128(u128::from_le_bytes(inner.val.uint128.data))
+                }
+                bluetooth_sys::SDP_INT128 => {
+                    SdpDataValue::I128(i128::from_le_bytes(inner.val.int128.data))
+                }
+                bluetooth_sys::SDP_UUID16
+                | bluetooth_sys::SDP_UUID32
+                | bluetooth_sys::SDP_UUID128 => SdpDataValue::Uuid(SdpUuid(inner.val.uuid)),
+                bluetooth_sys::SDP_TEXT_STR8
+                | bluetooth_sys::SDP_TEXT_STR16
+                | bluetooth_sys::SDP_TEXT_STR32 => {
+                    SdpDataValue::Text(CStr::from_ptr(inner.val.str))
+                }
+                bluetooth_sys::SDP_URL_STR8
+                | bluetooth_sys::SDP_URL_STR16
+                | bluetooth_sys::SDP_URL_STR32 => SdpDataValue::Url(CStr::from_ptr(inner.val.str)),
+                _ => unimplemented!(),
+            }
+        }
+    }
+}
+
+impl<'a> Drop for SdpData<'a> {
     fn drop(&mut self) {
         unsafe { bluetooth_sys::sdp_data_free(self.0) }
     }
@@ -266,37 +382,38 @@ impl SdpSession {
         &self,
         search_list: &[SdpUuid],
         max_rec_num: u16,
-    ) -> std::io::Result<Vec<SdpRecord>> {
+    ) -> std::io::Result<Vec<u16>> {
         let search_list: SdpList<SdpUuid> = search_list.into_iter().collect();
-        let mut rsp_list: Option<SdpList<*mut bluetooth_sys::sdp_record_t>> = None;
+        let mut rsp_list: *mut bluetooth_sys::sdp_list_t = std::ptr::null_mut();
 
         self.check_error(unsafe {
             bluetooth_sys::sdp_service_search_req(
                 self.0,
                 search_list.inner,
                 max_rec_num,
-                &mut rsp_list as *mut _ as *mut *mut _,
+                &mut rsp_list,
             )
         })?;
 
-        let result = rsp_list
-            .expect("response list is None")
-            .iter_mut()
-            .map(|item| SdpRecord(*item))
-            .collect();
+        let rsp_list = SdpList {
+            inner: rsp_list,
+            _data: PhantomData,
+        };
 
-        Ok(result)
+        let items = rsp_list.iter().map(|record| *record).collect();
+
+        Ok(items)
     }
 
-    pub fn search_attr_req(
+    pub fn search_attr_req<'a>(
         &self,
         search_list: &[SdpUuid],
         req_type: SdpAttributeSpecification,
         attr_list: &[u32],
-    ) -> std::io::Result<Vec<SdpRecord>> {
+    ) -> std::io::Result<Vec<SdpRecord<'a>>> {
         let search_list: SdpList<SdpUuid> = search_list.into_iter().collect();
         let attr_list: SdpList<u32> = attr_list.into_iter().collect();
-        let mut rsp_list: Option<SdpList<*mut bluetooth_sys::sdp_record_t>> = None;
+        let mut rsp_list: *mut bluetooth_sys::sdp_list_t = std::ptr::null_mut();
 
         self.check_error(unsafe {
             bluetooth_sys::sdp_service_search_attr_req(
@@ -304,14 +421,18 @@ impl SdpSession {
                 search_list.inner,
                 req_type as u32,
                 attr_list.inner,
-                &mut rsp_list as *mut _ as *mut *mut _,
+                &mut rsp_list,
             )
         })?;
 
+        let rsp_list = SdpList {
+            inner: rsp_list,
+            _data: PhantomData,
+        };
+
         let result = rsp_list
-            .expect("response list is None")
-            .iter_mut()
-            .map(|item| SdpRecord(*item))
+            .into_iter()
+            .map(|item| SdpRecord(item, PhantomData))
             .collect();
 
         Ok(result)
