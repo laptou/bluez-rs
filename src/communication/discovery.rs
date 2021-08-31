@@ -252,7 +252,7 @@ impl<'a> SdpRecord<'a> {
         unsafe { *self.0 }.handle
     }
 
-    // Do not drop these SdpData instances. They are owned by.
+    
     pub fn get_access_protos(&self) -> std::io::Result<Vec<ManuallyDrop<SdpData<'a>>>> {
         let mut list = std::ptr::null_mut();
         let res = unsafe { bluetooth_sys::sdp_get_access_protos(self.0, &mut list) };
