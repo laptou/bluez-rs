@@ -110,8 +110,8 @@ extern crate thiserror;
 
 pub use address::Address;
 
-pub mod management;
 pub mod communication;
+pub mod management;
 pub mod socket;
 
 mod address;

@@ -225,10 +225,10 @@ impl Response {
                     flags: buf.get_u32_le(),
                 },
                 0x0028 => Event::DefaultSystemConfigChanged {
-                    params: buf.get_tlv_map()
+                    params: buf.get_tlv_map(),
                 },
                 0x0029 => Event::DefaultRuntimeConfigChanged {
-                    params: buf.get_tlv_map()
+                    params: buf.get_tlv_map(),
                 },
                 _ => return Err(Error::UnknownEventCode { evt_code }),
             },
