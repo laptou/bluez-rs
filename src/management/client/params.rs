@@ -1,6 +1,6 @@
 use std::hash::Hash;
 
-use enumflags2::{BitFlags, bitflags};
+use enumflags2::{bitflags, BitFlags};
 
 use crate::Address;
 

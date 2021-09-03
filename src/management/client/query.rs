@@ -393,10 +393,15 @@ impl<'a> ManagementClient<'a> {
         &mut self,
         controller: Controller,
     ) -> Result<HashMap<RuntimeConfigParameterType, Vec<u8>>> {
-        self.exec_command(Command::ReadDefaultRuntimeConfig, controller, None, |_, param| {
-            let mut param = param.unwrap();
-            Ok(param.get_tlv_map())
-        })
+        self.exec_command(
+            Command::ReadDefaultRuntimeConfig,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.unwrap();
+                Ok(param.get_tlv_map())
+            },
+        )
         .await
     }
 
@@ -406,10 +411,15 @@ impl<'a> ManagementClient<'a> {
         &mut self,
         controller: Controller,
     ) -> Result<HashMap<SystemConfigParameterType, Vec<u8>>> {
-        self.exec_command(Command::ReadDefaultSystemConfig, controller, None, |_, param| {
-            let mut param = param.unwrap();
-            Ok(param.get_tlv_map())
-        })
+        self.exec_command(
+            Command::ReadDefaultSystemConfig,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.unwrap();
+                Ok(param.get_tlv_map())
+            },
+        )
         .await
     }
 }

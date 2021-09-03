@@ -1,6 +1,6 @@
-use bitvec::{view::BitView, field::BitField, prelude as bv};
+use bitvec::{field::BitField, prelude as bv, view::BitView};
 use bytes::{Buf, Bytes};
-use enumflags2::{BitFlags, bitflags};
+use enumflags2::{bitflags, BitFlags};
 
 #[bitflags]
 #[repr(u32)]

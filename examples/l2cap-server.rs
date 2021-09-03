@@ -24,7 +24,12 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
     let controller_info = mgmt.get_controller_info(controllers[0]).await?;
 
-    let listener = BluetoothListener::bind(BtProto::L2CAP, controller_info.address, AddressType::BREDR, 0)?;
+    let listener = BluetoothListener::bind(
+        BtProto::L2CAP,
+        controller_info.address,
+        AddressType::BREDR,
+        0,
+    )?;
     let (addr, port) = listener.local_addr()?;
 
     println!("l2cap server listening at {} on port {}", addr, port);

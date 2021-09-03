@@ -1,6 +1,7 @@
-use std::collections::HashMap;
 use std::ffi::CString;
 use std::hash::Hash;
+use std::os::unix::prelude::OsStringExt;
+use std::{collections::HashMap, ffi::OsString};
 
 use bytes::Buf;
 use enumflags2::{BitFlag, BitFlags};
@@ -79,7 +80,7 @@ pub(crate) trait BufExtBlueZ: Buf {
     ///   ...
     /// ```
     ///
-    fn get_tlv_map<T : FromPrimitive + Eq + Hash>(&mut self) -> HashMap<T, Vec<u8>> {
+    fn get_tlv_map<T: FromPrimitive + Eq + Hash>(&mut self) -> HashMap<T, Vec<u8>> {
         let mut parameters = HashMap::new();
         while self.has_remaining() {
             let parameter_type: T = self.get_primitive_u16_le();

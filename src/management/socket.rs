@@ -1,11 +1,10 @@
-
 use std::u16;
 
-use std::os::unix::io::{FromRawFd, RawFd};
-use smol::net::unix::UnixStream;
 use bytes::*;
 use futures::io::{AsyncReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf};
 use libc;
+use smol::net::unix::UnixStream;
+use std::os::unix::io::{FromRawFd, RawFd};
 
 use crate::management::interface::{Request, Response};
 use crate::management::Error;

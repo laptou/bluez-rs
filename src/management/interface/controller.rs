@@ -2,7 +2,7 @@ use std::ffi::CString;
 use std::fmt::{Display, Formatter};
 
 use bytes::Bytes;
-use enumflags2::{BitFlags, bitflags};
+use enumflags2::{bitflags, BitFlags};
 
 use crate::management::interface::class::{DeviceClass, ServiceClasses};
 use crate::Address;

@@ -1,6 +1,6 @@
 use super::*;
 use crate::util::BufExtBlueZ;
-use enumflags2::{BitFlags, bitflags};
+use enumflags2::{bitflags, BitFlags};
 
 impl<'a> ManagementClient<'a> {
     ///	This command is used to read the advertising features supported

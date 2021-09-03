@@ -38,9 +38,7 @@ impl<'a> ManagementClient<'a> {
         })
     }
 
-    pub fn new_with_handler(
-        handler: ManagementEventHandler<'a>,
-    ) -> Result<Self> {
+    pub fn new_with_handler(handler: ManagementEventHandler<'a>) -> Result<Self> {
         Ok(ManagementClient {
             socket: ManagementSocket::open()?,
             handler: Some(handler),

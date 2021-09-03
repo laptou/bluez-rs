@@ -838,10 +838,13 @@ impl<'a> ManagementClient<'a> {
         controller: Controller,
         params: &[(RuntimeConfigParameterType, Vec<u8>)],
     ) -> Result<()> {
-        let size = params.iter().fold(0, |acc, (_, value)| acc + 3 + value.len());
+        let size = params
+            .iter()
+            .fold(0, |acc, (_, value)| acc + 3 + value.len());
         let mut param = BytesMut::with_capacity(size);
 
-        #[allow(unreachable_code,unused_variables)] // until we have constants in RuntimeConfigParameterType
+        #[allow(unreachable_code, unused_variables)]
+        // until we have constants in RuntimeConfigParameterType
         for (parameter_type, value) in params {
             param.put_u16_le(unimplemented!("*parameter_type as u16"));
             param.put_u8(value.len() as u8);
@@ -869,7 +872,9 @@ impl<'a> ManagementClient<'a> {
         controller: Controller,
         params: &[(SystemConfigParameterType, Vec<u8>)],
     ) -> Result<()> {
-        let size = params.iter().fold(0, |acc, (_, value)| acc + 3 + value.len());
+        let size = params
+            .iter()
+            .fold(0, |acc, (_, value)| acc + 3 + value.len());
         let mut param = BytesMut::with_capacity(size);
 
         for (parameter_type, value) in params {
