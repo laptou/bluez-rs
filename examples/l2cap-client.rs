@@ -45,7 +45,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
     let stream = Arc::new(Async::new(stream)?);
 
-    let read_task = smol::spawn({
+    let read_task: smol::Task<Result<(), std::io::Error>> = smol::spawn({
         let sock = stream.clone();
         async move {
             let mut reader = BufReader::new(sock.as_ref());
@@ -55,12 +55,10 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 println!("> {}", line);
                 line.clear();
             }
-
-            std::io::Result::Ok(())
         }
     });
 
-    let write_task = smol::spawn({
+    let write_task: smol::Task<Result<(), std::io::Error>> = smol::spawn({
         let sock = stream.clone();
 
         async move {
@@ -74,8 +72,6 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 println!("< {}", line);
                 line.clear();
             }
-
-            std::io::Result::Ok(())
         }
     });
 
