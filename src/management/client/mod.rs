@@ -28,7 +28,7 @@ pub struct ManagementClient<'a> {
     handler: Option<ManagementEventHandler<'a>>,
 }
 
-pub type ManagementEventHandler<'a> = Box<dyn (FnMut(Controller, &Event) -> ()) + Send + 'a>;
+pub type ManagementEventHandler<'a> = Box<dyn (FnMut(Controller, &Event)) + Send + 'a>;
 
 impl<'a> ManagementClient<'a> {
     pub fn new() -> Result<Self> {
