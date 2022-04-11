@@ -11,7 +11,7 @@ use crate::util::BufExtBlueZ;
 
 // use some consts for common callback patterns
 fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSettings> {
-    Ok(param.unwrap().get_flags_u32_le())
+    Ok(param.ok_or(Error::NoData)?.get_flags_u32_le())
 }
 
 impl<'a> ManagementClient<'a> {
@@ -67,7 +67,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             Some(param.freeze()),
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
 
                 Ok((param.split_to(249).get_c_string(), param.get_c_string()))
             },

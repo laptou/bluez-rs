@@ -28,7 +28,7 @@ impl<'a> ManagementClient<'a> {
             Command::SetDeviceClass,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(device_class_from_bytes(param.unwrap())),
+            |_, param| Ok(device_class_from_bytes(param.ok_or(Error::NoData)?)),
         )
         .await
     }
@@ -58,7 +58,7 @@ impl<'a> ManagementClient<'a> {
             Command::AddUUID,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(device_class_from_bytes(param.unwrap())),
+            |_, param| Ok(device_class_from_bytes(param.ok_or(Error::NoData)?)),
         )
         .await
     }
@@ -86,7 +86,7 @@ impl<'a> ManagementClient<'a> {
             Command::RemoveUUID,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(device_class_from_bytes(param.unwrap())),
+            |_, param| Ok(device_class_from_bytes(param.ok_or(Error::NoData)?)),
         )
         .await
     }

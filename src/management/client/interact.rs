@@ -5,7 +5,7 @@ pub(crate) fn address_callback(
     _: Controller,
     param: Option<Bytes>,
 ) -> Result<(Address, AddressType)> {
-    let mut param = param.unwrap();
+    let mut param = param.ok_or(Error::NoData)?;
     Ok((param.get_address(), param.get_primitive_u8()))
 }
 

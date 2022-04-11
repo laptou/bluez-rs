@@ -18,7 +18,7 @@ impl<'a> ManagementClient<'a> {
     /// this command again to get updated values.
     pub async fn read_local_oob_data(&mut self, controller: Controller) -> Result<OutOfBandData> {
         self.exec_command(Command::ReadLocalOutOfBand, controller, None, |_, param| {
-            let mut param = param.unwrap();
+            let mut param = param.ok_or(Error::NoData)?;
             Ok(OutOfBandData {
                 hash_192: param.get_u8x16(),
                 randomizer_192: param.get_u8x16(),
@@ -50,7 +50,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             Some(Bytes::copy_from_slice(&[address_types.bits() as u8])),
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 Ok((
                     param.get_flags_u8(),
                     // read eir data length param, then use that to split

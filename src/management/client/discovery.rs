@@ -34,7 +34,7 @@ impl<'a> ManagementClient<'a> {
             Command::StartDiscovery,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(param.unwrap().get_flags_u8()),
+            |_, param| Ok(param.ok_or(Error::NoData)?.get_flags_u8()),
         )
         .await
     }
@@ -55,7 +55,7 @@ impl<'a> ManagementClient<'a> {
             Command::StopDiscovery,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(param.unwrap().get_flags_u8()),
+            |_, param| Ok(param.ok_or(Error::NoData)?.get_flags_u8()),
         )
         .await
     }
@@ -103,7 +103,7 @@ impl<'a> ManagementClient<'a> {
             Command::StartServiceDiscovery,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(param.unwrap().get_flags_u8()),
+            |_, param| Ok(param.ok_or(Error::NoData)?.get_flags_u8()),
         )
         .await
     }
@@ -133,7 +133,7 @@ impl<'a> ManagementClient<'a> {
             Command::StartLimitedDiscovery,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(param.unwrap().get_flags_u8()),
+            |_, param| Ok(param.ok_or(Error::NoData)?.get_flags_u8()),
         )
         .await
     }

@@ -16,7 +16,7 @@ impl<'a> ManagementClient<'a> {
             Controller::none(),
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 Ok(ManagementVersion {
                     version: param.get_u8(),
                     revision: param.get_u16_le(),
@@ -35,7 +35,8 @@ impl<'a> ManagementClient<'a> {
             Controller::none(),
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
+
                 let count = param.get_u16_le() as usize;
                 let mut controllers = vec![Controller::none(); count];
                 for i in 0..count {
@@ -71,7 +72,7 @@ impl<'a> ManagementClient<'a> {
     /// If no short name is set the Short_Name parameter will be all zeroes.
     pub async fn get_controller_info(&mut self, controller: Controller) -> Result<ControllerInfo> {
         self.exec_command(Command::ReadControllerInfo, controller, None, |_, param| {
-            let mut param = param.unwrap();
+            let mut param = param.ok_or(Error::NoData)?;
 
             Ok(ControllerInfo {
                 address: param.get_address(),
@@ -100,7 +101,7 @@ impl<'a> ManagementClient<'a> {
         controller: Controller,
     ) -> Result<Vec<(Address, AddressType)>> {
         self.exec_command(Command::GetConnections, controller, None, |_, param| {
-            let mut param = param.unwrap();
+            let mut param = param.ok_or(Error::NoData)?;
             let count = param.get_u16_le() as usize;
             let mut connections = Vec::with_capacity(count);
 
@@ -129,7 +130,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             Some(param.freeze()),
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 Ok(ConnectionInfo {
                     address: param.get_address(),
                     address_type: param.get_primitive_u8(),
@@ -170,7 +171,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             Some(param.freeze()),
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
 
                 let address = param.get_address();
                 let address_type = param.get_primitive_u8();
@@ -217,7 +218,7 @@ impl<'a> ManagementClient<'a> {
             Controller::none(),
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 let count = param.get_u16_le() as usize;
                 let mut controllers = vec![Controller::none(); count];
                 for i in 0..count {
@@ -268,7 +269,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 Ok(ControllerConfigInfo {
                     manufacturer: param.get_u16_le(),
                     supported_options: param.get_flags_u32_le(),
@@ -304,7 +305,7 @@ impl<'a> ManagementClient<'a> {
             Controller::none(),
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 let count = param.get_u16_le() as usize;
                 let mut index = Vec::with_capacity(count);
                 for _ in 0..count {
@@ -348,7 +349,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
 
                 Ok(ControllerInfoExt {
                     address: param.get_address(),
@@ -374,7 +375,7 @@ impl<'a> ManagementClient<'a> {
     /// on the PHY configuration. It is remembered over power cycles.
     pub async fn get_phy_config(&mut self, controller: Controller) -> Result<PhyConfig> {
         self.exec_command(Command::GetPhyConfig, controller, None, |_, param| {
-            let mut param = param.unwrap();
+            let mut param = param.ok_or(Error::NoData)?;
             Ok(PhyConfig {
                 supported_phys: param.get_flags_u32_le(),
                 configurable_phys: param.get_flags_u32_le(),
@@ -393,10 +394,15 @@ impl<'a> ManagementClient<'a> {
         &mut self,
         controller: Controller,
     ) -> Result<HashMap<RuntimeConfigParameterType, Vec<u8>>> {
-        self.exec_command(Command::ReadDefaultRuntimeConfig, controller, None, |_, param| {
-            let mut param = param.unwrap();
-            Ok(param.get_tlv_map())
-        })
+        self.exec_command(
+            Command::ReadDefaultRuntimeConfig,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.ok_or(Error::NoData)?;
+                Ok(param.get_tlv_map())
+            },
+        )
         .await
     }
 
@@ -406,10 +412,15 @@ impl<'a> ManagementClient<'a> {
         &mut self,
         controller: Controller,
     ) -> Result<HashMap<SystemConfigParameterType, Vec<u8>>> {
-        self.exec_command(Command::ReadDefaultSystemConfig, controller, None, |_, param| {
-            let mut param = param.unwrap();
-            Ok(param.get_tlv_map())
-        })
+        self.exec_command(
+            Command::ReadDefaultSystemConfig,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.ok_or(Error::NoData)?;
+                Ok(param.get_tlv_map())
+            },
+        )
         .await
     }
 }

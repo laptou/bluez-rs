@@ -18,7 +18,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 Ok(AdvertisingFeaturesInfo {
                     supported_flags: param.get_flags_u32_le(),
                     max_adv_data_len: param.get_u8(),
@@ -113,7 +113,7 @@ impl<'a> ManagementClient<'a> {
             Command::AddAdvertising,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(param.unwrap().get_u8()),
+            |_, param| Ok(param.ok_or(Error::NoData)?.get_u8()),
         )
         .await
     }
@@ -146,7 +146,7 @@ impl<'a> ManagementClient<'a> {
             Command::RemoveAdvertising,
             controller,
             Some(param.freeze()),
-            |_, param| Ok(param.unwrap().get_u8()),
+            |_, param| Ok(param.ok_or(Error::NoData)?.get_u8()),
         )
         .await
     }
@@ -177,7 +177,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             Some(param.freeze()),
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 Ok(AdvertisingSizeInfo {
                     instance: param.get_u8(),
                     flags: param.get_flags_u32_le(),
