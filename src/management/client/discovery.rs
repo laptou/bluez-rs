@@ -4,24 +4,24 @@ use super::*;
 use crate::util::BufExtBlueZ;
 
 impl<'a> ManagementClient<'a> {
-    ///	This command is used to start the process of discovering remote
-    ///	devices. A Device Found event will be sent for each discovered
-    ///	device.
+    /// This command is used to start the process of discovering remote
+    /// devices. A Device Found event will be sent for each discovered
+    /// device.
     ///
-    ///	Possible values for the `address_type` parameter are a bit-wise or
-    ///	of the following bits:
+    /// Possible values for the `address_type` parameter are a bit-wise or
+    /// of the following bits:
     ///
-    ///	0	BR/EDR
-    ///	1	LE Public
-    ///	2	LE Random
+    /// 0 BR/EDR
+    /// 1 LE Public
+    /// 2 LE Random
     ///
-    ///	By combining these e.g. the following values are possible:
+    /// By combining these e.g. the following values are possible:
     ///
-    ///	1	BR/EDR
-    ///	6	LE (public & random)
-    ///	7	BR/EDR/LE (interleaved discovery)
+    /// 1 BR/EDR
+    /// 6 LE (public & random)
+    /// 7 BR/EDR/LE (interleaved discovery)
     ///
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn start_discovery(
         &mut self,
         controller: Controller,
@@ -40,9 +40,9 @@ impl<'a> ManagementClient<'a> {
     }
 
     /// This command is used to stop the discovery process started using
-    ///	the Start Discovery command.
+    /// the Start Discovery command.
     ///
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn stop_discovery(
         &mut self,
         controller: Controller,
@@ -60,29 +60,29 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	This command is used to start the process of discovering remote
-    ///	devices with a specific UUID. A Device Found event will be sent
-    ///	for each discovered device.
+    /// This command is used to start the process of discovering remote
+    /// devices with a specific UUID. A Device Found event will be sent
+    /// for each discovered device.
     ///
     ///  The service discovery uses active scanning for Low Energy scanning
-    ///	and will search for UUID in both advertising data and scan response
-    ///	data.
+    /// and will search for UUID in both advertising data and scan response
+    /// data.
     ///
-    ///	Found devices that have a RSSI value smaller than `rssi_threshold`
-    ///	are not reported via DeviceFound event. Setting a value of 127
-    ///	will cause all devices to be reported.
+    /// Found devices that have a RSSI value smaller than `rssi_threshold`
+    /// are not reported via DeviceFound event. Setting a value of 127
+    /// will cause all devices to be reported.
     ///
-    ///	The list of UUIDs identifies a logical OR. Only one of the UUIDs
-    ///	have to match to cause a DeviceFound event. Providing an empty
-    ///	list of UUIDs means that DeviceFound events are send out for all devices above the RSSI_Threshold.
+    /// The list of UUIDs identifies a logical OR. Only one of the UUIDs
+    /// have to match to cause a DeviceFound event. Providing an empty
+    /// list of UUIDs means that DeviceFound events are send out for all devices above the RSSI_Threshold.
     ///
-    ///	In case `rssi_threshold` is set to 127 and `uuids` is empty, then
-    ///	this command behaves exactly the same as Start Discovery.
+    /// In case `rssi_threshold` is set to 127 and `uuids` is empty, then
+    /// this command behaves exactly the same as Start Discovery.
     ///
-    ///	When the discovery procedure starts the Discovery event will
-    ///	notify this similar to Start Discovery.
+    /// When the discovery procedure starts the Discovery event will
+    /// notify this similar to Start Discovery.
     ///
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn start_service_discovery(
         &mut self,
         controller: Controller,
@@ -108,19 +108,19 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	This command is used to start the process of discovering remote
-    ///	devices using the limited discovery procedure. A Device Found event
-    ///	will be sent for each discovered device.
+    /// This command is used to start the process of discovering remote
+    /// devices using the limited discovery procedure. A Device Found event
+    /// will be sent for each discovered device.
     ///
-    ///	The limited discovery uses active scanning for Low Energy scanning
-    ///	and will search for devices with the limited discoverability flag
-    ///	configured. On BR/EDR it uses LIAC and filters on the limited
-    ///	discoverability flag of the class of device.
+    /// The limited discovery uses active scanning for Low Energy scanning
+    /// and will search for devices with the limited discoverability flag
+    /// configured. On BR/EDR it uses LIAC and filters on the limited
+    /// discoverability flag of the class of device.
     ///
-    ///	When the discovery procedure starts the Discovery event will
-    ///	notify this similar to Start Discovery.
+    /// When the discovery procedure starts the Discovery event will
+    /// notify this similar to Start Discovery.
     ///
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn start_limited_discovery(
         &mut self,
         controller: Controller,

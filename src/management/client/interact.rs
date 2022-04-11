@@ -29,16 +29,16 @@ pub(crate) fn address_bytes_with_u8(
 }
 
 impl<'a> ManagementClient<'a> {
-    ///	This command is only valid during device discovery and is
-    ///	expected for each Device Found event with the Confirm Name
-    ///	flag set.
+    /// This command is only valid during device discovery and is
+    /// expected for each Device Found event with the Confirm Name
+    /// flag set.
     ///
-    ///	The name_known parameter should be set to true if user space
-    ///	knows the name for the device and false if it doesn't. If set to
-    ///	false the kernel will perform a name resolving procedure for the
-    ///	device in question.
+    /// The name_known parameter should be set to true if user space
+    /// knows the name for the device and false if it doesn't. If set to
+    /// false the kernel will perform a name resolving procedure for the
+    /// device in question.
     ///
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn confirm_name(
         &mut self,
         controller: Controller,
@@ -60,19 +60,19 @@ impl<'a> ManagementClient<'a> {
     }
 
     /// This command is used to add a device to the list of devices
-    ///	which should be blocked from being connected to the local
-    ///	controller.
+    /// which should be blocked from being connected to the local
+    /// controller.
     ///
-    ///	For Low Energy devices, the blocking of a device takes precedence
-    ///	over auto-connection actions provided by Add Device. Blocked
-    ///	devices will not be auto-connected or even reported when found
-    ///	during background scanning. If the controller is connectable
-    ///	direct advertising from blocked devices will also be ignored.
+    /// For Low Energy devices, the blocking of a device takes precedence
+    /// over auto-connection actions provided by Add Device. Blocked
+    /// devices will not be auto-connected or even reported when found
+    /// during background scanning. If the controller is connectable
+    /// direct advertising from blocked devices will also be ignored.
     ///
-    ///	Connections created from advertising of the controller will
-    ///	be dropped if the device is blocked.
+    /// Connections created from advertising of the controller will
+    /// be dropped if the device is blocked.
     ///
-    ///	This command can be used when the controller is not powered.
+    /// This command can be used when the controller is not powered.
     pub async fn block_device(
         &mut self,
         controller: Controller,
@@ -89,12 +89,12 @@ impl<'a> ManagementClient<'a> {
     }
 
     /// This command is used to remove a device from the list of blocked
-    ///	devices (where it was added to using the Block Device command).
+    /// devices (where it was added to using the Block Device command).
     ///
-    ///	When the `address` parameter is `00:00:00:00:00:00`, then all
-    ///	previously blocked devices will be unblocked.
+    /// When the `address` parameter is `00:00:00:00:00:00`, then all
+    /// previously blocked devices will be unblocked.
     ///
-    ///	This command can be used when the controller is not powered.
+    /// This command can be used when the controller is not powered.
     pub async fn unblock_device(
         &mut self,
         controller: Controller,
@@ -110,10 +110,10 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	This command is used to force the disconnection of a currently
-    ///	connected device.
+    /// This command is used to force the disconnection of a currently
+    /// connected device.
     ///
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn disconnect(
         &mut self,
         controller: Controller,
@@ -129,10 +129,10 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	This command is used to respond to a PIN Code request event.
+    /// This command is used to respond to a PIN Code request event.
     /// Pin code can be at most 16 bytes. Passing None will send a
     /// negative PIN code response.
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn pin_code_reply(
         &mut self,
         controller: Controller,
@@ -162,27 +162,27 @@ impl<'a> ManagementClient<'a> {
             .await
     }
 
-    ///	This command is used to trigger pairing with a remote device.
-    ///	The IO_Capability command parameter is used to temporarily (for
-    ///	this pairing event only) override the global IO Capability (set
-    ///	using the Set IO Capability command).
+    /// This command is used to trigger pairing with a remote device.
+    /// The IO_Capability command parameter is used to temporarily (for
+    /// this pairing event only) override the global IO Capability (set
+    /// using the Set IO Capability command).
     ///
-    ///	Passing a value 4 (KeyboardDisplay) will cause the kernel to
-    ///	convert it to 1 (DisplayYesNo) in the case of a BR/EDR
-    ///	connection (as KeyboardDisplay is specific to SMP).
+    /// Passing a value 4 (KeyboardDisplay) will cause the kernel to
+    /// convert it to 1 (DisplayYesNo) in the case of a BR/EDR
+    /// connection (as KeyboardDisplay is specific to SMP).
     ///
-    ///	The `address` and `address_type` of the return parameters will
-    ///	return the identity address if known. In case of resolvable
-    ///	random address given as command parameters and the remote
-    ///	provides an identity resolving key, the return parameters
-    ///	will provide the resolved address.
+    /// The `address` and `address_type` of the return parameters will
+    /// return the identity address if known. In case of resolvable
+    /// random address given as command parameters and the remote
+    /// provides an identity resolving key, the return parameters
+    /// will provide the resolved address.
     ///
-    ///	To allow tracking of which resolvable random address changed
-    ///	into which identity address, the New Identity Resolving Key
-    ///	event will be sent before receiving Command Complete event
-    ///	for this command.
+    /// To allow tracking of which resolvable random address changed
+    /// into which identity address, the New Identity Resolving Key
+    /// event will be sent before receiving Command Complete event
+    /// for this command.
     ///
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn pair_device(
         &mut self,
         controller: Controller,
@@ -203,10 +203,10 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	The `address` and `address_type` parameters should match what was
-    ///	given to a preceding Pair Device command.
+    /// The `address` and `address_type` parameters should match what was
+    /// given to a preceding Pair Device command.
     ///
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn cancel_pair_device(
         &mut self,
         controller: Controller,
@@ -222,22 +222,22 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	Removes all keys associated with the remote device.
+    /// Removes all keys associated with the remote device.
     ///
-    ///	The disconnect parameter tells the kernel whether to forcefully
-    ///	disconnect any existing connections to the device. It should in
-    ///	practice always be true except for some special GAP qualification
-    ///	test-cases where a key removal without disconnecting is needed.
+    /// The disconnect parameter tells the kernel whether to forcefully
+    /// disconnect any existing connections to the device. It should in
+    /// practice always be true except for some special GAP qualification
+    /// test-cases where a key removal without disconnecting is needed.
     ///
-    ///	When unpairing a device its link key, long term key and if
-    ///	provided identity resolving key will be purged.
+    /// When unpairing a device its link key, long term key and if
+    /// provided identity resolving key will be purged.
     ///
-    ///	For devices using resolvable random addresses where the identity
-    ///	resolving key was available, after this command they will now no
-    ///	longer be resolved. The device will essentially become private
-    ///	again.
+    /// For devices using resolvable random addresses where the identity
+    /// resolving key was available, after this command they will now no
+    /// longer be resolved. The device will essentially become private
+    /// again.
     ///
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn unpair_device(
         &mut self,
         controller: Controller,
@@ -258,8 +258,8 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	This command is used to respond to a User Confirmation Request
-    ///	event. This command can only be used when the controller is powered.
+    /// This command is used to respond to a User Confirmation Request
+    /// event. This command can only be used when the controller is powered.
     pub async fn user_confirmation_reply(
         &mut self,
         controller: Controller,
@@ -280,8 +280,8 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	This command is used to respond to a User Passkey Request
-    ///	event. Passing None for passkey will send a negative response.
+    /// This command is used to respond to a User Passkey Request
+    /// event. Passing None for passkey will send a negative response.
     /// This command can only be used when the controller is powered.
     pub async fn user_passkey_reply(
         &mut self,
@@ -310,34 +310,34 @@ impl<'a> ManagementClient<'a> {
             .await
     }
 
-    ///	This command is used to add a device to the action list. The
-    ///	action list allows scanning for devices and enables incoming
-    ///	connections from known devices.
+    /// This command is used to add a device to the action list. The
+    /// action list allows scanning for devices and enables incoming
+    /// connections from known devices.
     ///
-    ///	With the `BackgroundScan` action, when the device is found, a new Device Found
-    ///	event will be sent indicating this device is available. This
-    ///	action is only valid for LE Public and LE Random address types.
+    /// With the `BackgroundScan` action, when the device is found, a new Device Found
+    /// event will be sent indicating this device is available. This
+    /// action is only valid for LE Public and LE Random address types.
     ///
-    ///	With the `AllowConnect` action, the device is allowed to connect. For BR/EDR
-    ///	address type this means an incoming connection. For LE Public
-    ///	and LE Random address types, a connection will be established
-    ///	to devices using directed advertising. If successful a Device
-    ///	Connected event will be sent.
+    /// With the `AllowConnect` action, the device is allowed to connect. For BR/EDR
+    /// address type this means an incoming connection. For LE Public
+    /// and LE Random address types, a connection will be established
+    /// to devices using directed advertising. If successful a Device
+    /// Connected event will be sent.
     ///
-    ///	With the `AutoConnect`, when the device is found, it will be connected
-    ///	and if successful a Device Connected event will be sent. This
-    ///	action is only valid for LE Public and LE Random address types.
+    /// With the `AutoConnect`, when the device is found, it will be connected
+    /// and if successful a Device Connected event will be sent. This
+    /// action is only valid for LE Public and LE Random address types.
     ///
-    ///	When a device is blocked using Block Device command, then it is
-    ///	valid to add the device here, but all actions will be ignored
-    ///	until the device is unblocked.
+    /// When a device is blocked using Block Device command, then it is
+    /// valid to add the device here, but all actions will be ignored
+    /// until the device is unblocked.
     ///
-    ///	Devices added with `AllowConnect` are allowed to connect even if the
-    ///	connectable setting is off. This acts as list of known trusted
-    ///	devices.
+    /// Devices added with `AllowConnect` are allowed to connect even if the
+    /// connectable setting is off. This acts as list of known trusted
+    /// devices.
     ///
-    ///	This command can be used when the controller is not powered and
-    ///	all settings will be programmed once powered.
+    /// This command can be used when the controller is not powered and
+    /// all settings will be programmed once powered.
     pub async fn add_device(
         &mut self,
         controller: Controller,
@@ -354,14 +354,14 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	This command is used to remove a device from the action list
-    ///	previously added by using the Add Device command.
+    /// This command is used to remove a device from the action list
+    /// previously added by using the Add Device command.
     ///
-    ///	When the Address parameter is `00:00:00:00:00:00`, then all
-    ///	previously added devices will be removed.
+    /// When the Address parameter is `00:00:00:00:00:00`, then all
+    /// previously added devices will be removed.
     ///
-    ///	This command can be used when the controller is not powered and
-    ///	all settings will be programmed once powered.
+    /// This command can be used when the controller is not powered and
+    /// all settings will be programmed once powered.
     pub async fn remove_device(
         &mut self,
         controller: Controller,
