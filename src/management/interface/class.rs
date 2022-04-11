@@ -165,10 +165,9 @@ pub fn device_class_from_u32(class: u32) -> (DeviceClass, ServiceClasses) {
     let service_classes = ServiceClasses::from_bits_truncate(class);
 
     let class_bits = class.view_bits::<bv::Lsb0>();
-    let device_class: DeviceClass;
 
     // major device class encoded in bits 8-12
-    device_class = match class_bits[8..13].load::<u8>() {
+    let device_class = match class_bits[8..13].load::<u8>() {
         // minor device class in bits 2-7
         0b00001 => DeviceClass::Computer(match class_bits[2..8].load::<u8>() {
             0b000000 => ComputerDeviceClass::Uncategorized,
