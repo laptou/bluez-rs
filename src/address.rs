@@ -40,7 +40,7 @@ impl Address {
 
 impl From<[u8; 6]> for Address {
     fn from(bytes: [u8; 6]) -> Self {
-        return Address { bytes };
+        Address { bytes }
     }
 }
 
