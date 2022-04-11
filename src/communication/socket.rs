@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 use std::mem::MaybeUninit;
-use std::os::unix::net::{UnixListener, UnixStream};
+use std::os::unix::net::UnixStream;
 use std::os::unix::prelude::IntoRawFd;
 
 use libc::{self, c_int};
