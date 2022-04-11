@@ -10,14 +10,14 @@ pub struct Request {
     pub param: Bytes,
 }
 
-impl Into<Bytes> for Request {
-    fn into(self) -> Bytes {
-        let mut buf = BytesMut::with_capacity(6 + self.param.len());
+impl From<Request> for Bytes {
+    fn from(val: Request) -> Self {
+        let mut buf = BytesMut::with_capacity(6 + val.param.len());
 
-        buf.put_u16_le(self.opcode as u16);
-        buf.put_u16_le(self.controller.into());
-        buf.put_u16_le(self.param.len() as u16);
-        buf.put(self.param);
+        buf.put_u16_le(val.opcode as u16);
+        buf.put_u16_le(val.controller.into());
+        buf.put_u16_le(val.param.len() as u16);
+        buf.put(val.param);
 
         buf.freeze()
     }

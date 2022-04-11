@@ -16,9 +16,9 @@ impl Display for Controller {
     }
 }
 
-impl Into<u16> for Controller {
-    fn into(self) -> u16 {
-        return self.0;
+impl From<Controller> for u16 {
+    fn from(val: Controller) -> Self {
+        val.0
     }
 }
 

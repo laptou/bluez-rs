@@ -276,11 +276,11 @@ pub fn device_class_from_u32(class: u32) -> (DeviceClass, ServiceClasses) {
     (device_class, service_classes)
 }
 
-impl Into<u16> for DeviceClass {
-    fn into(self) -> u16 {
+impl From<DeviceClass> for u16 {
+    fn from(val: DeviceClass) -> Self {
         let mut bits = 0u16;
 
-        match self {
+        match val {
             DeviceClass::Computer(minor) => {
                 bits |= 0b00001 << 8;
                 match minor {

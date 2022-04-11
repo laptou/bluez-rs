@@ -44,9 +44,9 @@ impl From<[u8; 6]> for Address {
     }
 }
 
-impl Into<[u8; 6]> for Address {
-    fn into(self) -> [u8; 6] {
-        self.bytes
+impl From<Address> for [u8; 6] {
+    fn from(val: Address) -> Self {
+        val.bytes
     }
 }
 
