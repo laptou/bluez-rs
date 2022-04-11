@@ -64,16 +64,16 @@ impl Response {
                 0x0009 => Event::NewLinkKey {
                     store_hint: buf.get_bool(),
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                    key_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
+                    key_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     value: buf.get_u8x16(),
                     pin_length: buf.get_u8(),
                 },
                 0x000A => Event::NewLongTermKey {
                     store_hint: buf.get_bool(),
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                    key_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
+                    key_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     master: buf.get_u8(),
                     encryption_size: buf.get_u8(),
                     encryption_diversifier: buf.get_u16_le(),
@@ -82,7 +82,7 @@ impl Response {
                 },
                 0x000B => Event::DeviceConnected {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     flags: BitFlags::from_bits_truncate(buf.get_u32_le()),
                     eir_data: {
                         let len = buf.get_u16_le() as usize;
@@ -91,37 +91,37 @@ impl Response {
                 },
                 0x000C => Event::DeviceDisconnected {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-                    reason: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
+                    reason: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                 },
                 0x000D => Event::ConnectFailed {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     status: buf.get_u8(),
                 },
                 0x000E => Event::PinCodeRequest {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     secure: buf.get_bool(),
                 },
                 0x000F => Event::UserConfirmationRequest {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     confirm_hint: buf.get_bool(),
                     value: buf.get_u32_le(),
                 },
                 0x0010 => Event::UserPasskeyRequest {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                 },
                 0x0011 => Event::AuthenticationFailed {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     status: buf.get_u8(),
                 },
                 0x0012 => Event::DeviceFound {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     rssi: buf.get_i8(),
                     flags: BitFlags::from_bits_truncate(buf.get_u32_le()),
                     eir_data: {
@@ -135,19 +135,19 @@ impl Response {
                 },
                 0x0014 => Event::DeviceBlocked {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                 },
                 0x0015 => Event::DeviceUnblocked {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                 },
                 0x0016 => Event::DeviceUnpaired {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                 },
                 0x0017 => Event::PasskeyNotify {
                     address: Address::from_buf(&mut buf),
-                    address_type: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+                    address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     passkey: buf.get_u32_le(),
                     entered: buf.get_u8(),
                 },
