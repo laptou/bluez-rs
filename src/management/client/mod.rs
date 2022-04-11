@@ -81,7 +81,7 @@ impl<'a> ManagementClient<'a> {
         param: Option<Bytes>,
         callback: F,
     ) -> Result<T> {
-        let param = param.unwrap_or(Bytes::new());
+        let param = param.unwrap_or_default();
 
         // send request
         self.socket
