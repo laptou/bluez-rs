@@ -2,7 +2,7 @@ use std::ffi::CString;
 use std::fmt::{Display, Formatter};
 
 use bytes::Bytes;
-use enumflags2::{BitFlags, bitflags};
+use enumflags2::{bitflags, BitFlags};
 
 use crate::management::interface::class::{DeviceClass, ServiceClasses};
 use crate::Address;
@@ -16,9 +16,9 @@ impl Display for Controller {
     }
 }
 
-impl Into<u16> for Controller {
-    fn into(self) -> u16 {
-        return self.0;
+impl From<Controller> for u16 {
+    fn from(val: Controller) -> Self {
+        val.0
     }
 }
 
@@ -48,13 +48,13 @@ pub struct ControllerInfoExt {
     pub current_settings: ControllerSettings,
 
     /// Contains information about class of device,
-    ///	local name and other values. Not all of them might be present. For
-    ///	example a Low Energy only device does not contain class of device
-    ///	information.
+    /// local name and other values. Not all of them might be present. For
+    /// example a Low Energy only device does not contain class of device
+    /// information.
     ///
-    ///	When any of the values in the `eir_data` field changes, the event
-    ///	Extended Controller Information Changed will be used to inform
-    ///	clients about the updated information.
+    /// When any of the values in the `eir_data` field changes, the event
+    /// Extended Controller Information Changed will be used to inform
+    /// clients about the updated information.
     pub eir_data: Bytes,
 }
 

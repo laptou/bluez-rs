@@ -40,13 +40,13 @@ impl Address {
 
 impl From<[u8; 6]> for Address {
     fn from(bytes: [u8; 6]) -> Self {
-        return Address { bytes };
+        Address { bytes }
     }
 }
 
-impl Into<[u8; 6]> for Address {
-    fn into(self) -> [u8; 6] {
-        self.bytes
+impl From<Address> for [u8; 6] {
+    fn from(val: Address) -> Self {
+        val.bytes
     }
 }
 

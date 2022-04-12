@@ -58,7 +58,7 @@ pub(crate) trait BufExtBlueZ: Buf {
             bytes.push(current);
             current = self.get_u8();
         }
-        return unsafe { CString::from_vec_unchecked(bytes) };
+        unsafe { CString::from_vec_unchecked(bytes) }
     }
 
     /// Parses a list of Type/Length/Value entries into a map keyed by type

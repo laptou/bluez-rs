@@ -7,16 +7,16 @@ use super::*;
 
 impl<'a> ManagementClient<'a> {
     /// This command returns the Management version and revision.
-    ///	Besides, being informational the information can be used to
-    ///	determine whether certain behavior has changed or bugs fixed
-    ///	when interacting with the kernel.
+    /// Besides, being informational the information can be used to
+    /// determine whether certain behavior has changed or bugs fixed
+    /// when interacting with the kernel.
     pub async fn get_mgmt_version(&mut self) -> Result<ManagementVersion> {
         self.exec_command(
             Command::ReadVersionInfo,
             Controller::none(),
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 Ok(ManagementVersion {
                     version: param.get_u8(),
                     revision: param.get_u16_le(),
@@ -27,15 +27,16 @@ impl<'a> ManagementClient<'a> {
     }
 
     /// This command returns the list of currently known controllers.
-    ///	Controllers added or removed after calling this command can be
-    ///	monitored using the Index Added and Index Removed events.
+    /// Controllers added or removed after calling this command can be
+    /// monitored using the Index Added and Index Removed events.
     pub async fn get_controller_list(&mut self) -> Result<Vec<Controller>> {
         self.exec_command(
             Command::ReadControllerIndexList,
             Controller::none(),
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
+
                 let count = param.get_u16_le() as usize;
                 let mut controllers = vec![Controller::none(); count];
                 for i in 0..count {
@@ -49,29 +50,29 @@ impl<'a> ManagementClient<'a> {
     }
 
     /// This command is used to retrieve the current state and basic
-    ///	information of a controller. It is typically used right after
-    ///	getting the response to the Read Controller Index List command
-    ///	or an Index Added event.
+    /// information of a controller. It is typically used right after
+    /// getting the response to the Read Controller Index List command
+    /// or an Index Added event.
     ///
-    ///	The `address` parameter describes the controllers public address
-    ///	and it can be expected that it is set. However in case of single
-    ///	mode Low Energy only controllers it can be `00:00:00:00:00:00`. To
-    ///	power on the controller in this case, it is required to configure
-    ///	a static address using Set Static `address` command first.
+    /// The `address` parameter describes the controllers public address
+    /// and it can be expected that it is set. However in case of single
+    /// mode Low Energy only controllers it can be `00:00:00:00:00:00`. To
+    /// power on the controller in this case, it is required to configure
+    /// a static address using Set Static `address` command first.
     ///
-    ///	If the public address is set, then it will be used as identity
-    ///	address for the controller. If no public address is available,
-    ///	then the configured static address will be used as identity
-    ///	address.
+    /// If the public address is set, then it will be used as identity
+    /// address for the controller. If no public address is available,
+    /// then the configured static address will be used as identity
+    /// address.
     ///
-    ///	In the case of a dual-mode controller with public address that
-    ///	is configured as Low Energy only device (BR/EDR switched off),
-    ///	the static address is used when set and public address otherwise.
+    /// In the case of a dual-mode controller with public address that
+    /// is configured as Low Energy only device (BR/EDR switched off),
+    /// the static address is used when set and public address otherwise.
     ///
-    ///	If no short name is set the Short_Name parameter will be all zeroes.
+    /// If no short name is set the Short_Name parameter will be all zeroes.
     pub async fn get_controller_info(&mut self, controller: Controller) -> Result<ControllerInfo> {
         self.exec_command(Command::ReadControllerInfo, controller, None, |_, param| {
-            let mut param = param.unwrap();
+            let mut param = param.ok_or(Error::NoData)?;
 
             Ok(ControllerInfo {
                 address: param.get_address(),
@@ -87,20 +88,20 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	This command is used to retrieve a list of currently connected
-    ///	devices.
+    /// This command is used to retrieve a list of currently connected
+    /// devices.
     ///
-    ///	For devices using resolvable random addresses with a known
-    ///	identity resolving key, the `address` and `address_type` will
-    ///	contain the identity information.
+    /// For devices using resolvable random addresses with a known
+    /// identity resolving key, the `address` and `address_type` will
+    /// contain the identity information.
     ///
-    ///	This command can only be used when the controller is powered.
+    /// This command can only be used when the controller is powered.
     pub async fn get_connections(
         &mut self,
         controller: Controller,
     ) -> Result<Vec<(Address, AddressType)>> {
         self.exec_command(Command::GetConnections, controller, None, |_, param| {
-            let mut param = param.unwrap();
+            let mut param = param.ok_or(Error::NoData)?;
             let count = param.get_u16_le() as usize;
             let mut connections = Vec::with_capacity(count);
 
@@ -129,7 +130,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             Some(param.freeze()),
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 Ok(ConnectionInfo {
                     address: param.get_address(),
                     address_type: param.get_primitive_u8(),
@@ -170,7 +171,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             Some(param.freeze()),
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
 
                 let address = param.get_address();
                 let address_type = param.get_primitive_u8();
@@ -199,25 +200,25 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	This command returns the list of currently unconfigured controllers.
-    ///	Unconfigured controllers added after calling this command can be
-    ///	monitored using the Unconfigured Index Added event.
+    /// This command returns the list of currently unconfigured controllers.
+    /// Unconfigured controllers added after calling this command can be
+    /// monitored using the Unconfigured Index Added event.
     ///
-    ///	An unconfigured controller can either move to a configured state
-    ///	by indicating Unconfigured Index Removed event followed by an
-    ///	Index Added event; or it can be removed from the system which
-    ///	would be indicated by the Unconfigured Index Removed event.
+    /// An unconfigured controller can either move to a configured state
+    /// by indicating Unconfigured Index Removed event followed by an
+    /// Index Added event; or it can be removed from the system which
+    /// would be indicated by the Unconfigured Index Removed event.
     ///
-    ///	Only controllers that require configuration will be listed with
-    ///	this command. A controller that is fully configured will not
-    ///	be listed even if it supports configuration changes.
+    /// Only controllers that require configuration will be listed with
+    /// this command. A controller that is fully configured will not
+    /// be listed even if it supports configuration changes.
     pub async fn get_unconfigured_controller_list(&mut self) -> Result<Vec<Controller>> {
         self.exec_command(
             Command::ReadUnconfiguredControllerIndexList,
             Controller::none(),
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 let count = param.get_u16_le() as usize;
                 let mut controllers = vec![Controller::none(); count];
                 for i in 0..count {
@@ -230,35 +231,35 @@ impl<'a> ManagementClient<'a> {
         .await
     }
 
-    ///	This command is used to retrieve the supported configuration
-    ///	options of a controller and the missing configuration options.
+    /// This command is used to retrieve the supported configuration
+    /// options of a controller and the missing configuration options.
     ///
-    ///	The missing options are required to be configured before the
-    ///	controller is considered fully configured and ready for standard
-    ///	operation. The command is typically used right after getting the
-    ///	response to Read Unconfigured Controller Index List command or
-    ///	Unconfigured Index Added event.
+    /// The missing options are required to be configured before the
+    /// controller is considered fully configured and ready for standard
+    /// operation. The command is typically used right after getting the
+    /// response to Read Unconfigured Controller Index List command or
+    /// Unconfigured Index Added event.
     ///
-    ///	Supported_Options and Missing_Options is a bitmask with currently
-    ///	the following available bits:
+    /// Supported_Options and Missing_Options is a bitmask with currently
+    /// the following available bits:
     ///
-    ///	0	External configuration
-    ///	1	Bluetooth public address configuration
+    /// 0 External configuration
+    /// 1 Bluetooth public address configuration
     ///
-    ///	It is valid to call this command on controllers that do not
-    ///	require any configuration. It is possible that a fully configured
-    ///	controller offers additional support for configuration.
+    /// It is valid to call this command on controllers that do not
+    /// require any configuration. It is possible that a fully configured
+    /// controller offers additional support for configuration.
     ///
-    ///	For example a controller may contain a valid Bluetooth public
-    ///	device address, but also allows to configure it from the host
-    ///	stack. In this case the general support for configurations will
-    ///	be indicated by the Controller Configuration settings. For
-    ///	controllers where no configuration options are available that
-    ///	setting option will not be present.
+    /// For example a controller may contain a valid Bluetooth public
+    /// device address, but also allows to configure it from the host
+    /// stack. In this case the general support for configurations will
+    /// be indicated by the Controller Configuration settings. For
+    /// controllers where no configuration options are available that
+    /// setting option will not be present.
     ///
-    ///	When all configurations have been completed and as a result the
-    ///	Missing_Options mask would become empty, then the now ready
-    ///	controller will be announced via Index Added event.
+    /// When all configurations have been completed and as a result the
+    /// Missing_Options mask would become empty, then the now ready
+    /// controller will be announced via Index Added event.
     pub async fn get_controller_config_info(
         &mut self,
         controller: Controller,
@@ -268,7 +269,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 Ok(ControllerConfigInfo {
                     manufacturer: param.get_u16_le(),
                     supported_options: param.get_flags_u32_le(),
@@ -280,22 +281,22 @@ impl<'a> ManagementClient<'a> {
     }
 
     /// This command returns the list of currently known controllers. It
-    ///	includes configured, unconfigured and alternate controllers.
+    /// includes configured, unconfigured and alternate controllers.
     ///
-    ///	Controllers added or removed after calling this command can be
-    ///	be monitored using the Extended Index Added and Extended Index
-    ///	Removed events.
+    /// Controllers added or removed after calling this command can be
+    /// be monitored using the Extended Index Added and Extended Index
+    /// Removed events.
     ///
-    ///	The existing Index Added, Index Removed, Unconfigured Index Added
-    ///	and Unconfigured Index Removed are no longer sent after this command
-    ///	has been used at least once.
+    /// The existing Index Added, Index Removed, Unconfigured Index Added
+    /// and Unconfigured Index Removed are no longer sent after this command
+    /// has been used at least once.
     ///
-    ///	Instead of calling Read Controller Index List and Read Unconfigured
-    ///	Controller Index List, this command combines all the information
-    ///	and can be used to retrieve the controller list.
+    /// Instead of calling Read Controller Index List and Read Unconfigured
+    /// Controller Index List, this command combines all the information
+    /// and can be used to retrieve the controller list.
     ///
     /// Controllers marked as RAW only operation are currently not listed
-    ///	by this command.
+    /// by this command.
     pub async fn get_ext_controller_list(
         &mut self,
     ) -> Result<Vec<(Controller, ControllerType, ControllerBus)>> {
@@ -304,7 +305,7 @@ impl<'a> ManagementClient<'a> {
             Controller::none(),
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
                 let count = param.get_u16_le() as usize;
                 let mut index = Vec::with_capacity(count);
                 for _ in 0..count {
@@ -321,24 +322,24 @@ impl<'a> ManagementClient<'a> {
     }
 
     /// This command is used to retrieve the current state and basic
-    ///	information of a controller. It is typically used right after
-    ///	getting the response to the Read Controller Index List command
-    ///	or an Index Added event (or its extended counterparts).
+    /// information of a controller. It is typically used right after
+    /// getting the response to the Read Controller Index List command
+    /// or an Index Added event (or its extended counterparts).
     ///
-    ///	The Address parameter describes the controllers public address
-    ///	and it can be expected that it is set. However in case of single
-    ///	mode Low Energy only controllers it can be 00:00:00:00:00:00. To
-    ///	power on the controller in this case, it is required to configure
-    ///	a static address using Set Static Address command first.
+    /// The Address parameter describes the controllers public address
+    /// and it can be expected that it is set. However in case of single
+    /// mode Low Energy only controllers it can be 00:00:00:00:00:00. To
+    /// power on the controller in this case, it is required to configure
+    /// a static address using Set Static Address command first.
     ///
-    ///	If the public address is set, then it will be used as identity
-    ///	address for the controller. If no public address is available,
-    ///	then the configured static address will be used as identity
-    ///	address.
+    /// If the public address is set, then it will be used as identity
+    /// address for the controller. If no public address is available,
+    /// then the configured static address will be used as identity
+    /// address.
     ///
-    ///	In the case of a dual-mode controller with public address that
-    ///	is configured as Low Energy only device (BR/EDR switched off),
-    ///	the static address is used when set and public address otherwise.
+    /// In the case of a dual-mode controller with public address that
+    /// is configured as Low Energy only device (BR/EDR switched off),
+    /// the static address is used when set and public address otherwise.
     pub async fn get_ext_controller_info(
         &mut self,
         controller: Controller,
@@ -348,7 +349,7 @@ impl<'a> ManagementClient<'a> {
             controller,
             None,
             |_, param| {
-                let mut param = param.unwrap();
+                let mut param = param.ok_or(Error::NoData)?;
 
                 Ok(ControllerInfoExt {
                     address: param.get_address(),
@@ -367,14 +368,14 @@ impl<'a> ManagementClient<'a> {
     }
 
     /// If BR/EDR is supported, then BR 1M 1-Slot is supported by
-    ///	default and can also not be deselected. If LE is supported,
-    ///	then LE 1M TX and LE 1M RX are supported by default.
+    /// default and can also not be deselected. If LE is supported,
+    /// then LE 1M TX and LE 1M RX are supported by default.
     ///
-    ///	Disabling BR/EDR completely or respectively LE has no impact
-    ///	on the PHY configuration. It is remembered over power cycles.
+    /// Disabling BR/EDR completely or respectively LE has no impact
+    /// on the PHY configuration. It is remembered over power cycles.
     pub async fn get_phy_config(&mut self, controller: Controller) -> Result<PhyConfig> {
         self.exec_command(Command::GetPhyConfig, controller, None, |_, param| {
-            let mut param = param.unwrap();
+            let mut param = param.ok_or(Error::NoData)?;
             Ok(PhyConfig {
                 supported_phys: param.get_flags_u32_le(),
                 configurable_phys: param.get_flags_u32_le(),
@@ -393,10 +394,15 @@ impl<'a> ManagementClient<'a> {
         &mut self,
         controller: Controller,
     ) -> Result<HashMap<RuntimeConfigParameterType, Vec<u8>>> {
-        self.exec_command(Command::ReadDefaultRuntimeConfig, controller, None, |_, param| {
-            let mut param = param.unwrap();
-            Ok(param.get_tlv_map())
-        })
+        self.exec_command(
+            Command::ReadDefaultRuntimeConfig,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.ok_or(Error::NoData)?;
+                Ok(param.get_tlv_map())
+            },
+        )
         .await
     }
 
@@ -406,10 +412,15 @@ impl<'a> ManagementClient<'a> {
         &mut self,
         controller: Controller,
     ) -> Result<HashMap<SystemConfigParameterType, Vec<u8>>> {
-        self.exec_command(Command::ReadDefaultSystemConfig, controller, None, |_, param| {
-            let mut param = param.unwrap();
-            Ok(param.get_tlv_map())
-        })
+        self.exec_command(
+            Command::ReadDefaultSystemConfig,
+            controller,
+            None,
+            |_, param| {
+                let mut param = param.ok_or(Error::NoData)?;
+                Ok(param.get_tlv_map())
+            },
+        )
         .await
     }
 }

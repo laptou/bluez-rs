@@ -1,6 +1,6 @@
-use bitvec::{view::BitView, field::BitField, prelude as bv};
+use bitvec::{field::BitField, prelude as bv, view::BitView};
 use bytes::{Buf, Bytes};
-use enumflags2::{BitFlags, bitflags};
+use enumflags2::{bitflags, BitFlags};
 
 #[bitflags]
 #[repr(u32)]
@@ -165,10 +165,9 @@ pub fn device_class_from_u32(class: u32) -> (DeviceClass, ServiceClasses) {
     let service_classes = ServiceClasses::from_bits_truncate(class);
 
     let class_bits = class.view_bits::<bv::Lsb0>();
-    let device_class: DeviceClass;
 
     // major device class encoded in bits 8-12
-    device_class = match class_bits[8..13].load::<u8>() {
+    let device_class = match class_bits[8..13].load::<u8>() {
         // minor device class in bits 2-7
         0b00001 => DeviceClass::Computer(match class_bits[2..8].load::<u8>() {
             0b000000 => ComputerDeviceClass::Uncategorized,
@@ -276,11 +275,11 @@ pub fn device_class_from_u32(class: u32) -> (DeviceClass, ServiceClasses) {
     (device_class, service_classes)
 }
 
-impl Into<u16> for DeviceClass {
-    fn into(self) -> u16 {
+impl From<DeviceClass> for u16 {
+    fn from(val: DeviceClass) -> Self {
         let mut bits = 0u16;
 
-        match self {
+        match val {
             DeviceClass::Computer(minor) => {
                 bits |= 0b00001 << 8;
                 match minor {
