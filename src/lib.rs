@@ -74,7 +74,6 @@
 //!
 //! for _ in 0usize..5000usize {
 //!     client.process().await?;
-//!     std::thread::sleep(Duration::from_millis(50));
 //! }
 //! #  Ok(())
 //! # }

@@ -6,9 +6,8 @@
 extern crate bluez;
 
 use std::error::Error;
-use std::time::Duration;
 
-use async_std::task::{block_on, sleep};
+use async_std::task::block_on;
 
 use bluez::management::client::*;
 use bluez::management::interface::controller::*;
@@ -90,7 +89,5 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             }
             _ => (),
         }
-
-        sleep(Duration::from_millis(50)).await;
     }
 }
