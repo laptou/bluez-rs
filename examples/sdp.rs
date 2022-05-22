@@ -9,11 +9,12 @@ use std::io::{stdin, stdout, Write};
 
 use anyhow::Context;
 use bluetooth_sys::SDP_PSM;
-use bluez::communication::discovery::{service_search_request, BASE_UUID};
+use bluez::communication::discovery::service_search_request;
 use bluez::communication::stream::BluetoothStream;
 use bluez::management::client::AddressType;
 use bluez::socket::BtProto;
 use bluez::Address;
+use bluez::communication::BASE_UUID;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {
