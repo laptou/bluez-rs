@@ -7,8 +7,8 @@ extern crate bluez;
 use anyhow::Context;
 use bluez::communication::discovery::SdpStream;
 use bluez::communication::BASE_UUID;
-use bluez::socket::BtProto;
-use bluez::{Address, AddressType};
+
+use bluez::{Address};
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {

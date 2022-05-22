@@ -5,7 +5,7 @@
 
 extern crate bluez;
 
-use std::error::Error;
+
 
 use bluez::management::client::*;
 
