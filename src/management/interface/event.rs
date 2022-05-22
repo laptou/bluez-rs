@@ -3,13 +3,13 @@ use std::ffi::CString;
 use bytes::Bytes;
 use enumflags2::BitFlags;
 
+use crate::address::AddressType;
 use crate::management::client::*;
 use crate::management::interface::class::{DeviceClass, ServiceClasses};
 use crate::management::interface::controller::ControllerSettings;
 use crate::management::interface::{Command, CommandStatus};
 use crate::Address;
 use std::collections::HashMap;
-use crate::address::AddressType;
 
 #[derive(Debug)]
 pub enum Event {

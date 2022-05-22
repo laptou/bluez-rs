@@ -7,11 +7,11 @@ extern crate bluez;
 use std::error::Error;
 use std::sync::Arc;
 
-use tokio::io::stdin;
-use bluez::AddressType;
 use bluez::communication::stream::BluetoothListener;
 use bluez::management::client::*;
 use bluez::socket::BtProto;
+use bluez::AddressType;
+use tokio::io::stdin;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), Box<dyn Error>> {

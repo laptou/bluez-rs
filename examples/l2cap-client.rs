@@ -8,12 +8,12 @@ use std::error::Error;
 use std::sync::Arc;
 
 use async_std::io::{stdin, stdout};
+use bluez::address::AddressType;
 use bluez::communication::stream::BluetoothStream;
 use bluez::management::client::*;
 use bluez::socket::BtProto;
 use bluez::Address;
 use futures::AsyncReadExt;
-use bluez::address::AddressType;
 use smol::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
 use smol::Async;
 

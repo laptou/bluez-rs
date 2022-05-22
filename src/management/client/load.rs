@@ -1,5 +1,5 @@
-use crate::AddressType;
 use super::*;
+use crate::AddressType;
 
 impl<'a> ManagementClient<'a> {
     /// This command is used to feed the kernel with currently known

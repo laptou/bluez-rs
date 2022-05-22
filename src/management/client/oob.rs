@@ -1,5 +1,5 @@
-use enumflags2::BitFlags;
 use crate::AddressType;
+use enumflags2::BitFlags;
 
 use super::interact::{address_bytes, address_callback};
 use super::*;

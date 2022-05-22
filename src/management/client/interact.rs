@@ -1,6 +1,6 @@
-use crate::AddressType;
 use super::*;
 use crate::util::BufExtBlueZ;
+use crate::AddressType;
 
 pub(crate) fn address_callback(
     _: Controller,

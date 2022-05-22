@@ -6,7 +6,7 @@ use std::u16;
 use bytes::*;
 use libc;
 use std::os::unix::io::{FromRawFd, RawFd};
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt, AsyncReadExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::UnixStream;
 
 use crate::management::interface::{Request, Response};
