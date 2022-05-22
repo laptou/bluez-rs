@@ -1,3 +1,4 @@
+use crate::AddressType;
 use super::*;
 
 impl<'a> ManagementClient<'a> {

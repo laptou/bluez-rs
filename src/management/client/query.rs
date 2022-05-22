@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::AddressType;
 
 use crate::management::interface::controller::ControllerInfoExt;
 use crate::util::BufExtBlueZ;

@@ -9,8 +9,8 @@ use std::error::Error;
 
 use bluez::management::client::*;
 
-#[async_std::main]
-pub async fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main(flavor = "current_thread")]
+pub async fn main() -> Result<(), anyhow::Error> {
     let mut client = ManagementClient::new().unwrap();
 
     let version = client.get_mgmt_version().await?;

@@ -1,4 +1,4 @@
-use std::io::{Error};
+use std::io::Error;
 use std::mem::MaybeUninit;
 use std::os::unix::net::UnixStream as StdUnixStream;
 use std::os::unix::prelude::IntoRawFd;
@@ -11,9 +11,8 @@ use tokio::io::unix::AsyncFd;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::UnixStream;
 
-use crate::management::client::AddressType;
 use crate::util::check_error;
-use crate::{socket::*, Address};
+use crate::{socket::*, Address, AddressType};
 
 union SockAddr {
     l2: bluetooth_sys::sockaddr_l2,

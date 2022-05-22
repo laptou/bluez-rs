@@ -81,3 +81,11 @@ impl Display for Address {
         )
     }
 }
+
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
+pub enum AddressType {
+    BREDR = 0,
+    LEPublic = 1,
+    LERandom = 2,
+}

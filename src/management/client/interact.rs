@@ -1,3 +1,4 @@
+use crate::AddressType;
 use super::*;
 use crate::util::BufExtBlueZ;
 

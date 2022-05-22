@@ -9,6 +9,7 @@ use crate::management::interface::controller::ControllerSettings;
 use crate::management::interface::{Command, CommandStatus};
 use crate::Address;
 use std::collections::HashMap;
+use crate::address::AddressType;
 
 #[derive(Debug)]
 pub enum Event {

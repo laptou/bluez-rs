@@ -7,14 +7,13 @@ extern crate bluez;
 use std::error::Error;
 use std::sync::Arc;
 
-use async_std::io::stdin;
+use tokio::io::stdin;
+use bluez::AddressType;
 use bluez::communication::stream::BluetoothListener;
 use bluez::management::client::*;
 use bluez::socket::BtProto;
-use smol::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
-use smol::Async;
 
-#[async_std::main]
+#[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), Box<dyn Error>> {
     let mut mgmt = ManagementClient::new()?;
     let controllers = mgmt.get_controller_list().await?;

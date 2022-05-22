@@ -4,12 +4,15 @@ use std::{
     os::unix::prelude::{OsStrExt, OsStringExt},
 };
 
+use crate::util::BufExtBlueZ;
+use crate::{
+    communication::{Uuid128, Uuid16, Uuid32},
+    socket::BtProto,
+    Address, AddressType,
+};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use num_traits::FromPrimitive;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use crate::communication::{Uuid128, Uuid16, Uuid32};
-
-use crate::util::BufExtBlueZ;
 
 use super::stream::BluetoothStream;
 
@@ -405,63 +408,74 @@ impl<B: Buf> From<&mut B> for ServiceSearchResponse {
     }
 }
 
-async fn sdp_send(bs: &mut BluetoothStream, req: Pdu) -> Result<(), Error> {
-    let mut buf = BytesMut::new();
-    req.to_buf(&mut buf);
-    println!("send buf: {:02x?}", &buf[..]);
-    bs.write_all(buf.as_ref()).await?;
-    Ok(())
-}
+#[derive(Debug)]
+pub struct SdpStream(BluetoothStream);
 
-async fn sdp_recv(bs: &mut BluetoothStream) -> Result<Pdu, Error> {
-    let mut buf = BytesMut::with_capacity(65536);
-    bs.read_buf(&mut buf).await?;
-    println!("recv buf: {:02x?}", &buf[..]);
-    Ok(Pdu::from(&mut buf))
-}
+impl SdpStream {
+    async fn send(&mut self, req: Pdu) -> Result<(), Error> {
+        let mut buf = BytesMut::new();
+        req.to_buf(&mut buf);
+        println!("send buf: {:02x?}", &buf[..]);
+        self.0.write_all(buf.as_ref()).await?;
+        Ok(())
+    }
 
-pub async fn service_search_request(
-    bs: &mut BluetoothStream,
-    service_search_pattern: Vec<Uuid128>,
-    maximum_service_record_count: u16,
-) -> Result<ServiceSearchResponse, Error> {
-    let mut res: Option<ServiceSearchResponse> = None;
-    let mut txn = 0;
+    async fn recv(&mut self) -> Result<Pdu, Error> {
+        let mut buf = BytesMut::with_capacity(65536);
+        self.0.read_buf(&mut buf).await?;
+        println!("recv buf: {:02x?}", &buf[..]);
+        Ok(Pdu::from(&mut buf))
+    }
 
-    Ok(loop {
-        let req = ServiceSearchRequest {
-            service_search_pattern: service_search_pattern.clone(),
-            maximum_service_record_count,
-            continuation_state: res
-                .as_ref()
-                .map(|r| r.continuation_state.clone())
-                .unwrap_or(vec![]),
-        };
-        let req_pdu = Pdu::with_parameter(PduId::ServiceSearchRequest, txn, req);
-        sdp_send(bs, req_pdu).await?;
-        txn += 1;
+    pub async fn connect(address: Address) -> Result<Self, Error> {
+        let stream =
+            BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, SDP_PSM).await?;
+        Ok(Self(stream))
+    }
 
-        let mut res_pdu = sdp_recv(bs).await?;
-        match res_pdu.id {
-            PduId::ErrorResponse => {
-                return Err(Error::Remote(ErrorCode::from(&mut res_pdu.parameter)))
-            }
-            PduId::ServiceSearchResponse => {
-                let new_res = ServiceSearchResponse::from(&mut res_pdu.parameter);
+    pub async fn service_search(
+        &mut self,
+        service_search_pattern: Vec<Uuid128>,
+        maximum_service_record_count: u16,
+    ) -> Result<ServiceSearchResponse, Error> {
+        let mut res: Option<ServiceSearchResponse> = None;
+        let mut txn = 0;
 
-                if let Some(res) = &mut res {
-                    res.service_record_handle_list
-                        .extend(new_res.service_record_handle_list);
-                    res.continuation_state = new_res.continuation_state;
-                } else {
-                    res = Some(new_res)
+        Ok(loop {
+            let req = ServiceSearchRequest {
+                service_search_pattern: service_search_pattern.clone(),
+                maximum_service_record_count,
+                continuation_state: res
+                    .as_ref()
+                    .map(|r| r.continuation_state.clone())
+                    .unwrap_or(vec![]),
+            };
+            let req_pdu = Pdu::with_parameter(PduId::ServiceSearchRequest, txn, req);
+            self.send(req_pdu).await?;
+            txn += 1;
+
+            let mut res_pdu = self.recv().await?;
+            match res_pdu.id {
+                PduId::ErrorResponse => {
+                    return Err(Error::Remote(ErrorCode::from(&mut res_pdu.parameter)))
                 }
+                PduId::ServiceSearchResponse => {
+                    let new_res = ServiceSearchResponse::from(&mut res_pdu.parameter);
 
-                if res.as_ref().unwrap().continuation_state.len() == 0 {
-                    break res.unwrap();
+                    if let Some(res) = &mut res {
+                        res.service_record_handle_list
+                            .extend(new_res.service_record_handle_list);
+                        res.continuation_state = new_res.continuation_state;
+                    } else {
+                        res = Some(new_res)
+                    }
+
+                    if res.as_ref().unwrap().continuation_state.len() == 0 {
+                        break res.unwrap();
+                    }
                 }
+                _ => panic!("got wrong response to request"),
             }
-            _ => panic!("got wrong response to request"),
-        }
-    })
+        })
+    }
 }

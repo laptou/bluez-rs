@@ -108,7 +108,7 @@ extern crate num_derive;
 #[macro_use]
 extern crate thiserror;
 
-pub use address::Address;
+pub use address::*;
 
 pub mod communication;
 pub mod management;
