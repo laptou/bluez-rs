@@ -78,7 +78,7 @@ impl Response {
                     encryption_size: buf.get_u8(),
                     encryption_diversifier: buf.get_u16_le(),
                     random_number: buf.get_u64_le(),
-                    value: buf.get_u8x16(),
+                    value: buf.get_array_u8(),
                 },
                 0x000B => Event::DeviceConnected {
                     address: Address::from_buf(&mut buf),
@@ -156,14 +156,14 @@ impl Response {
                     random_address: buf.get_address(),
                     address: buf.get_address(),
                     address_type: buf.get_primitive_u8(),
-                    value: buf.get_u8x16(),
+                    value: buf.get_array_u8(),
                 },
                 0x0019 => Event::NewSignatureResolvingKey {
                     store_hint: buf.get_bool(),
                     address: buf.get_address(),
                     address_type: buf.get_primitive_u8(),
                     key_type: buf.get_primitive_u8(),
-                    value: buf.get_u8x16(),
+                    value: buf.get_array_u8(),
                 },
                 0x001A => Event::DeviceAdded {
                     address: buf.get_address(),
@@ -221,7 +221,7 @@ impl Response {
                     selected_phys: BitFlags::from_bits_truncate(buf.get_u32_le()),
                 },
                 0x0027 => Event::ExperimentalFeatureChanged {
-                    uuid: buf.get_u8x16(),
+                    uuid: buf.get_array_u8(),
                     flags: buf.get_u32_le(),
                 },
                 0x0028 => Event::DefaultSystemConfigChanged {

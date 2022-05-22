@@ -1,7 +1,6 @@
 use std::{
     ffi::OsString,
     fmt::Debug,
-    io::{Read, Write},
     os::unix::prelude::{OsStrExt, OsStringExt},
 };
 

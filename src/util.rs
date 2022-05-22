@@ -15,8 +15,8 @@ pub(crate) trait BufExtBlueZ: Buf {
         Address::from(arr)
     }
 
-    fn get_u8x16(&mut self) -> [u8; 16] {
-        let mut arr = [0u8; 16];
+    fn get_array_u8<const N: usize>(&mut self) -> [u8; N] {
+        let mut arr = [0u8; N];
         self.copy_to_slice(&mut arr[..]);
         arr
     }

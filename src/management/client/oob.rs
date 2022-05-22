@@ -20,15 +20,15 @@ impl<'a> ManagementClient<'a> {
         self.exec_command(Command::ReadLocalOutOfBand, controller, None, |_, param| {
             let mut param = param.ok_or(Error::NoData)?;
             Ok(OutOfBandData {
-                hash_192: param.get_u8x16(),
-                randomizer_192: param.get_u8x16(),
+                hash_192: param.get_array_u8(),
+                randomizer_192: param.get_array_u8(),
                 hash_256: if param.has_remaining() {
-                    Some(param.get_u8x16())
+                    Some(param.get_array_u8())
                 } else {
                     None
                 },
                 randomizer_256: if param.has_remaining() {
-                    Some(param.get_u8x16())
+                    Some(param.get_array_u8())
                 } else {
                     None
                 },
