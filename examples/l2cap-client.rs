@@ -4,17 +4,14 @@
 
 extern crate bluez;
 
-use std::error::Error;
-use std::sync::Arc;
-
 use bluez::communication::stream::BluetoothStream;
-use bluez::management::client::*;
+
 use bluez::socket::BtProto;
 use bluez::Address;
 use bluez::AddressType;
 use tokio::io::BufReader;
 use tokio::io::BufWriter;
-use tokio::io::{stdin, stdout, AsyncReadExt, AsyncWriteExt, AsyncBufReadExt};
+use tokio::io::{stdin, stdout, AsyncBufReadExt, AsyncWriteExt};
 use tokio::spawn;
 
 #[tokio::main(flavor = "current_thread")]

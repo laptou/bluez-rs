@@ -51,10 +51,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
     // to do this we'll need to listen for the Device Found event
 
     client
-        .start_discovery(
-            controller,
-            AddressTypeFlag::BREDR.into(),
-        )
+        .start_discovery(controller, AddressTypeFlag::BREDR.into())
         .await
         .context("starting discovery failed")?;
 

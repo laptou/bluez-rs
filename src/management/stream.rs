@@ -1,12 +1,11 @@
 use std::os::unix::net::UnixStream as StdUnixStream;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+
 use std::u16;
 
 use bytes::*;
 use libc;
 use std::os::unix::io::{FromRawFd, RawFd};
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufStream, BufReader};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 
 use crate::management::interface::{Request, Response};
@@ -18,7 +17,7 @@ pub struct ManagementStream(
     // reads need to be buffered so that methods like read_exact do not end up
     // dropping data and writes cannot be buffered so that we don't have to
     // worry about flushing them
-    BufReader<UnixStream>
+    BufReader<UnixStream>,
 );
 
 impl ManagementStream {
