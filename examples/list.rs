@@ -7,7 +7,7 @@ extern crate bluez;
 
 use bluez::management::client::*;
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main]
 pub async fn main() -> Result<(), anyhow::Error> {
     let mut client = ManagementClient::new().unwrap();
 

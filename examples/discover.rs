@@ -7,7 +7,7 @@ extern crate bluez;
 
 use std::time::Duration;
 
-use anyhow::bail;
+use anyhow::{bail, Context};
 use bluez::management::client::*;
 use bluez::management::interface::controller::*;
 use bluez::management::interface::event::Event;
@@ -37,9 +37,14 @@ pub async fn main() -> Result<(), anyhow::Error> {
         None => bail!("no available bluetooth controllers"),
     };
 
+    println!("using controller {}", controller);
+
     if !info.current_settings.contains(ControllerSetting::Powered) {
         println!("powering on bluetooth controller {}", controller);
-        client.set_powered(controller, true).await?;
+        client
+            .set_powered(controller, true)
+            .await
+            .context("powering on bluetooth controlled failed")?;
     }
 
     // scan for some devices
@@ -50,12 +55,13 @@ pub async fn main() -> Result<(), anyhow::Error> {
             controller,
             AddressTypeFlag::BREDR | AddressTypeFlag::LEPublic | AddressTypeFlag::LERandom,
         )
-        .await?;
+        .await
+        .context("starting discovery failed")?;
 
     // just wait for discovery forever
     loop {
         // process() blocks until there is a response to be had
-        let response = client.process().await?;
+        let response = client.process().await.context("processing events failed")?;
 
         match response.event {
             Event::DeviceFound {
