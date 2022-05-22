@@ -5,34 +5,37 @@
 
 extern crate bluez;
 
-use std::error::Error;
+use std::time::Duration;
 
-use async_std::task::block_on;
-
+use anyhow::bail;
 use bluez::management::client::*;
 use bluez::management::interface::controller::*;
 use bluez::management::interface::event::Event;
+use tokio::time::sleep;
 
-#[async_std::main]
-pub async fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main(flavor = "current_thread")]
+pub async fn main() -> Result<(), anyhow::Error> {
     let mut client = ManagementClient::new().unwrap();
 
     let controllers = client.get_controller_list().await?;
 
-    // find the first controller we can power on
-    let (controller, info) = controllers
-        .into_iter()
-        .filter_map(|controller| {
-            let info = block_on(client.get_controller_info(controller)).ok()?;
+    let mut active_controller = None;
 
+    for controller in controllers {
+        if let Ok(info) = client.get_controller_info(controller).await {
             if info.supported_settings.contains(ControllerSetting::Powered) {
-                Some((controller, info))
+                active_controller = Some((controller, info));
+                break;
             } else {
-                None
+                bail!("controller is not powered");
             }
-        })
-        .nth(0)
-        .expect("no usable controllers found");
+        }
+    }
+
+    let (controller, info) = match active_controller {
+        Some(active_controller) => active_controller,
+        None => bail!("no available bluetooth controllers"),
+    };
 
     if !info.current_settings.contains(ControllerSetting::Powered) {
         println!("powering on bluetooth controller {}", controller);

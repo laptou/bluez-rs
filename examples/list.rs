@@ -5,8 +5,6 @@
 
 extern crate bluez;
 
-
-
 use bluez::management::client::*;
 
 #[tokio::main(flavor = "current_thread")]
