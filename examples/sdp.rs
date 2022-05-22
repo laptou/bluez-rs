@@ -8,7 +8,7 @@ use std::error::Error;
 use std::io::{stdin, stdout, Write};
 use std::sync::Arc;
 
-use bluez::communication::discovery::{SdpAttributeSpecification, SdpSession, SdpSessionFlags};
+// use bluez::communication::discovery::{SdpAttributeSpecification, SdpSession, SdpSessionFlags};
 use bluez::Address;
 
 pub fn main() -> Result<(), Box<dyn Error>> {

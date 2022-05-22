@@ -6,7 +6,7 @@ use std::{
     os::unix::prelude::{OsStrExt, OsStringExt},
 };
 
-use bytes::{Buf, BufMut, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use num_traits::FromPrimitive;
 
 use crate::util::BufExtBlueZ;
@@ -72,11 +72,19 @@ impl Debug for Uuid128 {
     }
 }
 
+trait FromBuf {
+    fn from_buf<B: Buf>(buf: &mut B) -> Self;
+}
+
+trait ToBuf {
+    fn to_buf<B: BufMut>(&self, buf: &mut B);
+}
+
 #[derive(Debug)]
 struct Pdu {
     id: PduId,
     txn: u16,
-    parameter: Vec<u8>,
+    parameter: Bytes,
 }
 
 #[repr(u8)]
@@ -89,6 +97,40 @@ enum PduId {
     ServiceAttributeResponse,
     ServiceSearchAttributeRequest,
     ServiceSearchAttributeResponse,
+}
+
+impl Pdu {
+    pub fn with_parameter<F: ToBuf>(id: PduId, txn: u16, parameter: F) -> Self {
+        let mut buf = BytesMut::new();
+        parameter.to_buf(&mut buf);
+        Self {
+            id,
+            txn,
+            parameter: buf.freeze(),
+        }
+    }
+}
+
+impl FromBuf for Pdu {
+    fn from_buf<B: Buf>(buf: &mut B) -> Self {
+        Pdu {
+            id: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+            txn: buf.get_u16(),
+            parameter: {
+                let param_size = buf.get_u8() as usize;
+                buf.copy_to_bytes(param_size)
+            },
+        }
+    }
+}
+
+impl ToBuf for Pdu {
+    fn to_buf<B: BufMut>(&self, buf: &mut B) {
+        buf.put_u8(self.id as u8);
+        buf.put_u16(self.txn);
+        buf.put_u16(self.parameter.len() as u16);
+        buf.put(&self.parameter[..]);
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -310,14 +352,6 @@ impl DataElement {
     }
 }
 
-trait FromBuf {
-    fn from_buf<B: Buf>(buf: &mut B) -> Self;
-}
-
-trait ToBuf {
-    fn to_buf<B: BufMut>(&self, buf: &mut B);
-}
-
 #[repr(u16)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum ErrorCode {
@@ -334,10 +368,10 @@ struct ErrorResponse {
 }
 
 impl FromBuf for ErrorResponse {
-    fn from_buf<B: Buf>(buf: &mut B) -> Option<Self> {
-        Some(Self {
-            code: FromPrimitive::from_u8(DataElement::from_buf(buf).into_u8()?)?,
-        })
+    fn from_buf<B: Buf>(buf: &mut B) -> ErrorResponse {
+        Self {
+            code: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
+        }
     }
 }
 
@@ -348,7 +382,7 @@ struct ServiceSearchRequest {
 }
 
 impl ToBuf for ServiceSearchRequest {
-    pub fn to_buf<B: BufMut>(&self, buf: &mut B) {
+    fn to_buf<B: BufMut>(&self, buf: &mut B) {
         let service_search_pat = DataElement::Sequence(
             self.service_search_pattern
                 .iter()
@@ -362,7 +396,7 @@ impl ToBuf for ServiceSearchRequest {
     }
 }
 
-struct ServiceSearchResponse {
+pub struct ServiceSearchResponse {
     total_service_record_count: u16,
     current_service_record_count: u16,
     service_record_handle_list: Vec<u32>,
@@ -370,20 +404,22 @@ struct ServiceSearchResponse {
 }
 
 impl FromBuf for ServiceSearchResponse {
-    fn from_buf<B: Buf>(buf: &mut B) -> Option<Self> {
-        Some(Self {
+    fn from_buf<B: Buf>(buf: &mut B) -> Self {
+        Self {
             total_service_record_count: buf.get_u16(),
             current_service_record_count: buf.get_u16(),
             service_record_handle_list: DataElement::from_buf(buf)
-                .into_sequence()?
+                .into_sequence()
+                .unwrap()
                 .into_iter()
                 .map(|de| de.into_u32())
-                .collect::<Option<Vec<u32>>>()?,
+                .collect::<Option<Vec<u32>>>()
+                .unwrap(),
             continuation_state: {
                 let continuation_state_size = buf.get_u8();
                 buf.get_vec_u8(continuation_state_size as usize)
             },
-        })
+        }
     }
 }
 
@@ -391,47 +427,59 @@ impl FromBuf for ServiceSearchResponse {
 pub struct SdpClient(BluetoothStream);
 
 impl SdpClient {
-    fn send<T: ToBuf>(&self, req: T) {
-        let buf = BytesMut::new();
+    fn send(&mut self, req: Pdu) {
+        let mut buf = BytesMut::new();
         req.to_buf(&mut buf);
-        self.0.write_all(buf.as_ref());
+        self.0.write_all(buf.as_ref()).unwrap();
     }
 
-    fn recv<T: FromBuf>(&self) -> T {
-        let buf = BytesMut::new();
-        self.0.read(buf.as_mut());
-        T::from_buf(&mut buf)
+    fn recv(&mut self) -> Pdu {
+        let mut buf = BytesMut::new();
+        self.0.read(buf.as_mut()).unwrap();
+        Pdu::from_buf(&mut buf)
     }
 
     pub fn service_search_request(
-        &self,
+        &mut self,
         service_search_pattern: Vec<Uuid128>,
         maximum_service_record_count: u16,
     ) -> ServiceSearchResponse {
-        let req = ServiceSearchRequest {
-            service_search_pattern,
-            maximum_service_record_count,
-            continuation_state: Vec::new(),
-        };
-        self.send(req);
+        let mut continuation_state = Vec::new();
+        let mut res: Option<ServiceSearchResponse> = None;
 
-        let mut res: ServiceSearchResponse = self.recv();
-
-        while res.continuation_state.len() > 0 {
+        loop {
             let req = ServiceSearchRequest {
-                service_search_pattern,
+                service_search_pattern: service_search_pattern.clone(),
                 maximum_service_record_count,
-                continuation_state: res.continuation_state,
+                continuation_state: continuation_state.clone(),
             };
-            self.send(req);
+            let req_pdu = Pdu::with_parameter(PduId::ServiceSearchRequest, 0, req);
+            self.send(req_pdu);
 
-            let new_res: ServiceSearchResponse = self.recv();
-            res.continuation_state = new_res.continuation_state;
-            res.current_service_record_count = new_res.current_service_record_count;
-            res.total_service_record_count = new_res.total_service_record_count;
-            res.service_record_handle_list.extend(new_res.service_record_handle_list);
+            let mut res_pdu = self.recv();
+            match res_pdu.id {
+                PduId::ErrorResponse => panic!("got error response"),
+                PduId::ServiceSearchResponse => {
+                    let new_res = ServiceSearchResponse::from_buf(&mut res_pdu.parameter);
+
+                    res = if let Some(mut res) = res {
+                        res.service_record_handle_list
+                            .extend(new_res.service_record_handle_list);
+
+                        if res.continuation_state.len() == 0 {
+                            break res;
+                        } else {
+                            continuation_state = res.continuation_state;
+                            res.continuation_state = Vec::new();
+                        }
+
+                        Some(res)
+                    } else {
+                        Some(new_res)
+                    }
+                }
+                _ => panic!("got wrong response to request"),
+            }
         }
-
-        res
     }
 }

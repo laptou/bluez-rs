@@ -1,7 +1,6 @@
+use std::collections::HashMap;
 use std::ffi::CString;
 use std::hash::Hash;
-use std::os::unix::prelude::OsStringExt;
-use std::{collections::HashMap, ffi::OsString};
 
 use bytes::Buf;
 use enumflags2::{BitFlag, BitFlags};
