@@ -367,25 +367,13 @@ impl<B: Buf> From<&mut B> for ErrorCode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AttributeRange {
-    Single(u16),
-    Range(u16, u16),
+pub enum ServiceAttributeRange {
+    Single(ServiceAttributeId),
+    Range(ServiceAttributeId, ServiceAttributeId),
 }
 
-impl AttributeRange {
-    pub const ALL: Self = Self::Range(0, u16::MAX);
-}
-
-impl ToBuf for AttributeRange {
-    fn to_buf<B: BufMut>(&self, buf: &mut B) {
-        match self {
-            &AttributeRange::Single(u) => buf.put_u16(u),
-            &AttributeRange::Range(low, high) => {
-                buf.put_u16(low);
-                buf.put_u16(high);
-            }
-        }
-    }
+impl ServiceAttributeRange {
+    pub const ALL: Self = Self::Range(ServiceAttributeId(0), ServiceAttributeId(u16::MAX));
 }
 
 struct ServiceSearchRequest {
@@ -441,7 +429,7 @@ impl<B: Buf> From<&mut B> for ServiceSearchResponse {
 struct ServiceAttributeRequest {
     service_handle: u32,
     maximum_attribute_byte_count: u16,
-    attribute_id_list: Vec<AttributeRange>,
+    attribute_id_list: Vec<ServiceAttributeRange>,
     continuation_state: Vec<u8>,
 }
 
@@ -454,9 +442,9 @@ impl ToBuf for ServiceAttributeRequest {
             self.attribute_id_list
                 .iter()
                 .map(|range| match range {
-                    &AttributeRange::Single(item) => DataElement::Uint16(item),
-                    &AttributeRange::Range(start, end) => {
-                        DataElement::Uint32(((start as u32) << 16) | end as u32)
+                    &ServiceAttributeRange::Single(item) => DataElement::Uint16(item.0),
+                    &ServiceAttributeRange::Range(start, end) => {
+                        DataElement::Uint32(((start.0 as u32) << 16) | end.0 as u32)
                     }
                 })
                 .collect(),
@@ -469,9 +457,35 @@ impl ToBuf for ServiceAttributeRequest {
     }
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+pub struct ServiceAttributeId(pub u16);
+
+impl Debug for ServiceAttributeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:04x?}", self.0)
+    }
+}
+
+impl ServiceAttributeId {
+    pub const SERVICE_RECORD_HANDLE: Self = Self(0x0000);
+    pub const SERVICE_CLASS_ID_LIST: Self = Self(0x0001);
+    pub const SERVICE_RECORD_STATE: Self = Self(0x0002);
+    pub const SERVICE_ID: Self = Self(0x0003);
+    pub const PROTOCOL_DESCRIPTOR_LIST: Self = Self(0x0004);
+    pub const BROWSE_GROUP_LIST: Self = Self(0x0005);
+    pub const LANGUAGE_BASE_ATTRIBUTE_ID_LIST: Self = Self(0x0006);
+    pub const SERVICE_INFO_TIME_TO_LIVE: Self = Self(0x0007);
+    pub const SERVICE_AVAILABILITY: Self = Self(0x0008);
+    pub const BLUETOOTH_PROFILE_DESCRIPTOR_LIST: Self = Self(0x0009);
+    pub const DOCUMENTATION_URL: Self = Self(0x000A);
+    pub const CLIENT_EXECUTABLE_URL: Self = Self(0x000B);
+    pub const ICON_URL: Self = Self(0x000C);
+    pub const ADDITIONAL_PROTOCOL_DESCRIPTOR_LISTS: Self = Self(0x000D);
+}
+
 #[derive(Debug, Clone)]
 pub struct ServiceAttributeResponse {
-    pub attributes: HashMap<u16, DataElement>,
+    pub attributes: HashMap<ServiceAttributeId, DataElement>,
     pub continuation_state: Vec<u8>,
 }
 
@@ -492,7 +506,7 @@ impl<B: Buf> From<&mut B> for ServiceAttributeResponse {
                     panic!("expected attribute id to be a u16");
                 };
 
-                attributes.insert(attribute_id, pair[1].clone());
+                attributes.insert(ServiceAttributeId(attribute_id), pair[1].clone());
             }
 
             return Self {
@@ -583,7 +597,7 @@ impl SdpClient {
         &mut self,
         service_handle: u32,
         maximum_attribute_byte_count: u16,
-        attribute_id_list: Vec<AttributeRange>,
+        attribute_id_list: Vec<ServiceAttributeRange>,
     ) -> Result<ServiceAttributeResponse, Error> {
         let mut res: Option<ServiceAttributeResponse> = None;
         let mut txn = 0;

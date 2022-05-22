@@ -5,7 +5,9 @@
 extern crate bluez;
 
 use anyhow::Context;
-use bluez::communication::discovery::{AttributeRange, SdpClient, SDP_BROWSE_ROOT};
+use bluez::communication::discovery::{
+    SdpClient, ServiceAttributeId, ServiceAttributeRange, SDP_BROWSE_ROOT,
+};
 use bluez::Address;
 
 #[tokio::main(flavor = "current_thread")]
@@ -41,12 +43,85 @@ pub async fn main() -> Result<(), anyhow::Error> {
             service_handle
         );
 
-        let response = client
-            .service_attribute(service_handle, u16::MAX, vec![AttributeRange::ALL])
+        let mut response = client
+            .service_attribute(service_handle, u16::MAX, vec![ServiceAttributeRange::ALL])
             .await
             .context("service attribute request failed")?;
 
-        println!("{:?}", response.attributes);
+        response
+            .attributes
+            .remove(&ServiceAttributeId::SERVICE_RECORD_HANDLE);
+
+        if let Some(val) = response
+            .attributes
+            .remove(&ServiceAttributeId::SERVICE_CLASS_ID_LIST)
+        {
+            println!("\tservice class id list: {:?}", val)
+        }
+
+        if let Some(val) = response
+            .attributes
+            .remove(&ServiceAttributeId::SERVICE_RECORD_STATE)
+        {
+            println!("\tservice record state: {:?}", val)
+        }
+
+        if let Some(val) = response.attributes.remove(&ServiceAttributeId::SERVICE_ID) {
+            println!("\tservice id: {:?}", val)
+        }
+
+        if let Some(val) = response
+            .attributes
+            .remove(&ServiceAttributeId::PROTOCOL_DESCRIPTOR_LIST)
+        {
+            println!("\tprotocol descriptor list: {:?}", val)
+        }
+
+        if let Some(val) = response
+            .attributes
+            .remove(&ServiceAttributeId::BROWSE_GROUP_LIST)
+        {
+            println!("\tbrowse group list: {:?}", val)
+        }
+
+        if let Some(val) = response
+            .attributes
+            .remove(&ServiceAttributeId::LANGUAGE_BASE_ATTRIBUTE_ID_LIST)
+        {
+            println!("\tlanguage base attribute id list: {:?}", val)
+        }
+
+        if let Some(val) = response
+            .attributes
+            .remove(&ServiceAttributeId::SERVICE_INFO_TIME_TO_LIVE)
+        {
+            println!("\tservice info ttl: {:?}", val)
+        }
+
+        if let Some(val) = response
+            .attributes
+            .remove(&ServiceAttributeId::SERVICE_AVAILABILITY)
+        {
+            println!("\tservice availability: {:?}", val)
+        }
+
+        if let Some(val) = response
+            .attributes
+            .remove(&ServiceAttributeId::BLUETOOTH_PROFILE_DESCRIPTOR_LIST)
+        {
+            println!("\tbluetooth profile descriptor list: {:?}", val)
+        }
+
+        if let Some(val) = response
+            .attributes
+            .remove(&ServiceAttributeId::ADDITIONAL_PROTOCOL_DESCRIPTOR_LISTS)
+        {
+            println!("\tadditional profile descriptor lists: {:?}", val)
+        }
+
+        if response.attributes.len() > 0 {
+            println!("\tother attributes: {:?}", response.attributes);
+        }
     }
 
     Ok(())
