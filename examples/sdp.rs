@@ -5,10 +5,8 @@
 extern crate bluez;
 
 use anyhow::Context;
-use bluez::communication::discovery::SdpStream;
-use bluez::communication::BASE_UUID;
-
-use bluez::{Address};
+use bluez::communication::discovery::{AttributeRange, SdpClient, SDP_BROWSE_ROOT};
+use bluez::Address;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {
@@ -26,18 +24,30 @@ pub async fn main() -> Result<(), anyhow::Error> {
 
     let address = Address::from_slice(&octets[..]);
 
-    let mut stream = SdpStream::connect(address)
+    let mut client = SdpClient::connect(address)
         .await
         .context("could not connect to device")?;
 
     println!("connected to device");
 
-    let response = stream
-        .service_search(vec![BASE_UUID.into()], 30)
+    let response = client
+        .service_search(vec![SDP_BROWSE_ROOT.into()], 30)
         .await
         .context("service search request failed")?;
 
-    println!("service search response: {:?}", response);
+    for service_handle in response.service_record_handles {
+        println!(
+            "getting attribute values for service {:#010x}",
+            service_handle
+        );
+
+        let response = client
+            .service_attribute(service_handle, u16::MAX, vec![AttributeRange::ALL])
+            .await
+            .context("service attribute request failed")?;
+
+        println!("{:?}", response.attributes);
+    }
 
     Ok(())
 }

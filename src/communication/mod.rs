@@ -3,6 +3,49 @@ use std::fmt::Debug;
 pub mod discovery;
 pub mod stream;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Uuid {
+    Uuid16(Uuid16),
+    Uuid32(Uuid32),
+    Uuid128(Uuid128),
+}
+
+impl From<u16> for Uuid {
+    fn from(u: u16) -> Self {
+        Self::Uuid16(u.into())
+    }
+}
+
+impl From<u32> for Uuid {
+    fn from(u: u32) -> Self {
+        Self::Uuid32(u.into())
+    }
+}
+
+impl From<u128> for Uuid {
+    fn from(u: u128) -> Self {
+        Self::Uuid128(u.into())
+    }
+}
+
+impl From<Uuid16> for Uuid {
+    fn from(u: Uuid16) -> Self {
+        Self::Uuid16(u)
+    }
+}
+
+impl From<Uuid32> for Uuid {
+    fn from(u: Uuid32) -> Self {
+        Self::Uuid32(u)
+    }
+}
+
+impl From<Uuid128> for Uuid {
+    fn from(u: Uuid128) -> Self {
+        Self::Uuid128(u)
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Uuid16(pub u16);
 

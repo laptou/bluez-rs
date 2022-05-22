@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     ffi::OsString,
     fmt::Debug,
     os::unix::prelude::{OsStrExt, OsStringExt},
@@ -14,9 +15,10 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use num_traits::FromPrimitive;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use super::stream::BluetoothStream;
+use super::{stream::BluetoothStream, Uuid};
 
 pub const SDP_PSM: u16 = 0x0001;
+pub const SDP_BROWSE_ROOT: Uuid16 = Uuid16(0x1002);
 
 trait ToBuf {
     fn to_buf<B: BufMut>(&self, buf: &mut B);
@@ -77,7 +79,7 @@ impl ToBuf for Pdu {
 }
 
 #[derive(Debug, Clone)]
-enum DataElement {
+pub enum DataElement {
     Nil,
     Uint8(u8),
     Uint16(u16),
@@ -341,6 +343,9 @@ pub enum Error {
 
     #[error("the remote device returned an error: {0:?}")]
     Remote(ErrorCode),
+
+    #[error("the remote device returned invalid data")]
+    InvalidResponse,
 }
 
 #[repr(u16)]
@@ -361,8 +366,30 @@ impl<B: Buf> From<&mut B> for ErrorCode {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttributeRange {
+    Single(u16),
+    Range(u16, u16),
+}
+
+impl AttributeRange {
+    pub const ALL: Self = Self::Range(0, u16::MAX);
+}
+
+impl ToBuf for AttributeRange {
+    fn to_buf<B: BufMut>(&self, buf: &mut B) {
+        match self {
+            &AttributeRange::Single(u) => buf.put_u16(u),
+            &AttributeRange::Range(low, high) => {
+                buf.put_u16(low);
+                buf.put_u16(high);
+            }
+        }
+    }
+}
+
 struct ServiceSearchRequest {
-    service_search_pattern: Vec<Uuid128>,
+    service_search_pattern: Vec<Uuid>,
     maximum_service_record_count: u16,
     continuation_state: Vec<u8>,
 }
@@ -372,7 +399,11 @@ impl ToBuf for ServiceSearchRequest {
         let service_search_pat = DataElement::Sequence(
             self.service_search_pattern
                 .iter()
-                .map(|u| DataElement::Uuid128(*u))
+                .map(|u| match *u {
+                    Uuid::Uuid16(u) => DataElement::Uuid16(u),
+                    Uuid::Uuid32(u) => DataElement::Uuid32(u),
+                    Uuid::Uuid128(u) => DataElement::Uuid128(u),
+                })
                 .collect(),
         );
         service_search_pat.to_buf(buf);
@@ -384,22 +415,21 @@ impl ToBuf for ServiceSearchRequest {
 
 #[derive(Debug, Clone)]
 pub struct ServiceSearchResponse {
-    pub total_service_record_count: u16,
-    pub current_service_record_count: u16,
-    pub service_record_handle_list: Vec<u32>,
-    pub continuation_state: Vec<u8>,
+    pub service_record_handles: Vec<u32>,
+    continuation_state: Vec<u8>,
 }
 
 impl<B: Buf> From<&mut B> for ServiceSearchResponse {
     fn from(buf: &mut B) -> Self {
-        let total_service_record_count = buf.get_u16();
+        let _total_service_record_count = buf.get_u16();
+
         let current_service_record_count = buf.get_u16();
+
         Self {
-            total_service_record_count,
-            current_service_record_count,
-            service_record_handle_list: (0..current_service_record_count)
+            service_record_handles: (0..current_service_record_count)
                 .map(|_| buf.get_u32())
                 .collect(),
+
             continuation_state: {
                 let continuation_state_size = buf.get_u8();
                 buf.get_vec_u8(continuation_state_size as usize)
@@ -408,14 +438,84 @@ impl<B: Buf> From<&mut B> for ServiceSearchResponse {
     }
 }
 
-#[derive(Debug)]
-pub struct SdpStream(BluetoothStream);
+struct ServiceAttributeRequest {
+    service_handle: u32,
+    maximum_attribute_byte_count: u16,
+    attribute_id_list: Vec<AttributeRange>,
+    continuation_state: Vec<u8>,
+}
 
-impl SdpStream {
+impl ToBuf for ServiceAttributeRequest {
+    fn to_buf<B: BufMut>(&self, buf: &mut B) {
+        buf.put_u32(self.service_handle);
+        buf.put_u16(self.maximum_attribute_byte_count);
+
+        let attribute_id_list = DataElement::Sequence(
+            self.attribute_id_list
+                .iter()
+                .map(|range| match range {
+                    &AttributeRange::Single(item) => DataElement::Uint16(item),
+                    &AttributeRange::Range(start, end) => {
+                        DataElement::Uint32(((start as u32) << 16) | end as u32)
+                    }
+                })
+                .collect(),
+        );
+
+        attribute_id_list.to_buf(buf);
+
+        buf.put_u8(self.continuation_state.len() as u8);
+        buf.put(self.continuation_state.as_ref());
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ServiceAttributeResponse {
+    pub attributes: HashMap<u16, DataElement>,
+    pub continuation_state: Vec<u8>,
+}
+
+impl<B: Buf> From<&mut B> for ServiceAttributeResponse {
+    fn from(buf: &mut B) -> Self {
+        let _attribute_byte_count = buf.get_u16();
+        let attribute_list = DataElement::from(&mut *buf);
+
+        if let DataElement::Sequence(attribute_list) = attribute_list {
+            // println!("recv attr list: {:#?}", attribute_list);
+
+            let mut attributes = HashMap::new();
+
+            for pair in attribute_list.chunks_exact(2) {
+                let attribute_id = if let &DataElement::Uint16(attribute_id) = &pair[0] {
+                    attribute_id
+                } else {
+                    panic!("expected attribute id to be a u16");
+                };
+
+                attributes.insert(attribute_id, pair[1].clone());
+            }
+
+            return Self {
+                attributes,
+                continuation_state: {
+                    let continuation_state_size = buf.get_u8();
+                    buf.get_vec_u8(continuation_state_size as usize)
+                },
+            };
+        } else {
+            panic!("expected attribute list to be a sequence");
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SdpClient(BluetoothStream);
+
+impl SdpClient {
     async fn send(&mut self, req: Pdu) -> Result<(), Error> {
         let mut buf = BytesMut::new();
         req.to_buf(&mut buf);
-        println!("send buf: {:02x?}", &buf[..]);
+        // println!("send buf: {:02x?}", &buf[..]);
         self.0.write_all(buf.as_ref()).await?;
         Ok(())
     }
@@ -423,7 +523,7 @@ impl SdpStream {
     async fn recv(&mut self) -> Result<Pdu, Error> {
         let mut buf = BytesMut::with_capacity(65536);
         self.0.read_buf(&mut buf).await?;
-        println!("recv buf: {:02x?}", &buf[..]);
+        // println!("recv buf: {:02x?}", &buf[..]);
         Ok(Pdu::from(&mut buf))
     }
 
@@ -435,7 +535,7 @@ impl SdpStream {
 
     pub async fn service_search(
         &mut self,
-        service_search_pattern: Vec<Uuid128>,
+        service_search_pattern: Vec<Uuid>,
         maximum_service_record_count: u16,
     ) -> Result<ServiceSearchResponse, Error> {
         let mut res: Option<ServiceSearchResponse> = None;
@@ -463,8 +563,8 @@ impl SdpStream {
                     let new_res = ServiceSearchResponse::from(&mut res_pdu.parameter);
 
                     if let Some(res) = &mut res {
-                        res.service_record_handle_list
-                            .extend(new_res.service_record_handle_list);
+                        res.service_record_handles
+                            .extend(new_res.service_record_handles);
                         res.continuation_state = new_res.continuation_state;
                     } else {
                         res = Some(new_res)
@@ -474,7 +574,55 @@ impl SdpStream {
                         break res.unwrap();
                     }
                 }
-                _ => panic!("got wrong response to request"),
+                _ => return Err(Error::InvalidResponse),
+            }
+        })
+    }
+
+    pub async fn service_attribute(
+        &mut self,
+        service_handle: u32,
+        maximum_attribute_byte_count: u16,
+        attribute_id_list: Vec<AttributeRange>,
+    ) -> Result<ServiceAttributeResponse, Error> {
+        let mut res: Option<ServiceAttributeResponse> = None;
+        let mut txn = 0;
+
+        Ok(loop {
+            let req = ServiceAttributeRequest {
+                attribute_id_list: attribute_id_list.clone(),
+                maximum_attribute_byte_count,
+                service_handle,
+                continuation_state: res
+                    .as_ref()
+                    .map(|r| r.continuation_state.clone())
+                    .unwrap_or(vec![]),
+            };
+
+            let req_pdu = Pdu::with_parameter(PduId::ServiceAttributeRequest, txn, req);
+            self.send(req_pdu).await?;
+            txn += 1;
+
+            let mut res_pdu = self.recv().await?;
+            match res_pdu.id {
+                PduId::ErrorResponse => {
+                    return Err(Error::Remote(ErrorCode::from(&mut res_pdu.parameter)))
+                }
+                PduId::ServiceAttributeResponse => {
+                    let new_res = ServiceAttributeResponse::from(&mut res_pdu.parameter);
+
+                    if let Some(res) = &mut res {
+                        res.attributes.extend(new_res.attributes);
+                        res.continuation_state = new_res.continuation_state;
+                    } else {
+                        res = Some(new_res)
+                    }
+
+                    if res.as_ref().unwrap().continuation_state.len() == 0 {
+                        break res.unwrap();
+                    }
+                }
+                _ => return Err(Error::InvalidResponse),
             }
         })
     }
