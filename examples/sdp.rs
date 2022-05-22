@@ -9,19 +9,20 @@ use std::io::{stdin, stdout, Write};
 
 use anyhow::Context;
 use bluetooth_sys::SDP_PSM;
-use bluez::communication::discovery::service_search_request;
+use bluez::communication::discovery::{service_search_request, BASE_UUID};
 use bluez::communication::stream::BluetoothStream;
 use bluez::management::client::AddressType;
 use bluez::socket::BtProto;
 use bluez::Address;
 
-pub fn main() -> Result<(), anyhow::Error> {
-    print!("enter sdp server address: ");
-    stdout().flush()?;
-    let mut line = String::new();
-    stdin().read_line(&mut line)?;
+#[tokio::main(flavor = "current_thread")]
+pub async fn main() -> Result<(), anyhow::Error> {
+    // print!("enter sdp server address: ");
+    // stdout().flush()?;
+    // let mut line = String::new();
+    // stdin().read_line(&mut line)?;
 
-    let octets = line
+    let octets = "94:DB:56:C0:18:1A"
         .trim()
         .split(':')
         .map(|octet| u8::from_str_radix(octet, 16))
@@ -30,10 +31,16 @@ pub fn main() -> Result<(), anyhow::Error> {
 
     let address = Address::from_slice(&octets[..]);
 
-    let mut stream = BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, SDP_PSM as u16)
-        .context("could not connect to device")?;
+    let mut stream =
+        BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, SDP_PSM as u16)
+            .await
+            .context("could not connect to device")?;
 
-    let response = service_search_request(&mut stream, vec![0x110Bu32.into()], 30);
+    println!("connected to device");
+
+    let response = service_search_request(&mut stream, vec![BASE_UUID.into()], 30)
+        .await
+        .context("service search request failed")?;
 
     println!("service search response: {:?}", response);
 

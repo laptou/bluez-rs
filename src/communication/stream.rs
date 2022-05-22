@@ -257,27 +257,21 @@ impl BluetoothStream {
             )
         };
 
-        match res {
-            0 => {}
+        match check_error(res) {
+            Ok(_) => {}
             // should always get EINPROGRESS if socket is initialized using SOCK_NONBLOCK
-            libc::EINPROGRESS => {
+            Err(err) if err.raw_os_error() == Some(libc::EINPROGRESS) => {
                 // wait until the file descriptor becomes writeable
                 let afd = AsyncFd::new(fd)?;
                 let _ = afd.writable().await?;
             }
-            res => {
-                if let Err(err) = check_error(res) {
-                    unsafe {
-                        libc::close(fd);
-                    }
-
-                    return Err(err);
-                }
+            other => {
+                other?;
             }
         }
 
         Ok(BluetoothStream {
-            inner: unsafe { UnixStream::from_std(unsafe { StdUnixStream::from_raw_fd(fd) })? },
+            inner: UnixStream::from_std(unsafe { StdUnixStream::from_raw_fd(fd) })?,
             proto,
         })
     }

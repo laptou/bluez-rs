@@ -54,7 +54,7 @@ impl From<u128> for Uuid128 {
     }
 }
 
-const BASE_UUID: u128 = 0x00000000_0000_1000_8000_00805F9B34FB;
+pub const BASE_UUID: u128 = 0x00000000_0000_1000_8000_00805F9B34FB;
 const BASE_UUID_FACTOR: u128 = 2 ^ 96;
 
 impl From<Uuid16> for Uuid32 {
@@ -145,7 +145,7 @@ impl<B: Buf> From<&mut B> for Pdu {
             id: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
             txn: buf.get_u16(),
             parameter: {
-                let param_size = buf.get_u8() as usize;
+                let param_size = buf.get_u16() as usize;
                 buf.copy_to_bytes(param_size)
             },
         }
@@ -156,7 +156,8 @@ impl ToBuf for Pdu {
     fn to_buf<B: BufMut>(&self, buf: &mut B) {
         buf.put_u8(self.id as u8);
         buf.put_u16(self.txn);
-        buf.put_u16(self.parameter.len() as u16);
+        let param_size = self.parameter.len() as u16;
+        buf.put_u16(param_size);
         buf.put(&self.parameter[..]);
     }
 }
@@ -240,7 +241,14 @@ impl<B: Buf> From<&mut B> for DataElement {
                     _ => panic!("invalid size descriptor"),
                 };
 
-                Self::Sequence((0..size).map(|_| DataElement::from(&mut *buf)).collect())
+                let mut seq_buf = buf.copy_to_bytes(size);
+                let mut seq = vec![];
+
+                while seq_buf.len() > 0 {
+                    seq.push(DataElement::from(&mut seq_buf))
+                }
+
+                Self::Sequence(seq)
             }
             7 => {
                 let size = match size_desc {
@@ -250,7 +258,14 @@ impl<B: Buf> From<&mut B> for DataElement {
                     _ => panic!("invalid size descriptor"),
                 };
 
-                Self::Alternative((0..size).map(|_| DataElement::from(&mut *buf)).collect())
+                let mut seq_buf = buf.copy_to_bytes(size);
+                let mut seq = vec![];
+
+                while seq_buf.len() > 0 {
+                    seq.push(DataElement::from(&mut seq_buf))
+                }
+
+                Self::Alternative(seq)
             }
             8 => {
                 let size = match size_desc {
@@ -269,41 +284,64 @@ impl<B: Buf> From<&mut B> for DataElement {
 
 impl DataElement {
     fn to_buf<B: BufMut>(&self, buf: &mut B) {
-        let (type_desc, mut size_desc, size): (u8, u8, usize) = match self {
-            DataElement::Nil => (0, 0, 0),
-            DataElement::Uint8(_) => (1, 0, 0),
-            DataElement::Uint16(_) => (1, 1, 0),
-            DataElement::Uint32(_) => (1, 2, 0),
-            DataElement::Uint64(_) => (1, 3, 0),
-            DataElement::Uint128(_) => (1, 4, 0),
-            DataElement::Int8(_) => (2, 0, 0),
-            DataElement::Int16(_) => (2, 1, 0),
-            DataElement::Int32(_) => (2, 2, 0),
-            DataElement::Int64(_) => (2, 3, 0),
-            DataElement::Int128(_) => (2, 4, 0),
-            DataElement::Uuid16(_) => (3, 1, 0),
-            DataElement::Uuid32(_) => (3, 2, 0),
-            DataElement::Uuid128(_) => (3, 4, 0),
-            DataElement::String(s) => (4, 0, s.len()),
-            DataElement::Bool(_) => (5, 0, 0),
-            DataElement::Sequence(s) => (6, 0, s.len()),
-            DataElement::Alternative(s) => (7, 0, s.len()),
-            DataElement::Url(s) => (8, 0, s.len()),
+        let (type_desc, size_desc, size): (u8, Option<u8>, usize) = match self {
+            DataElement::Nil => (0, Some(0), 0),
+            DataElement::Uint8(_) => (1, Some(0), 0),
+            DataElement::Uint16(_) => (1, Some(1), 0),
+            DataElement::Uint32(_) => (1, Some(2), 0),
+            DataElement::Uint64(_) => (1, Some(3), 0),
+            DataElement::Uint128(_) => (1, Some(4), 0),
+            DataElement::Int8(_) => (2, Some(0), 0),
+            DataElement::Int16(_) => (2, Some(1), 0),
+            DataElement::Int32(_) => (2, Some(2), 0),
+            DataElement::Int64(_) => (2, Some(3), 0),
+            DataElement::Int128(_) => (2, Some(4), 0),
+            DataElement::Uuid16(_) => (3, Some(1), 0),
+            DataElement::Uuid32(_) => (3, Some(2), 0),
+            DataElement::Uuid128(_) => (3, Some(4), 0),
+            DataElement::String(s) => (4, None, s.len()),
+            DataElement::Bool(_) => (5, None, 0),
+            DataElement::Sequence(s) => (
+                6,
+                None,
+                s.iter()
+                    .map(|i| {
+                        let mut b = BytesMut::new();
+                        i.to_buf(&mut b);
+                        b.len()
+                    })
+                    .sum(),
+            ),
+            DataElement::Alternative(s) => (
+                7,
+                None,
+                s.iter()
+                    .map(|i| {
+                        let mut b = BytesMut::new();
+                        i.to_buf(&mut b);
+                        b.len()
+                    })
+                    .sum(),
+            ),
+            DataElement::Url(s) => (8, None, s.len()),
         };
 
-        if size_desc == 0 && size != 0 {
-            if size < u8::MAX as usize {
-                size_desc = 5;
-            } else if size < u16::MAX as usize {
-                size_desc = 6;
-            } else if size < u32::MAX as usize {
-                size_desc = 7;
-            } else {
-                panic!("size of data too large");
+        let size_desc = match size_desc {
+            Some(size_desc) => size_desc,
+            None => {
+                if size < u8::MAX as usize {
+                    5
+                } else if size < u16::MAX as usize {
+                    6
+                } else if size < u32::MAX as usize {
+                    7
+                } else {
+                    panic!("size of data too large");
+                }
             }
-        }
+        };
 
-        let header = (type_desc << 5) | size_desc;
+        let header = (type_desc << 3) | size_desc;
 
         buf.put_u8(header);
 
@@ -404,7 +442,8 @@ pub enum ErrorCode {
 
 impl<B: Buf> From<&mut B> for ErrorCode {
     fn from(buf: &mut B) -> Self {
-        FromPrimitive::from_u8(buf.get_u8()).unwrap()
+        let code = buf.get_u16();
+        FromPrimitive::from_u16(code).unwrap()
     }
 }
 
@@ -439,16 +478,14 @@ pub struct ServiceSearchResponse {
 
 impl<B: Buf> From<&mut B> for ServiceSearchResponse {
     fn from(buf: &mut B) -> Self {
+        let total_service_record_count = buf.get_u16();
+        let current_service_record_count = buf.get_u16();
         Self {
-            total_service_record_count: buf.get_u16(),
-            current_service_record_count: buf.get_u16(),
-            service_record_handle_list: DataElement::from(&mut *buf)
-                .into_sequence()
-                .unwrap()
-                .into_iter()
-                .map(|de| de.into_u32())
-                .collect::<Option<Vec<u32>>>()
-                .unwrap(),
+            total_service_record_count,
+            current_service_record_count,
+            service_record_handle_list: (0..current_service_record_count)
+                .map(|_| buf.get_u32())
+                .collect(),
             continuation_state: {
                 let continuation_state_size = buf.get_u8();
                 buf.get_vec_u8(continuation_state_size as usize)
@@ -460,15 +497,15 @@ impl<B: Buf> From<&mut B> for ServiceSearchResponse {
 async fn sdp_send(bs: &mut BluetoothStream, req: Pdu) -> Result<(), Error> {
     let mut buf = BytesMut::new();
     req.to_buf(&mut buf);
+    println!("send buf: {:02x?}", &buf[..]);
     bs.write_all(buf.as_ref()).await?;
     Ok(())
 }
 
 async fn sdp_recv(bs: &mut BluetoothStream) -> Result<Pdu, Error> {
-    let mut buf = BytesMut::with_capacity(1024);
-
-    while bs.read_buf(&mut buf).await? > 0 {}
-
+    let mut buf = BytesMut::with_capacity(65536);
+    bs.read_buf(&mut buf).await?;
+    println!("recv buf: {:02x?}", &buf[..]);
     Ok(Pdu::from(&mut buf))
 }
 
@@ -477,7 +514,6 @@ pub async fn service_search_request(
     service_search_pattern: Vec<Uuid128>,
     maximum_service_record_count: u16,
 ) -> Result<ServiceSearchResponse, Error> {
-    let mut continuation_state = Vec::new();
     let mut res: Option<ServiceSearchResponse> = None;
     let mut txn = 0;
 
@@ -485,7 +521,10 @@ pub async fn service_search_request(
         let req = ServiceSearchRequest {
             service_search_pattern: service_search_pattern.clone(),
             maximum_service_record_count,
-            continuation_state: continuation_state.clone(),
+            continuation_state: res
+                .as_ref()
+                .map(|r| r.continuation_state.clone())
+                .unwrap_or(vec![]),
         };
         let req_pdu = Pdu::with_parameter(PduId::ServiceSearchRequest, txn, req);
         sdp_send(bs, req_pdu).await?;
@@ -499,20 +538,16 @@ pub async fn service_search_request(
             PduId::ServiceSearchResponse => {
                 let new_res = ServiceSearchResponse::from(&mut res_pdu.parameter);
 
-                res = if let Some(mut res) = res {
+                if let Some(res) = &mut res {
                     res.service_record_handle_list
                         .extend(new_res.service_record_handle_list);
-
-                    if res.continuation_state.len() == 0 {
-                        break res;
-                    } else {
-                        continuation_state = res.continuation_state;
-                        res.continuation_state = Vec::new();
-                    }
-
-                    Some(res)
+                    res.continuation_state = new_res.continuation_state;
                 } else {
-                    Some(new_res)
+                    res = Some(new_res)
+                }
+
+                if res.as_ref().unwrap().continuation_state.len() == 0 {
+                    break res.unwrap();
                 }
             }
             _ => panic!("got wrong response to request"),
