@@ -13,32 +13,62 @@ use crate::util::BufExtBlueZ;
 use super::stream::BluetoothStream;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Uuid16(u16);
+pub struct Uuid16(pub u16);
+
+impl From<u16> for Uuid16 {
+    fn from(u: u16) -> Self {
+        Self(u)
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Uuid32(u32);
+pub struct Uuid32(pub u32);
+
+impl From<u32> for Uuid32 {
+    fn from(u: u32) -> Self {
+        Self(u)
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Uuid128(u128);
+pub struct Uuid128(pub u128);
+
+impl From<u16> for Uuid128 {
+    fn from(u: u16) -> Self {
+        Self::from(Uuid16::from(u))
+    }
+}
+
+impl From<u32> for Uuid128 {
+    fn from(u: u32) -> Self {
+        Self::from(Uuid32::from(u))
+    }
+}
+
+impl From<u128> for Uuid128 {
+    fn from(u: u128) -> Self {
+        Self(u)
+    }
+}
 
 const BASE_UUID: u128 = 0x00000000_0000_1000_8000_00805F9B34FB;
 const BASE_UUID_FACTOR: u128 = 2 ^ 96;
 
-impl Into<Uuid32> for Uuid16 {
-    fn into(self) -> Uuid32 {
-        Uuid32(self.0 as u32)
+impl From<Uuid16> for Uuid32 {
+    fn from(u: Uuid16) -> Self {
+        Self(u.0 as u32)
     }
 }
 
-impl Into<Uuid128> for Uuid16 {
-    fn into(self) -> Uuid128 {
-        Uuid128((self.0 as u128) * BASE_UUID_FACTOR + BASE_UUID)
+impl From<Uuid16> for Uuid128 {
+    fn from(u: Uuid16) -> Self {
+        Self((u.0 as u128) * BASE_UUID_FACTOR + BASE_UUID)
     }
 }
 
-impl Into<Uuid128> for Uuid32 {
-    fn into(self) -> Uuid128 {
-        Uuid128((self.0 as u128) * BASE_UUID_FACTOR + BASE_UUID)
+impl From<Uuid32> for Uuid128 {
+    fn from(u: Uuid32) -> Self {
+        Self((u.0 as u128) * BASE_UUID_FACTOR + BASE_UUID)
     }
 }
 
@@ -232,7 +262,6 @@ impl<B: Buf> From<&mut B> for DataElement {
             _ => panic!("invalid size descriptor"),
         }
     }
-
 }
 
 impl DataElement {
@@ -394,11 +423,12 @@ impl ToBuf for ServiceSearchRequest {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ServiceSearchResponse {
-    total_service_record_count: u16,
-    current_service_record_count: u16,
-    service_record_handle_list: Vec<u32>,
-    continuation_state: Vec<u8>,
+    pub total_service_record_count: u16,
+    pub current_service_record_count: u16,
+    pub service_record_handle_list: Vec<u32>,
+    pub continuation_state: Vec<u8>,
 }
 
 impl<B: Buf> From<&mut B> for ServiceSearchResponse {
@@ -421,63 +451,58 @@ impl<B: Buf> From<&mut B> for ServiceSearchResponse {
     }
 }
 
-#[derive(Debug)]
-pub struct SdpClient(BluetoothStream);
+fn sdp_send(bs: &mut BluetoothStream, req: Pdu) {
+    let mut buf = BytesMut::new();
+    req.to_buf(&mut buf);
+    bs.write_all(buf.as_ref()).unwrap();
+}
 
-impl SdpClient {
-    fn send(&mut self, req: Pdu) {
-        let mut buf = BytesMut::new();
-        req.to_buf(&mut buf);
-        self.0.write_all(buf.as_ref()).unwrap();
-    }
+fn sdp_recv(bs: &mut BluetoothStream) -> Pdu {
+    let mut buf = BytesMut::new();
+    bs.read(buf.as_mut()).unwrap();
+    Pdu::from(&mut buf)
+}
 
-    fn recv(&mut self) -> Pdu {
-        let mut buf = BytesMut::new();
-        self.0.read(buf.as_mut()).unwrap();
-        Pdu::from(&mut buf)
-    }
+pub fn service_search_request(
+    bs: &mut BluetoothStream,
+    service_search_pattern: Vec<Uuid128>,
+    maximum_service_record_count: u16,
+) -> ServiceSearchResponse {
+    let mut continuation_state = Vec::new();
+    let mut res: Option<ServiceSearchResponse> = None;
 
-    pub fn service_search_request(
-        &mut self,
-        service_search_pattern: Vec<Uuid128>,
-        maximum_service_record_count: u16,
-    ) -> ServiceSearchResponse {
-        let mut continuation_state = Vec::new();
-        let mut res: Option<ServiceSearchResponse> = None;
+    loop {
+        let req = ServiceSearchRequest {
+            service_search_pattern: service_search_pattern.clone(),
+            maximum_service_record_count,
+            continuation_state: continuation_state.clone(),
+        };
+        let req_pdu = Pdu::with_parameter(PduId::ServiceSearchRequest, 0, req);
+        sdp_send(bs, req_pdu);
 
-        loop {
-            let req = ServiceSearchRequest {
-                service_search_pattern: service_search_pattern.clone(),
-                maximum_service_record_count,
-                continuation_state: continuation_state.clone(),
-            };
-            let req_pdu = Pdu::with_parameter(PduId::ServiceSearchRequest, 0, req);
-            self.send(req_pdu);
+        let mut res_pdu = sdp_recv(bs);
+        match res_pdu.id {
+            PduId::ErrorResponse => panic!("got error response"),
+            PduId::ServiceSearchResponse => {
+                let new_res = ServiceSearchResponse::from(&mut res_pdu.parameter);
 
-            let mut res_pdu = self.recv();
-            match res_pdu.id {
-                PduId::ErrorResponse => panic!("got error response"),
-                PduId::ServiceSearchResponse => {
-                    let new_res = ServiceSearchResponse::from(&mut res_pdu.parameter);
+                res = if let Some(mut res) = res {
+                    res.service_record_handle_list
+                        .extend(new_res.service_record_handle_list);
 
-                    res = if let Some(mut res) = res {
-                        res.service_record_handle_list
-                            .extend(new_res.service_record_handle_list);
-
-                        if res.continuation_state.len() == 0 {
-                            break res;
-                        } else {
-                            continuation_state = res.continuation_state;
-                            res.continuation_state = Vec::new();
-                        }
-
-                        Some(res)
+                    if res.continuation_state.len() == 0 {
+                        break res;
                     } else {
-                        Some(new_res)
+                        continuation_state = res.continuation_state;
+                        res.continuation_state = Vec::new();
                     }
+
+                    Some(res)
+                } else {
+                    Some(new_res)
                 }
-                _ => panic!("got wrong response to request"),
             }
+            _ => panic!("got wrong response to request"),
         }
     }
 }

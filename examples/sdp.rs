@@ -6,9 +6,11 @@ extern crate bluez;
 
 use std::error::Error;
 use std::io::{stdin, stdout, Write};
-use std::sync::Arc;
 
-// use bluez::communication::discovery::{SdpAttributeSpecification, SdpSession, SdpSessionFlags};
+use bluez::communication::discovery::service_search_request;
+use bluez::communication::stream::BluetoothStream;
+use bluez::management::client::AddressType;
+use bluez::socket::BtProto;
 use bluez::Address;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
@@ -26,31 +28,11 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     let address = Address::from_slice(&octets[..]);
 
-    let session = SdpSession::connect(
-        Address::zero(),
-        address,
-        SdpSessionFlags::RetryIfBusy.into(),
-    )?;
+    let mut stream = BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, 0)?;
 
-    // let records = session.search_req(&[0x110Bu32.into()], 30)?;
+    let response = service_search_request(&mut stream, vec![0x110Bu32.into()], 30);
 
-    // for record in records {
-    //     println!("0x{:04x?}", record);
-    // }
-
-    let records = session.search_attr_req(
-        &[0x110Bu32.into()],
-        SdpAttributeSpecification::Range,
-        &[0x0000FFFF],
-    )?;
-
-    for record in records {
-        println!("handle -> 0x{:08x?}", record.handle());
-
-        for data in record.get_access_protos()? {
-            println!("{:?}", data.value());
-        }
-    }
+    println!("service search response: {:?}", response);
 
     Ok(())
 }
