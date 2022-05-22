@@ -1,5 +1,4 @@
 use std::{
-    convert::TryFrom,
     ffi::OsString,
     fmt::Debug,
     io::{Read, Write},
