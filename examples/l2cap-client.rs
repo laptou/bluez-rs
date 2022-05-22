@@ -7,22 +7,23 @@ extern crate bluez;
 use std::error::Error;
 use std::sync::Arc;
 
-use async_std::io::{stdin, stdout};
-use bluez::address::AddressType;
 use bluez::communication::stream::BluetoothStream;
 use bluez::management::client::*;
 use bluez::socket::BtProto;
 use bluez::Address;
-use futures::AsyncReadExt;
-use smol::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
-use smol::Async;
+use bluez::AddressType;
+use tokio::io::BufReader;
+use tokio::io::BufWriter;
+use tokio::io::{stdin, stdout, AsyncReadExt, AsyncWriteExt, AsyncBufReadExt};
+use tokio::spawn;
 
-#[async_std::main]
-pub async fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main(flavor = "current_thread")]
+pub async fn main() -> Result<(), anyhow::Error> {
     print!("enter l2cap server address: ");
     stdout().flush().await?;
     let mut line = String::new();
-    stdin().read_line(&mut line).await?;
+    let mut stdin = BufReader::new(stdin());
+    stdin.read_line(&mut line).await?;
 
     let octets = line
         .trim()
@@ -36,36 +37,36 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     print!("enter l2cap server port: ");
     stdout().flush().await?;
     let mut line = String::new();
-    stdin().read_line(&mut line).await?;
+    stdin.read_line(&mut line).await?;
 
     let port = line.trim().parse()?;
 
-    let stream = BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, port)?;
+    let stream =
+        BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, port).await?;
 
     println!("l2cap client connected to {} on port {}", address, port);
 
-    let stream = Arc::new(Async::new(stream)?);
+    let (read, write) = tokio::io::split(stream);
 
-    let read_task: smol::Task<Result<(), std::io::Error>> = smol::spawn({
-        let sock = stream.clone();
+    let read_task = spawn({
         async move {
-            let mut reader = BufReader::new(sock.as_ref());
+            let mut reader = BufReader::new(read);
             let mut line = String::new();
             loop {
                 reader.read_line(&mut line).await?;
                 println!("> {}", line);
                 line.clear();
             }
+
+            #[allow(unreachable_code)]
+            Ok::<_, anyhow::Error>(())
         }
     });
 
-    let write_task: smol::Task<Result<(), std::io::Error>> = smol::spawn({
-        let sock = stream.clone();
-
+    let write_task = spawn({
         async move {
-            let mut writer = BufWriter::new(sock.as_ref());
+            let mut writer = BufWriter::new(write);
             let mut line = String::new();
-            let stdin = stdin();
             loop {
                 stdin.read_line(&mut line).await?;
                 writer.write(line.as_bytes()).await?;
@@ -73,12 +74,15 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 println!("< {}", line);
                 line.clear();
             }
+
+            #[allow(unreachable_code)]
+            Ok::<_, anyhow::Error>(())
         }
     });
 
     let (res1, res2) = futures::join!(read_task, write_task);
-    res1?;
-    res2?;
+    res1??;
+    res2??;
 
     Ok(())
 }
