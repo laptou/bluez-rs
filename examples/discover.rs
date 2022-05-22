@@ -53,7 +53,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
     client
         .start_discovery(
             controller,
-            AddressTypeFlag::BREDR | AddressTypeFlag::LEPublic | AddressTypeFlag::LERandom,
+            AddressTypeFlag::BREDR.into(),
         )
         .await
         .context("starting discovery failed")?;
@@ -72,7 +72,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
                 ..
             } => {
                 println!(
-                    "[{:?}] found device {} ({:?})",
+                    "[{}] found device {} ({:?})",
                     controller, address, address_type
                 );
                 println!("\tflags: {:?}", flags);
