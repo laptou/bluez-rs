@@ -71,10 +71,6 @@ impl Debug for Uuid128 {
     }
 }
 
-trait FromBuf {
-    fn from_buf<B: Buf>(buf: &mut B) -> Self;
-}
-
 trait ToBuf {
     fn to_buf<B: BufMut>(&self, buf: &mut B);
 }
@@ -110,8 +106,8 @@ impl Pdu {
     }
 }
 
-impl FromBuf for Pdu {
-    fn from_buf<B: Buf>(buf: &mut B) -> Self {
+impl<B: Buf> From<&mut B> for Pdu {
+    fn from(buf: &mut B) -> Self {
         Pdu {
             id: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
             txn: buf.get_u16(),
@@ -159,8 +155,8 @@ enum DataElement {
     Alternative(Vec<DataElement>),
 }
 
-impl DataElement {
-    fn from_buf<B: Buf>(buf: &mut B) -> Self {
+impl<B: Buf> From<&mut B> for DataElement {
+    fn from(buf: &mut B) -> Self {
         let desc = buf.get_u8();
         let type_desc = (desc & 0b11111000) >> 3;
         let size_desc = desc & 0b00000111;
@@ -211,7 +207,7 @@ impl DataElement {
                     _ => panic!("invalid size descriptor"),
                 };
 
-                Self::Sequence((0..size).map(|_| DataElement::from_buf(buf)).collect())
+                Self::Sequence((0..size).map(|_| DataElement::from(&mut *buf)).collect())
             }
             7 => {
                 let size = match size_desc {
@@ -221,7 +217,7 @@ impl DataElement {
                     _ => panic!("invalid size descriptor"),
                 };
 
-                Self::Alternative((0..size).map(|_| DataElement::from_buf(buf)).collect())
+                Self::Alternative((0..size).map(|_| DataElement::from(&mut *buf)).collect())
             }
             8 => {
                 let size = match size_desc {
@@ -237,6 +233,9 @@ impl DataElement {
         }
     }
 
+}
+
+impl DataElement {
     fn to_buf<B: BufMut>(&self, buf: &mut B) {
         let (type_desc, mut size_desc, size): (u8, u8, usize) = match self {
             DataElement::Nil => (0, 0, 0),
@@ -366,8 +365,8 @@ struct ErrorResponse {
     code: ErrorCode,
 }
 
-impl FromBuf for ErrorResponse {
-    fn from_buf<B: Buf>(buf: &mut B) -> ErrorResponse {
+impl<B: Buf> From<&mut B> for ErrorResponse {
+    fn from(buf: &mut B) -> Self {
         Self {
             code: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
         }
@@ -402,12 +401,12 @@ pub struct ServiceSearchResponse {
     continuation_state: Vec<u8>,
 }
 
-impl FromBuf for ServiceSearchResponse {
-    fn from_buf<B: Buf>(buf: &mut B) -> Self {
+impl<B: Buf> From<&mut B> for ServiceSearchResponse {
+    fn from(buf: &mut B) -> Self {
         Self {
             total_service_record_count: buf.get_u16(),
             current_service_record_count: buf.get_u16(),
-            service_record_handle_list: DataElement::from_buf(buf)
+            service_record_handle_list: DataElement::from(&mut *buf)
                 .into_sequence()
                 .unwrap()
                 .into_iter()
@@ -435,7 +434,7 @@ impl SdpClient {
     fn recv(&mut self) -> Pdu {
         let mut buf = BytesMut::new();
         self.0.read(buf.as_mut()).unwrap();
-        Pdu::from_buf(&mut buf)
+        Pdu::from(&mut buf)
     }
 
     pub fn service_search_request(
@@ -459,7 +458,7 @@ impl SdpClient {
             match res_pdu.id {
                 PduId::ErrorResponse => panic!("got error response"),
                 PduId::ServiceSearchResponse => {
-                    let new_res = ServiceSearchResponse::from_buf(&mut res_pdu.parameter);
+                    let new_res = ServiceSearchResponse::from(&mut res_pdu.parameter);
 
                     res = if let Some(mut res) = res {
                         res.service_record_handle_list
