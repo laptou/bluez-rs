@@ -4,8 +4,8 @@
 
 extern crate bluez;
 
-use std::error::Error;
-use std::io::{stdin, stdout, Write};
+
+
 
 use anyhow::Context;
 use bluetooth_sys::SDP_PSM;
