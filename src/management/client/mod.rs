@@ -9,7 +9,7 @@ pub use params::*;
 pub use settings::*;
 
 use crate::management::interface::*;
-use crate::management::socket::ManagementSocket;
+use crate::management::stream::ManagementStream;
 use crate::management::{Error, Result};
 use crate::Address;
 
@@ -24,7 +24,7 @@ mod query;
 mod settings;
 
 pub struct ManagementClient<'a> {
-    socket: ManagementSocket,
+    socket: ManagementStream,
     handler: Option<ManagementEventHandler<'a>>,
 }
 
@@ -33,14 +33,14 @@ pub type ManagementEventHandler<'a> = Box<dyn (FnMut(Controller, &Event)) + Send
 impl<'a> ManagementClient<'a> {
     pub fn new() -> Result<Self> {
         Ok(ManagementClient {
-            socket: ManagementSocket::open()?,
+            socket: ManagementStream::open()?,
             handler: None,
         })
     }
 
     pub fn new_with_handler(handler: ManagementEventHandler<'a>) -> Result<Self> {
         Ok(ManagementClient {
-            socket: ManagementSocket::open()?,
+            socket: ManagementStream::open()?,
             handler: Some(handler),
         })
     }

@@ -20,11 +20,10 @@ enumflags2_derive = "0.7"
 bytes = "1.0"
 bitvec = "1.0"
 futures = "0.3"
-smol = "1.2"
+tokio = { version = "1.0", features = ["net", "io-util"] }
 bluetooth-sys = "0.1"
 
 [dev-dependencies]
-async-std = { version = "1.9", features = ["attributes"] }
 anyhow = "1.0"
 
 [[example]]

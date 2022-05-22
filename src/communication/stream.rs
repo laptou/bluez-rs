@@ -1,10 +1,15 @@
-use std::io::{Read, Write};
+use std::io::{Error, Read, Write};
 use std::mem::MaybeUninit;
-use std::os::unix::net::UnixStream;
+use std::os::unix::net::UnixStream as StdUnixStream;
 use std::os::unix::prelude::IntoRawFd;
 
 use libc;
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use tokio::io::unix::AsyncFd;
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::net::UnixStream;
 
 use crate::management::client::AddressType;
 use crate::util::check_error;
@@ -113,11 +118,9 @@ impl BluetoothListener {
             _ => unreachable!(),
         };
 
-        let sock = unsafe {
-            BluetoothStream {
-                inner: UnixStream::from_raw_fd(fd),
-                proto: self.proto,
-            }
+        let sock = BluetoothStream {
+            inner: UnixStream::from_std(unsafe { StdUnixStream::from_raw_fd(fd) })?,
+            proto: self.proto,
         };
 
         Ok((sock, addr))
@@ -197,7 +200,7 @@ pub struct BluetoothStream {
 }
 
 impl BluetoothStream {
-    pub fn connect(
+    pub async fn connect(
         proto: BtProto,
         addr: Address,
         addr_type: AddressType,
@@ -256,8 +259,11 @@ impl BluetoothStream {
 
         match res {
             0 => {}
+            // should always get EINPROGRESS if socket is initialized using SOCK_NONBLOCK
             libc::EINPROGRESS => {
-                libc::sele
+                // wait until the file descriptor becomes writeable
+                let afd = AsyncFd::new(fd)?;
+                let _ = afd.writable().await?;
             }
             res => {
                 if let Err(err) = check_error(res) {
@@ -270,19 +276,10 @@ impl BluetoothStream {
             }
         }
 
-        let stream = unsafe { UnixStream::from_raw_fd(fd) };
-
         Ok(BluetoothStream {
-            inner: stream,
+            inner: unsafe { UnixStream::from_std(unsafe { StdUnixStream::from_raw_fd(fd) })? },
             proto,
         })
-    }
-
-    pub(crate) unsafe fn from_raw_fd(fd: RawFd, proto: BtProto) -> Self {
-        BluetoothStream {
-            inner: UnixStream::from_raw_fd(fd),
-            proto,
-        }
     }
 
     pub fn set_mtu(&mut self, mtu: u16) -> std::io::Result<()> {
@@ -315,10 +312,6 @@ impl BluetoothStream {
         })?;
 
         Ok(())
-    }
-
-    pub fn set_nonblocking(&self, nonblocking: bool) -> std::io::Result<()> {
-        self.inner.set_nonblocking(nonblocking)
     }
 
     pub fn local_addr(&self) -> Result<(Address, u16), std::io::Error> {
@@ -370,6 +363,10 @@ impl BluetoothStream {
 
         Ok(addr)
     }
+
+    fn pin_get_inner(self: Pin<&mut Self>) -> Pin<&mut UnixStream> {
+        unsafe { self.map_unchecked_mut(|s| &mut s.inner) }
+    }
 }
 
 impl AsRawFd for BluetoothStream {
@@ -378,40 +375,42 @@ impl AsRawFd for BluetoothStream {
     }
 }
 
-impl IntoRawFd for BluetoothStream {
-    fn into_raw_fd(self) -> RawFd {
-        self.inner.into_raw_fd()
+impl AsRef<UnixStream> for BluetoothStream {
+    fn as_ref(&self) -> &UnixStream {
+        &self.inner
     }
 }
 
-impl Read for BluetoothStream {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.inner.read(buf)
+impl AsMut<UnixStream> for BluetoothStream {
+    fn as_mut(&mut self) -> &mut UnixStream {
+        &mut self.inner
     }
 }
 
-impl<'a> Read for &'a BluetoothStream {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        (&(*self).inner).read(buf)
+impl AsyncWrite for BluetoothStream {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<Result<usize, Error>> {
+        AsyncWrite::poll_write(self.pin_get_inner(), cx, buf)
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+        AsyncWrite::poll_flush(self.pin_get_inner(), cx)
+    }
+
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
+        AsyncWrite::poll_shutdown(self.pin_get_inner(), cx)
     }
 }
 
-impl Write for BluetoothStream {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.inner.write(buf)
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.inner.flush()
-    }
-}
-
-impl<'a> Write for &'a BluetoothStream {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        (&(*self).inner).write(buf)
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        (&(*self).inner).flush()
+impl AsyncRead for BluetoothStream {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        AsyncRead::poll_read(self.pin_get_inner(), cx, buf)
     }
 }

@@ -7,6 +7,7 @@ use std::{
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use num_traits::FromPrimitive;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::util::BufExtBlueZ;
 
@@ -456,31 +457,22 @@ impl<B: Buf> From<&mut B> for ServiceSearchResponse {
     }
 }
 
-fn sdp_send(bs: &mut BluetoothStream, req: Pdu) -> Result<(), Error> {
+async fn sdp_send(bs: &mut BluetoothStream, req: Pdu) -> Result<(), Error> {
     let mut buf = BytesMut::new();
     req.to_buf(&mut buf);
-    bs.write_all(buf.as_ref())?;
+    bs.write_all(buf.as_ref()).await?;
     Ok(())
 }
 
-fn sdp_recv(bs: &mut BluetoothStream) -> Result<Pdu, Error> {
-    let mut buf = BytesMut::new();
-    let mut tmp = [0u8; 1024];
+async fn sdp_recv(bs: &mut BluetoothStream) -> Result<Pdu, Error> {
+    let mut buf = BytesMut::with_capacity(1024);
 
-    loop {
-        let bytes_read = bs.read(&mut tmp[..])?;
-
-        if bytes_read == 0 {
-            break;
-        } else {
-            buf.extend_from_slice(&tmp[..bytes_read]);
-        }
-    }
+    while bs.read_buf(&mut buf).await? > 0 {}
 
     Ok(Pdu::from(&mut buf))
 }
 
-pub fn service_search_request(
+pub async fn service_search_request(
     bs: &mut BluetoothStream,
     service_search_pattern: Vec<Uuid128>,
     maximum_service_record_count: u16,
@@ -496,10 +488,10 @@ pub fn service_search_request(
             continuation_state: continuation_state.clone(),
         };
         let req_pdu = Pdu::with_parameter(PduId::ServiceSearchRequest, txn, req);
-        sdp_send(bs, req_pdu)?;
+        sdp_send(bs, req_pdu).await?;
         txn += 1;
 
-        let mut res_pdu = sdp_recv(bs)?;
+        let mut res_pdu = sdp_recv(bs).await?;
         match res_pdu.id {
             PduId::ErrorResponse => {
                 return Err(Error::Remote(ErrorCode::from(&mut res_pdu.parameter)))
