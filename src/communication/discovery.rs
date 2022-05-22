@@ -12,6 +12,8 @@ use crate::util::BufExtBlueZ;
 
 use super::stream::BluetoothStream;
 
+pub const SDP_PSM: u16 = 0x0001;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Uuid16(pub u16);
 
@@ -379,6 +381,15 @@ impl DataElement {
     }
 }
 
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("an i/o error occurred")]
+    Io(#[from] std::io::Error),
+
+    #[error("the remote device returned an error: {0:?}")]
+    Remote(ErrorCode),
+}
+
 #[repr(u16)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum ErrorCode {
@@ -390,15 +401,9 @@ pub enum ErrorCode {
     InsufficientResources,
 }
 
-struct ErrorResponse {
-    code: ErrorCode,
-}
-
-impl<B: Buf> From<&mut B> for ErrorResponse {
+impl<B: Buf> From<&mut B> for ErrorCode {
     fn from(buf: &mut B) -> Self {
-        Self {
-            code: FromPrimitive::from_u8(buf.get_u8()).unwrap(),
-        }
+        FromPrimitive::from_u8(buf.get_u8()).unwrap()
     }
 }
 
@@ -451,38 +456,54 @@ impl<B: Buf> From<&mut B> for ServiceSearchResponse {
     }
 }
 
-fn sdp_send(bs: &mut BluetoothStream, req: Pdu) {
+fn sdp_send(bs: &mut BluetoothStream, req: Pdu) -> Result<(), Error> {
     let mut buf = BytesMut::new();
     req.to_buf(&mut buf);
-    bs.write_all(buf.as_ref()).unwrap();
+    bs.write_all(buf.as_ref())?;
+    Ok(())
 }
 
-fn sdp_recv(bs: &mut BluetoothStream) -> Pdu {
+fn sdp_recv(bs: &mut BluetoothStream) -> Result<Pdu, Error> {
     let mut buf = BytesMut::new();
-    bs.read(buf.as_mut()).unwrap();
-    Pdu::from(&mut buf)
+    let mut tmp = [0u8; 1024];
+
+    loop {
+        let bytes_read = bs.read(&mut tmp[..])?;
+
+        if bytes_read == 0 {
+            break;
+        } else {
+            buf.extend_from_slice(&tmp[..bytes_read]);
+        }
+    }
+
+    Ok(Pdu::from(&mut buf))
 }
 
 pub fn service_search_request(
     bs: &mut BluetoothStream,
     service_search_pattern: Vec<Uuid128>,
     maximum_service_record_count: u16,
-) -> ServiceSearchResponse {
+) -> Result<ServiceSearchResponse, Error> {
     let mut continuation_state = Vec::new();
     let mut res: Option<ServiceSearchResponse> = None;
+    let mut txn = 0;
 
-    loop {
+    Ok(loop {
         let req = ServiceSearchRequest {
             service_search_pattern: service_search_pattern.clone(),
             maximum_service_record_count,
             continuation_state: continuation_state.clone(),
         };
-        let req_pdu = Pdu::with_parameter(PduId::ServiceSearchRequest, 0, req);
-        sdp_send(bs, req_pdu);
+        let req_pdu = Pdu::with_parameter(PduId::ServiceSearchRequest, txn, req);
+        sdp_send(bs, req_pdu)?;
+        txn += 1;
 
-        let mut res_pdu = sdp_recv(bs);
+        let mut res_pdu = sdp_recv(bs)?;
         match res_pdu.id {
-            PduId::ErrorResponse => panic!("got error response"),
+            PduId::ErrorResponse => {
+                return Err(Error::Remote(ErrorCode::from(&mut res_pdu.parameter)))
+            }
             PduId::ServiceSearchResponse => {
                 let new_res = ServiceSearchResponse::from(&mut res_pdu.parameter);
 
@@ -504,5 +525,5 @@ pub fn service_search_request(
             }
             _ => panic!("got wrong response to request"),
         }
-    }
+    })
 }

@@ -202,7 +202,7 @@ impl BluetoothStream {
         addr: Address,
         addr_type: AddressType,
         port: u16,
-    ) -> Result<Self, smol::io::Error> {
+    ) -> Result<Self, std::io::Error> {
         let flags = match proto {
             BtProto::L2CAP => libc::SOCK_SEQPACKET,
             BtProto::RFCOMM => libc::SOCK_STREAM,
@@ -215,7 +215,7 @@ impl BluetoothStream {
         let fd: RawFd = check_error(unsafe {
             libc::socket(
                 libc::AF_BLUETOOTH,
-                libc::SOCK_CLOEXEC | flags,
+                libc::SOCK_CLOEXEC | libc::SOCK_NONBLOCK | flags,
                 proto as libc::c_int,
             )
         })?;
@@ -246,18 +246,28 @@ impl BluetoothStream {
             _ => unreachable!(),
         };
 
-        if let Err(err) = check_error(unsafe {
+        let res = unsafe {
             libc::connect(
                 fd,
                 &addr as *const SockAddr as *const libc::sockaddr,
                 addr_len as u32,
             )
-        }) {
-            unsafe {
-                libc::close(fd);
-            }
+        };
 
-            return Err(err);
+        match res {
+            0 => {}
+            libc::EINPROGRESS => {
+                libc::sele
+            }
+            res => {
+                if let Err(err) = check_error(res) {
+                    unsafe {
+                        libc::close(fd);
+                    }
+
+                    return Err(err);
+                }
+            }
         }
 
         let stream = unsafe { UnixStream::from_raw_fd(fd) };

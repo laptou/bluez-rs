@@ -7,13 +7,15 @@ extern crate bluez;
 use std::error::Error;
 use std::io::{stdin, stdout, Write};
 
+use anyhow::Context;
+use bluetooth_sys::SDP_PSM;
 use bluez::communication::discovery::service_search_request;
 use bluez::communication::stream::BluetoothStream;
 use bluez::management::client::AddressType;
 use bluez::socket::BtProto;
 use bluez::Address;
 
-pub fn main() -> Result<(), Box<dyn Error>> {
+pub fn main() -> Result<(), anyhow::Error> {
     print!("enter sdp server address: ");
     stdout().flush()?;
     let mut line = String::new();
@@ -28,7 +30,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     let address = Address::from_slice(&octets[..]);
 
-    let mut stream = BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, 0)?;
+    let mut stream = BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, SDP_PSM as u16)
+        .context("could not connect to device")?;
 
     let response = service_search_request(&mut stream, vec![0x110Bu32.into()], 30);
 
