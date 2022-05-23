@@ -292,48 +292,6 @@ impl DataElement {
             }
         };
     }
-
-    fn into_u8(self) -> Option<u8> {
-        match self {
-            Self::Uint8(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    fn into_u16(self) -> Option<u16> {
-        match self {
-            Self::Uint16(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    fn into_u32(self) -> Option<u32> {
-        match self {
-            Self::Uint32(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    fn into_u64(self) -> Option<u64> {
-        match self {
-            Self::Uint64(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    fn into_u128(self) -> Option<u128> {
-        match self {
-            Self::Uint128(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    fn into_sequence(self) -> Option<Vec<DataElement>> {
-        match self {
-            Self::Sequence(v) => Some(v),
-            _ => None,
-        }
-    }
 }
 
 #[derive(Error, Debug)]
