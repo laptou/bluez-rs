@@ -3,11 +3,13 @@ use std::mem::MaybeUninit;
 use std::os::unix::net::UnixStream as StdUnixStream;
 
 use libc;
+use num_traits::FromPrimitive;
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio::io::unix::AsyncFd;
 use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf, ReadHalf, WriteHalf};
 use tokio::net::UnixStream;
 
 use crate::util::check_error;
@@ -20,19 +22,19 @@ union SockAddr {
 
 pub struct BluetoothListener {
     inner: AsyncFd<RawFd>,
-    proto: BtProto,
+    proto: Protocol,
 }
 
 impl BluetoothListener {
     pub fn bind(
-        proto: BtProto,
+        proto: Protocol,
         addr: Address,
         addr_type: AddressType,
         port: u16,
     ) -> Result<Self, std::io::Error> {
         let flags = match proto {
-            BtProto::L2CAP => libc::SOCK_SEQPACKET,
-            BtProto::RFCOMM => libc::SOCK_STREAM,
+            Protocol::L2CAP => libc::SOCK_SEQPACKET,
+            Protocol::RFCOMM => libc::SOCK_STREAM,
             other => panic!(
                 "bluetooth protocol {:?} cannot be used with BluetoothListener",
                 other
@@ -48,7 +50,7 @@ impl BluetoothListener {
         })?;
 
         let (addr, addr_len) = match proto {
-            BtProto::L2CAP => (
+            Protocol::L2CAP => (
                 SockAddr {
                     l2: bluez_sys::sockaddr_l2 {
                         l2_family: libc::AF_BLUETOOTH as u16,
@@ -60,7 +62,7 @@ impl BluetoothListener {
                 },
                 std::mem::size_of::<bluez_sys::sockaddr_l2>(),
             ),
-            BtProto::RFCOMM => (
+            Protocol::RFCOMM => (
                 SockAddr {
                     rc: bluez_sys::sockaddr_rc {
                         rc_family: libc::AF_BLUETOOTH as u16,
@@ -104,8 +106,8 @@ impl BluetoothListener {
     pub async fn accept(&self) -> Result<(BluetoothStream, (Address, u16)), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
-            BtProto::L2CAP => std::mem::size_of::<bluez_sys::sockaddr_l2>(),
-            BtProto::RFCOMM => std::mem::size_of::<bluez_sys::sockaddr_rc>(),
+            Protocol::L2CAP => std::mem::size_of::<bluez_sys::sockaddr_l2>(),
+            Protocol::RFCOMM => std::mem::size_of::<bluez_sys::sockaddr_rc>(),
             _ => unreachable!(),
         } as u32;
 
@@ -127,8 +129,8 @@ impl BluetoothListener {
         };
 
         let addr = match self.proto {
-            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
-            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
+            Protocol::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
+            Protocol::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
             _ => unreachable!(),
         };
 
@@ -143,8 +145,8 @@ impl BluetoothListener {
     pub fn local_addr(&self) -> Result<(Address, u16), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
-            BtProto::L2CAP => std::mem::size_of::<bluez_sys::sockaddr_l2>(),
-            BtProto::RFCOMM => std::mem::size_of::<bluez_sys::sockaddr_rc>(),
+            Protocol::L2CAP => std::mem::size_of::<bluez_sys::sockaddr_l2>(),
+            Protocol::RFCOMM => std::mem::size_of::<bluez_sys::sockaddr_rc>(),
             _ => unreachable!(),
         } as u32;
 
@@ -157,8 +159,8 @@ impl BluetoothListener {
         })?;
 
         let addr = match self.proto {
-            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
-            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
+            Protocol::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
+            Protocol::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
             _ => unreachable!(),
         };
 
@@ -175,19 +177,19 @@ impl AsRawFd for BluetoothListener {
 #[derive(Debug)]
 pub struct BluetoothStream {
     inner: UnixStream,
-    proto: BtProto,
+    proto: Protocol,
 }
 
 impl BluetoothStream {
     pub async fn connect(
-        proto: BtProto,
+        proto: Protocol,
         addr: Address,
         addr_type: AddressType,
         port: u16,
     ) -> Result<Self, std::io::Error> {
         let flags = match proto {
-            BtProto::L2CAP => libc::SOCK_SEQPACKET,
-            BtProto::RFCOMM => libc::SOCK_STREAM,
+            Protocol::L2CAP => libc::SOCK_SEQPACKET,
+            Protocol::RFCOMM => libc::SOCK_STREAM,
             other => panic!(
                 "bluetooth protocol {:?} cannot be used with BluetoothStream",
                 other
@@ -203,7 +205,7 @@ impl BluetoothStream {
         })?;
 
         let (addr, addr_len) = match proto {
-            BtProto::L2CAP => (
+            Protocol::L2CAP => (
                 SockAddr {
                     l2: bluez_sys::sockaddr_l2 {
                         l2_family: libc::AF_BLUETOOTH as u16,
@@ -215,7 +217,7 @@ impl BluetoothStream {
                 },
                 std::mem::size_of::<bluez_sys::sockaddr_l2>(),
             ),
-            BtProto::RFCOMM => (
+            Protocol::RFCOMM => (
                 SockAddr {
                     rc: bluez_sys::sockaddr_rc {
                         rc_family: libc::AF_BLUETOOTH as u16,
@@ -257,7 +259,7 @@ impl BluetoothStream {
 
     pub fn set_mtu(&mut self, mtu: u16) -> std::io::Result<()> {
         let mut options = std::mem::MaybeUninit::<bluez_sys::l2cap_options>::uninit();
-        let mut len = std::mem::size_of::<bluez_sys::l2cap_options>() as u32;
+        let mut len = std::mem::size_of::<bluez_sys::l2cap_options>() as libc::socklen_t;
 
         check_error(unsafe {
             libc::getsockopt(
@@ -290,8 +292,8 @@ impl BluetoothStream {
     pub fn local_addr(&self) -> Result<(Address, u16), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
-            BtProto::L2CAP => std::mem::size_of::<bluez_sys::sockaddr_l2>(),
-            BtProto::RFCOMM => std::mem::size_of::<bluez_sys::sockaddr_rc>(),
+            Protocol::L2CAP => std::mem::size_of::<bluez_sys::sockaddr_l2>(),
+            Protocol::RFCOMM => std::mem::size_of::<bluez_sys::sockaddr_rc>(),
             _ => unreachable!(),
         } as u32;
 
@@ -304,8 +306,8 @@ impl BluetoothStream {
         })?;
 
         let addr = match self.proto {
-            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
-            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
+            Protocol::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
+            Protocol::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
             _ => unreachable!(),
         };
 
@@ -315,8 +317,8 @@ impl BluetoothStream {
     pub fn peer_addr(&self) -> Result<(Address, u16), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
-            BtProto::L2CAP => std::mem::size_of::<bluez_sys::sockaddr_l2>(),
-            BtProto::RFCOMM => std::mem::size_of::<bluez_sys::sockaddr_rc>(),
+            Protocol::L2CAP => std::mem::size_of::<bluez_sys::sockaddr_l2>(),
+            Protocol::RFCOMM => std::mem::size_of::<bluez_sys::sockaddr_rc>(),
             _ => unreachable!(),
         } as u32;
 
@@ -329,12 +331,75 @@ impl BluetoothStream {
         })?;
 
         let addr = match self.proto {
-            BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
-            BtProto::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
+            Protocol::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
+            Protocol::RFCOMM => unsafe { (addr.rc.rc_bdaddr.into(), addr.rc.rc_channel as u16) },
             _ => unreachable!(),
         };
 
         Ok(addr)
+    }
+
+    pub fn split(&mut self) -> (ReadHalf, WriteHalf) {
+        self.inner.split()
+    }
+
+    pub fn into_split(self) -> (OwnedReadHalf, OwnedWriteHalf) {
+        self.inner.into_split()
+    }
+
+    /// Converts a [`BluetoothStream`] into a [`UnixStream`].
+    pub fn into_inner(self) -> UnixStream {
+        self.inner
+    }
+
+    /// Converts a [`UnixStream`] into a [`BluetoothStream`]. This method will
+    /// check that `stream` is actually a bluetooth stream, and will panic if it
+    /// is not.
+    pub fn from_unix(stream: UnixStream) -> Self {
+        let mut optval: libc::c_int = 0;
+        let mut optlen = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+
+        check_error(unsafe {
+            libc::getsockopt(
+                stream.as_raw_fd(),
+                libc::SOL_SOCKET,
+                libc::SO_DOMAIN,
+                &mut optval as *mut _ as *mut _,
+                &mut optlen as *mut _,
+            )
+        })
+        .unwrap();
+
+        assert_eq!(optval, libc::AF_BLUETOOTH, "socket domain is not bluetooth");
+
+        let mut optval: libc::c_int = 0;
+        let mut optlen = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+
+        check_error(unsafe {
+            libc::getsockopt(
+                stream.as_raw_fd(),
+                libc::SOL_SOCKET,
+                libc::SO_PROTOCOL,
+                &mut optval as *mut _ as *mut _,
+                &mut optlen as *mut _,
+            )
+        })
+        .unwrap();
+
+        let proto = FromPrimitive::from_i32(optval).expect("socket has invalid protocol");
+
+        match proto {
+            Protocol::L2CAP | Protocol::RFCOMM => {}
+            other => panic!(
+                "bluetooth protocol {:?} cannot be used with BluetoothStream",
+                other
+            ),
+        };
+
+        Self {
+            inner: stream,
+            proto,
+        }
     }
 
     fn pin_get_inner(self: Pin<&mut Self>) -> Pin<&mut UnixStream> {

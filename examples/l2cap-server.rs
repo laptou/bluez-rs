@@ -1,15 +1,15 @@
 //! This example allows you to chat over L2CAP with another bluetooth device.
 //!
-//! Copyright (c) 2021 Ibiyemi Abiodun
+//! Copyright (c) 2022 Ibiyemi Abiodun
 
 extern crate bluez;
 
-use std::{cell::RefCell, io::BufRead, sync::Arc};
+use std::{io::BufRead, sync::Arc};
 
 use anyhow::Context;
 use bluez::communication::stream::BluetoothListener;
 use bluez::management::client::*;
-use bluez::socket::BtProto;
+use bluez::socket::Protocol;
 use bluez::AddressType;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -17,7 +17,7 @@ use tokio::{
     sync::Mutex,
 };
 
-#[tokio::main(worker_threads = 4)]
+#[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {
     let (input_tx, input_rx) = tokio::sync::mpsc::channel(16);
 
@@ -41,7 +41,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
     let controller_info = mgmt.get_controller_info(controllers[0]).await?;
 
     let listener = BluetoothListener::bind(
-        BtProto::L2CAP,
+        Protocol::L2CAP,
         controller_info.address,
         AddressType::BREDR,
         0,
@@ -57,7 +57,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
 
         println!("l2cap client connected from {} on port {}", addr, port);
 
-        let (reader, mut writer) = tokio::io::split(stream);
+        let (reader, mut writer) = stream.into_split();
 
         let read_task = spawn(async move {
             let mut line = String::new();

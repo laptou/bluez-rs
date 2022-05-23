@@ -9,7 +9,7 @@ use std::io::BufRead;
 use anyhow::Context;
 use bluez::communication::stream::BluetoothStream;
 
-use bluez::socket::BtProto;
+use bluez::socket::Protocol;
 use bluez::Address;
 use bluez::AddressType;
 use clap::Parser;
@@ -41,7 +41,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
 
     let stream =
-        BluetoothStream::connect(BtProto::L2CAP, args.address, AddressType::BREDR, args.port)
+        BluetoothStream::connect(Protocol::L2CAP, args.address, AddressType::BREDR, args.port)
             .await?;
 
     println!(
@@ -49,7 +49,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
         args.address, args.port
     );
 
-    let (reader, mut writer) = tokio::io::split(stream);
+    let (reader, mut writer) = stream.into_split();
 
     let read_task = spawn(async move {
         let mut line = String::new();

@@ -8,7 +8,7 @@ use std::{
 use crate::util::BufExtBlueZ;
 use crate::{
     communication::{Uuid128, Uuid16, Uuid32},
-    socket::BtProto,
+    socket::Protocol,
     Address, AddressType,
 };
 use bytes::{Buf, BufMut, Bytes, BytesMut};
@@ -501,7 +501,7 @@ impl SdpClient {
 
     pub async fn connect(address: Address) -> Result<Self, Error> {
         let stream =
-            BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, SDP_PSM).await?;
+            BluetoothStream::connect(Protocol::L2CAP, address, AddressType::BREDR, SDP_PSM).await?;
         Ok(Self(stream))
     }
 

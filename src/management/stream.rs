@@ -26,7 +26,7 @@ impl ManagementStream {
             libc::socket(
                 libc::AF_BLUETOOTH,
                 libc::SOCK_RAW | libc::SOCK_CLOEXEC | libc::SOCK_NONBLOCK,
-                BtProto::HCI as libc::c_int,
+                Protocol::HCI as libc::c_int,
             )
         };
 
