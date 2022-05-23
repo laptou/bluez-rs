@@ -24,7 +24,7 @@ use tokio::task::block_in_place;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {
-    let (tx, mut rx) = tokio::sync::mpsc::channel(16);
+    let (input_tx, mut input_rx) = tokio::sync::mpsc::channel(16);
 
     std::thread::spawn(move || -> anyhow::Result<()> {
         let stdin = std::io::stdin();
@@ -33,18 +33,18 @@ pub async fn main() -> Result<(), anyhow::Error> {
         loop {
             let mut line = String::new();
             stdin.read_line(&mut line)?;
-            tx.blocking_send(line)?;
+            input_tx.blocking_send(line)?;
         }
     });
 
     print!("enter l2cap server address: ");
     std::io::stdout().flush()?;
-    let address = rx.recv().await.context("server address is required")?;
+    let address = input_rx.recv().await.context("server address is required")?;
     let address = Address::from_str(address.trim())?;
 
     print!("enter l2cap server port: ");
     std::io::stdout().flush()?;
-    let port = rx.recv().await.context("server port is required")?;
+    let port = input_rx.recv().await.context("server port is required")?;
     let port = port.trim().parse()?;
 
     let stream =
@@ -73,7 +73,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
         async move {
             let mut writer = BufWriter::new(write);
             loop {
-                let line = rx.recv().await.context("stdin ended")?;
+                let line = input_rx.recv().await.context("stdin ended")?;
                 writer.write(line.as_bytes()).await?;
                 writer.flush().await?;
                 println!("< {}", line);

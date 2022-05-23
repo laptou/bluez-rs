@@ -20,7 +20,7 @@ union SockAddr {
 }
 
 pub struct BluetoothListener {
-    inner: RawFd,
+    inner: AsyncFd<RawFd>,
     proto: BtProto,
 }
 
@@ -43,7 +43,7 @@ impl BluetoothListener {
         let fd: RawFd = check_error(unsafe {
             libc::socket(
                 libc::AF_BLUETOOTH,
-                libc::SOCK_CLOEXEC | flags,
+                libc::SOCK_CLOEXEC | libc::SOCK_NONBLOCK | flags,
                 proto as libc::c_int,
             )
         })?;
@@ -96,10 +96,13 @@ impl BluetoothListener {
             return Err(err);
         }
 
-        Ok(BluetoothListener { inner: fd, proto })
+        Ok(BluetoothListener {
+            inner: AsyncFd::new(fd)?,
+            proto,
+        })
     }
 
-    pub fn accept(&self) -> Result<(BluetoothStream, (Address, u16)), std::io::Error> {
+    pub async fn accept(&self) -> Result<(BluetoothStream, (Address, u16)), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
             BtProto::L2CAP => std::mem::size_of::<bluetooth_sys::sockaddr_l2>(),
@@ -107,9 +110,22 @@ impl BluetoothListener {
             _ => unreachable!(),
         } as u32;
 
-        let fd = check_error(unsafe {
-            libc::accept(self.inner, &mut addr as *mut _ as *mut _, &mut addr_len)
-        })?;
+        let fd = loop {
+            let res = self.inner.readable().await?.try_io(|fd| {
+                Ok(check_error(unsafe {
+                    libc::accept(
+                        self.inner.as_raw_fd(),
+                        &mut addr as *mut _ as *mut _,
+                        &mut addr_len,
+                    )
+                })?)
+            });
+
+            match res {
+                Ok(fd) => break fd?,
+                Err(_would_block) => continue,
+            }
+        };
 
         let addr = match self.proto {
             BtProto::L2CAP => unsafe { (addr.l2.l2_bdaddr.into(), addr.l2.l2_psm) },
@@ -149,46 +165,11 @@ impl BluetoothListener {
 
         Ok(addr)
     }
-
-    pub fn incoming(&self) -> Incoming<'_> {
-        Incoming { listener: self }
-    }
 }
 
 impl AsRawFd for BluetoothListener {
     fn as_raw_fd(&self) -> RawFd {
-        self.inner
-    }
-}
-
-impl IntoRawFd for BluetoothListener {
-    fn into_raw_fd(self) -> RawFd {
-        self.inner
-    }
-}
-
-impl<'a> IntoIterator for &'a BluetoothListener {
-    type Item = std::io::Result<BluetoothStream>;
-    type IntoIter = Incoming<'a>;
-
-    fn into_iter(self) -> Incoming<'a> {
-        self.incoming()
-    }
-}
-
-pub struct Incoming<'a> {
-    listener: &'a BluetoothListener,
-}
-
-impl<'a> Iterator for Incoming<'a> {
-    type Item = std::io::Result<BluetoothStream>;
-
-    fn next(&mut self) -> Option<std::io::Result<BluetoothStream>> {
-        Some(self.listener.accept().map(|s| s.0))
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (usize::MAX, None)
+        self.inner.as_raw_fd()
     }
 }
 

@@ -5,16 +5,32 @@
 extern crate bluez;
 
 use std::error::Error;
+use std::io::BufRead;
 use std::sync::Arc;
 
+use anyhow::Context;
 use bluez::communication::stream::BluetoothListener;
 use bluez::management::client::*;
 use bluez::socket::BtProto;
 use bluez::AddressType;
-use tokio::io::stdin;
+use tokio::io::{stdin, AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
+use tokio::spawn;
 
 #[tokio::main(flavor = "current_thread")]
-pub async fn main() -> Result<(), Box<dyn Error>> {
+pub async fn main() -> Result<(), anyhow::Error> {
+    let (input_tx, mut input_rx) = tokio::sync::mpsc::channel(16);
+
+    std::thread::spawn(move || -> anyhow::Result<()> {
+        let stdin = std::io::stdin();
+        let mut stdin = stdin.lock();
+
+        loop {
+            let mut line = String::new();
+            stdin.read_line(&mut line)?;
+            input_tx.blocking_send(line)?;
+        }
+    });
+
     let mut mgmt = ManagementClient::new()?;
     let controllers = mgmt.get_controller_list().await?;
     if controllers.len() < 1 {
@@ -34,46 +50,46 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     println!("l2cap server listening at {} on port {}", addr, port);
 
     loop {
-        let (sock, (addr, port)) = listener.read_with(|l| l.accept()).await?;
+        let (stream, (addr, port)) = listener.accept().await?;
 
         println!("l2cap server got connection from {} on port {}", addr, port);
 
-        let sock = Arc::new(Async::new(sock)?);
+        let (read, write) = tokio::io::split(stream);
 
-        let read_task: smol::Task<Result<(), std::io::Error>> = smol::spawn({
-            let sock = sock.clone();
-            async move {
-                let mut reader = BufReader::new(sock.as_ref());
+        let read_fut = {
+            async {
+                let mut reader = BufReader::new(read);
                 let mut line = String::new();
-
                 loop {
                     reader.read_line(&mut line).await?;
                     println!("> {}", line);
                     line.clear();
                 }
+
+                #[allow(unreachable_code)]
+                Ok::<_, anyhow::Error>(())
             }
-        });
+        };
 
-        let write_task: smol::Task<Result<(), std::io::Error>> = smol::spawn({
-            let sock = sock.clone();
-
-            async move {
-                let mut writer = BufWriter::new(sock.as_ref());
-                let mut line = String::new();
-                let stdin = stdin();
-
+        let write_fut = {
+            async {
+                let mut writer = BufWriter::new(write);
                 loop {
-                    stdin.read_line(&mut line).await?;
+                    let line = input_rx.recv().await.context("stdin ended")?;
                     writer.write(line.as_bytes()).await?;
                     writer.flush().await?;
                     println!("< {}", line);
-                    line.clear();
                 }
-            }
-        });
 
-        let (res1, res2) = futures::join!(read_task, write_task);
-        res1?;
-        res2?;
+                #[allow(unreachable_code)]
+                Ok::<_, anyhow::Error>(())
+            }
+        };
+
+        futures::pin_mut!(read_fut);
+        futures::pin_mut!(write_fut);
+        futures::future::select(read_fut, write_fut).await;
+
+        println!("l2cap client disconnected, listening again");
     }
 }
