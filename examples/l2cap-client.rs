@@ -51,39 +51,44 @@ pub async fn main() -> Result<(), anyhow::Error> {
     );
 
     let (reader, mut writer) = tokio::io::split(stream);
+    let mut reader = BufReader::new(reader);
 
-    let read_fut = {
-        async {
-            let mut reader = BufReader::new(reader);
-            let mut line = String::new();
-            loop {
-                reader.read_line(&mut line).await?;
-                println!("> {}", line);
-                line.clear();
+    {
+        let read_fut = {
+            async {
+                let mut line = String::new();
+                loop {
+                    reader.read_line(&mut line).await?;
+                    println!("> {}", line);
+                    line.clear();
+                }
+
+                #[allow(unreachable_code)]
+                Ok::<_, anyhow::Error>(())
             }
+        };
 
-            #[allow(unreachable_code)]
-            Ok::<_, anyhow::Error>(())
-        }
-    };
+        let write_fut = {
+            async {
+                loop {
+                    let line = input_rx.recv().await.context("stdin ended")?;
+                    writer.write(line.as_bytes()).await?;
+                    // writer.flush().await?;
+                    println!("< {}", line);
+                }
 
-    let write_fut = {
-        async {
-            loop {
-                let line = input_rx.recv().await.context("stdin ended")?;
-                writer.write(line.as_bytes()).await?;
-                writer.flush().await?;
-                println!("< {}", line);
+                #[allow(unreachable_code)]
+                Ok::<_, anyhow::Error>(())
             }
+        };
 
-            #[allow(unreachable_code)]
-            Ok::<_, anyhow::Error>(())
-        }
-    };
+        futures::pin_mut!(read_fut);
+        futures::pin_mut!(write_fut);
+        futures::future::select(read_fut, write_fut).await;
+    }
 
-    futures::pin_mut!(read_fut);
-    futures::pin_mut!(write_fut);
-    futures::future::select(read_fut, write_fut).await;
+    let mut stream = reader.into_inner().unsplit(writer);
+    stream.shutdown().await?;
 
     Ok(())
 }

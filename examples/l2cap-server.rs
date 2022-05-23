@@ -52,39 +52,44 @@ pub async fn main() -> Result<(), anyhow::Error> {
         println!("l2cap server got connection from {} on port {}", addr, port);
 
         let (reader, mut writer) = tokio::io::split(stream);
-
-        let read_fut = {
-            async {
-                let mut reader = BufReader::new(reader);
-                let mut line = String::new();
-                loop {
-                    reader.read_line(&mut line).await?;
-                    println!("> {}", line);
-                    line.clear();
+        let mut reader = BufReader::new(reader);
+    
+        {
+            let read_fut = {
+                async {
+                    let mut line = String::new();
+                    loop {
+                        reader.read_line(&mut line).await?;
+                        println!("> {}", line);
+                        line.clear();
+                    }
+    
+                    #[allow(unreachable_code)]
+                    Ok::<_, anyhow::Error>(())
                 }
-
-                #[allow(unreachable_code)]
-                Ok::<_, anyhow::Error>(())
-            }
-        };
-
-        let write_fut = {
-            async {
-                loop {
-                    let line = input_rx.recv().await.context("stdin ended")?;
-                    writer.write(line.as_bytes()).await?;
-                    writer.flush().await?;
-                    println!("< {}", line);
+            };
+    
+            let write_fut = {
+                async {
+                    loop {
+                        let line = input_rx.recv().await.context("stdin ended")?;
+                        writer.write(line.as_bytes()).await?;
+                        // writer.flush().await?;
+                        println!("< {}", line);
+                    }
+    
+                    #[allow(unreachable_code)]
+                    Ok::<_, anyhow::Error>(())
                 }
-
-                #[allow(unreachable_code)]
-                Ok::<_, anyhow::Error>(())
-            }
-        };
-
-        futures::pin_mut!(read_fut);
-        futures::pin_mut!(write_fut);
-        futures::future::select(read_fut, write_fut).await;
+            };
+    
+            futures::pin_mut!(read_fut);
+            futures::pin_mut!(write_fut);
+            futures::future::select(read_fut, write_fut).await;
+        }
+    
+        let mut stream = reader.into_inner().unsplit(writer);
+        stream.shutdown().await?;
 
         println!("l2cap client disconnected, listening again");
     }
