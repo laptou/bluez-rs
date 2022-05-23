@@ -77,9 +77,9 @@ pub async fn main() -> Result<(), anyhow::Error> {
             loop {
                 let line = input_rx.recv().await.context("stdin ended").unwrap();
 
-                writer.write(line.as_bytes()).await.unwrap();
-                writer.flush().await.unwrap();
                 println!("< {}", line);
+                writer.write_all(line.as_bytes()).await.unwrap();
+                println!("<< {}", line);
             }
         });
 

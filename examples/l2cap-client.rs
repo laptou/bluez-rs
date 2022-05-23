@@ -15,6 +15,7 @@ use bluez::AddressType;
 use clap::Parser;
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+use tokio::spawn;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -49,43 +50,29 @@ pub async fn main() -> Result<(), anyhow::Error> {
     );
 
     let (reader, mut writer) = tokio::io::split(stream);
-    let mut reader = BufReader::new(reader);
 
-    {
-        let read_fut = {
-            async {
-                let mut line = String::new();
+    let read_task = spawn(async move {
+        let mut line = String::new();
+        let mut reader = BufReader::new(reader);
 
-                while reader.read_line(&mut line).await? > 0 {
-                    println!("> {}", line);
-                    line.clear();
-                }
+        while reader.read_line(&mut line).await.unwrap() > 0 {
+            println!("> {}", line);
+            line.clear();
+        }
+    });
 
-                #[allow(unreachable_code)]
-                Ok::<_, anyhow::Error>(())
-            }
-        };
+    let write_task = spawn(async move {
+        loop {
+            let line = input_rx.recv().await.context("stdin ended").unwrap();
 
-        let write_fut = {
-            async {
-                loop {
-                    let line = input_rx.recv().await.context("stdin ended")?;
-                    writer.write(line.as_bytes()).await?;
-                    // writer.flush().await?;
-                    println!("< {}", line);
-                }
+            println!("< {}", line);
+            writer.write_all(line.as_bytes()).await.unwrap();
+            println!("<< {}", line);
+        }
+    });
 
-                #[allow(unreachable_code)]
-                Ok::<_, anyhow::Error>(())
-            }
-        };
-
-        futures::pin_mut!(read_fut);
-        futures::pin_mut!(write_fut);
-        let _ = futures::future::join(read_fut, write_fut).await;
-    }
-
-    writer.shutdown().await?;
+    read_task.await?;
+    write_task.abort();
 
     Ok(())
 }
