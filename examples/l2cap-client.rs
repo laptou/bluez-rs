@@ -4,7 +4,6 @@
 
 extern crate bluez;
 
-use std::borrow::Cow;
 use std::io::BufRead;
 use std::io::Write;
 use std::str::FromStr;
@@ -17,10 +16,8 @@ use bluez::Address;
 use bluez::AddressType;
 use tokio::io::BufReader;
 use tokio::io::BufWriter;
-use tokio::io::{stdin, stdout, AsyncBufReadExt, AsyncWriteExt};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 use tokio::spawn;
-use tokio::sync::oneshot;
-use tokio::task::block_in_place;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {
@@ -39,7 +36,10 @@ pub async fn main() -> Result<(), anyhow::Error> {
 
     print!("enter l2cap server address: ");
     std::io::stdout().flush()?;
-    let address = input_rx.recv().await.context("server address is required")?;
+    let address = input_rx
+        .recv()
+        .await
+        .context("server address is required")?;
     let address = Address::from_str(address.trim())?;
 
     print!("enter l2cap server port: ");

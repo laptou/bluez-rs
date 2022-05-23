@@ -1,7 +1,6 @@
 use std::io::Error;
 use std::mem::MaybeUninit;
 use std::os::unix::net::UnixStream as StdUnixStream;
-use std::os::unix::prelude::IntoRawFd;
 
 use libc;
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
@@ -111,7 +110,7 @@ impl BluetoothListener {
         } as u32;
 
         let fd = loop {
-            let res = self.inner.readable().await?.try_io(|fd| {
+            let res = self.inner.readable().await?.try_io(|_fd| {
                 Ok(check_error(unsafe {
                     libc::accept(
                         self.inner.as_raw_fd(),
