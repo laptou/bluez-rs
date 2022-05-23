@@ -51,11 +51,11 @@ pub async fn main() -> Result<(), anyhow::Error> {
 
         println!("l2cap server got connection from {} on port {}", addr, port);
 
-        let (read, write) = tokio::io::split(stream);
+        let (reader, mut writer) = tokio::io::split(stream);
 
         let read_fut = {
             async {
-                let mut reader = BufReader::new(read);
+                let mut reader = BufReader::new(reader);
                 let mut line = String::new();
                 loop {
                     reader.read_line(&mut line).await?;
@@ -70,7 +70,6 @@ pub async fn main() -> Result<(), anyhow::Error> {
 
         let write_fut = {
             async {
-                let mut writer = BufWriter::new(write);
                 loop {
                     let line = input_rx.recv().await.context("stdin ended")?;
                     writer.write(line.as_bytes()).await?;

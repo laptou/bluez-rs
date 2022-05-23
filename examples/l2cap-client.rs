@@ -15,9 +15,7 @@ use bluez::socket::BtProto;
 use bluez::Address;
 use bluez::AddressType;
 use tokio::io::BufReader;
-use tokio::io::BufWriter;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
-use tokio::spawn;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {
@@ -52,11 +50,11 @@ pub async fn main() -> Result<(), anyhow::Error> {
 
     println!("l2cap client connected to {} on port {}", address, port);
 
-    let (read, write) = tokio::io::split(stream);
+    let (reader, mut writer) = tokio::io::split(stream);
 
-    let read_task = spawn({
-        async move {
-            let mut reader = BufReader::new(read);
+    let read_fut = {
+        async {
+            let mut reader = BufReader::new(reader);
             let mut line = String::new();
             loop {
                 reader.read_line(&mut line).await?;
@@ -67,11 +65,10 @@ pub async fn main() -> Result<(), anyhow::Error> {
             #[allow(unreachable_code)]
             Ok::<_, anyhow::Error>(())
         }
-    });
+    };
 
-    let write_task = spawn({
-        async move {
-            let mut writer = BufWriter::new(write);
+    let write_fut = {
+        async {
             loop {
                 let line = input_rx.recv().await.context("stdin ended")?;
                 writer.write(line.as_bytes()).await?;
@@ -82,11 +79,11 @@ pub async fn main() -> Result<(), anyhow::Error> {
             #[allow(unreachable_code)]
             Ok::<_, anyhow::Error>(())
         }
-    });
+    };
 
-    let (res1, res2) = futures::join!(read_task, write_task);
-    res1??;
-    res2??;
+    futures::pin_mut!(read_fut);
+    futures::pin_mut!(write_fut);
+    futures::future::select(read_fut, write_fut).await;
 
     Ok(())
 }
