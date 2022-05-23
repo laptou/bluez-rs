@@ -1,12 +1,10 @@
 //! This example allows you to chat over L2CAP with another bluetooth device.
 //!
-//! Copyright (c) 2021 Ibiyemi Abiodun
+//! Copyright (c) 2022 Ibiyemi Abiodun
 
 extern crate bluez;
 
 use std::io::BufRead;
-use std::io::Write;
-use std::str::FromStr;
 
 use anyhow::Context;
 use bluez::communication::stream::BluetoothStream;
@@ -57,8 +55,8 @@ pub async fn main() -> Result<(), anyhow::Error> {
         let read_fut = {
             async {
                 let mut line = String::new();
-                loop {
-                    reader.read_line(&mut line).await?;
+
+                while reader.read_line(&mut line).await? > 0 {
                     println!("> {}", line);
                     line.clear();
                 }
@@ -84,11 +82,10 @@ pub async fn main() -> Result<(), anyhow::Error> {
 
         futures::pin_mut!(read_fut);
         futures::pin_mut!(write_fut);
-        futures::future::select(read_fut, write_fut).await;
+        let _ = futures::future::join(read_fut, write_fut).await;
     }
 
-    let mut stream = reader.into_inner().unsplit(writer);
-    stream.shutdown().await?;
+    writer.shutdown().await?;
 
     Ok(())
 }
