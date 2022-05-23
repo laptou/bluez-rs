@@ -17,7 +17,7 @@ use tokio::{
     sync::Mutex,
 };
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main(worker_threads = 2)]
 pub async fn main() -> Result<(), anyhow::Error> {
     let (input_tx, input_rx) = tokio::sync::mpsc::channel(16);
 

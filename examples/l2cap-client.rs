@@ -23,7 +23,7 @@ struct Args {
     port: u16,
 }
 
-#[tokio::main(flavor = "current_thread")]
+#[tokio::main(worker_threads = 2)]
 pub async fn main() -> Result<(), anyhow::Error> {
     let (input_tx, mut input_rx) = tokio::sync::mpsc::channel(16);
 
@@ -49,6 +49,8 @@ pub async fn main() -> Result<(), anyhow::Error> {
         args.address, args.port
     );
 
+    // note: using tokio::io::split for this use-case does not work, because that method
+    // uses a lock internally, whereas this one does not
     let (reader, mut writer) = stream.into_split();
 
     let read_task = spawn(async move {
@@ -64,10 +66,8 @@ pub async fn main() -> Result<(), anyhow::Error> {
     let write_task = spawn(async move {
         loop {
             let line = input_rx.recv().await.context("stdin ended").unwrap();
-
-            println!("< {}", line);
             writer.write_all(line.as_bytes()).await.unwrap();
-            println!("<< {}", line);
+            println!("< {}", line);
         }
     });
 
