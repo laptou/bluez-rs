@@ -33,8 +33,6 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("l2cap server listening at {} on port {}", addr, port);
 
-    let listener = Async::new(listener)?;
-
     loop {
         let (sock, (addr, port)) = listener.read_with(|l| l.accept()).await?;
 

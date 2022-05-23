@@ -4,6 +4,12 @@
 
 extern crate bluez;
 
+use std::borrow::Cow;
+use std::io::BufRead;
+use std::io::Write;
+use std::str::FromStr;
+
+use anyhow::Context;
 use bluez::communication::stream::BluetoothStream;
 
 use bluez::socket::BtProto;
@@ -13,30 +19,33 @@ use tokio::io::BufReader;
 use tokio::io::BufWriter;
 use tokio::io::{stdin, stdout, AsyncBufReadExt, AsyncWriteExt};
 use tokio::spawn;
+use tokio::sync::oneshot;
+use tokio::task::block_in_place;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {
+    let (tx, mut rx) = tokio::sync::mpsc::channel(16);
+
+    std::thread::spawn(move || -> anyhow::Result<()> {
+        let stdin = std::io::stdin();
+        let mut stdin = stdin.lock();
+
+        loop {
+            let mut line = String::new();
+            stdin.read_line(&mut line)?;
+            tx.blocking_send(line)?;
+        }
+    });
+
     print!("enter l2cap server address: ");
-    stdout().flush().await?;
-    let mut line = String::new();
-    let mut stdin = BufReader::new(stdin());
-    stdin.read_line(&mut line).await?;
-
-    let octets = line
-        .trim()
-        .split(':')
-        .map(|octet| u8::from_str_radix(octet, 16))
-        .rev()
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let address = Address::from_slice(&octets[..]);
+    std::io::stdout().flush()?;
+    let address = rx.recv().await.context("server address is required")?;
+    let address = Address::from_str(address.trim())?;
 
     print!("enter l2cap server port: ");
-    stdout().flush().await?;
-    let mut line = String::new();
-    stdin.read_line(&mut line).await?;
-
-    let port = line.trim().parse()?;
+    std::io::stdout().flush()?;
+    let port = rx.recv().await.context("server port is required")?;
+    let port = port.trim().parse()?;
 
     let stream =
         BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, port).await?;
@@ -63,13 +72,11 @@ pub async fn main() -> Result<(), anyhow::Error> {
     let write_task = spawn({
         async move {
             let mut writer = BufWriter::new(write);
-            let mut line = String::new();
             loop {
-                stdin.read_line(&mut line).await?;
+                let line = rx.recv().await.context("stdin ended")?;
                 writer.write(line.as_bytes()).await?;
                 writer.flush().await?;
                 println!("< {}", line);
-                line.clear();
             }
 
             #[allow(unreachable_code)]

@@ -1,4 +1,7 @@
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 use bytes::Buf;
 
@@ -80,6 +83,50 @@ impl Display for Address {
             self.bytes[0]
         )
     }
+}
+
+impl FromStr for Address {
+    type Err = AddressParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut it = s
+            .split(':')
+            .map(|octet| u8::from_str_radix(octet, 16))
+            .rev();
+
+        let bytes = [
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+        ];
+
+        Ok(Self { bytes })
+    }
+}
+
+#[derive(Error, Debug, Clone, Copy)]
+pub enum AddressParseError {
+    #[error("the string contained an invalid octet")]
+    InvalidOctet,
+    #[error("the string contained less than six octets")]
+    NotEnoughOctets,
+    #[error("the string contained more than six octets")]
+    TooManyOctets,
 }
 
 #[repr(u8)]
