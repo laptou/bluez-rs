@@ -52,14 +52,14 @@ impl From<Address> for [u8; 6] {
     }
 }
 
-impl Into<bluetooth_sys::bdaddr_t> for Address {
-    fn into(self) -> bluetooth_sys::bdaddr_t {
-        bluetooth_sys::bdaddr_t { b: self.bytes }
+impl Into<bluez_sys::bdaddr_t> for Address {
+    fn into(self) -> bluez_sys::bdaddr_t {
+        bluez_sys::bdaddr_t { b: self.bytes }
     }
 }
 
-impl From<bluetooth_sys::bdaddr_t> for Address {
-    fn from(bdaddr: bluetooth_sys::bdaddr_t) -> Self {
+impl From<bluez_sys::bdaddr_t> for Address {
+    fn from(bdaddr: bluez_sys::bdaddr_t) -> Self {
         Address { bytes: bdaddr.b }
     }
 }

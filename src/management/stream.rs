@@ -34,17 +34,17 @@ impl ManagementStream {
             return Err(std::io::Error::last_os_error());
         }
 
-        let addr = bluetooth_sys::sockaddr_hci {
+        let addr = bluez_sys::sockaddr_hci {
             hci_family: libc::AF_BLUETOOTH as u16,
-            hci_dev: bluetooth_sys::HCI_DEV_NONE as u16,
-            hci_channel: bluetooth_sys::HCI_CHANNEL_CONTROL as u16,
+            hci_dev: bluez_sys::HCI_DEV_NONE as u16,
+            hci_channel: bluez_sys::HCI_CHANNEL_CONTROL as u16,
         };
 
         if unsafe {
             libc::bind(
                 fd,
-                &addr as *const bluetooth_sys::sockaddr_hci as *const libc::sockaddr,
-                std::mem::size_of::<bluetooth_sys::sockaddr_hci>() as u32,
+                &addr as *const bluez_sys::sockaddr_hci as *const libc::sockaddr,
+                std::mem::size_of::<bluez_sys::sockaddr_hci>() as u32,
             )
         } < 0
         {
