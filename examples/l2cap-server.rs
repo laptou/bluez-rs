@@ -11,7 +11,7 @@ use bluez::communication::stream::BluetoothListener;
 use bluez::management::client::*;
 use bluez::socket::BtProto;
 use bluez::AddressType;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {

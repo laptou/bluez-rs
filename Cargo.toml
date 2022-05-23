@@ -25,6 +25,7 @@ bluez-sys = { path = "sys" }
 
 [dev-dependencies]
 anyhow = "1.0"
+clap = { version = "3.1.18", features = ["derive"] }
 tokio = { version = "1.0", features = ["macros", "rt", "rt-multi-thread", "io-std", "time", "sync"] }
 
 [[example]]

@@ -14,8 +14,15 @@ use bluez::communication::stream::BluetoothStream;
 use bluez::socket::BtProto;
 use bluez::Address;
 use bluez::AddressType;
+use clap::Parser;
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+
+#[derive(Parser, Debug)]
+struct Args {
+    address: Address,
+    port: u16,
+}
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {
@@ -32,23 +39,16 @@ pub async fn main() -> Result<(), anyhow::Error> {
         }
     });
 
-    print!("enter l2cap server address: ");
-    std::io::stdout().flush()?;
-    let address = input_rx
-        .recv()
-        .await
-        .context("server address is required")?;
-    let address = Address::from_str(address.trim())?;
-
-    print!("enter l2cap server port: ");
-    std::io::stdout().flush()?;
-    let port = input_rx.recv().await.context("server port is required")?;
-    let port = port.trim().parse()?;
+    let args = Args::parse();
 
     let stream =
-        BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, port).await?;
+        BluetoothStream::connect(BtProto::L2CAP, args.address, AddressType::BREDR, args.port)
+            .await?;
 
-    println!("l2cap client connected to {} on port {}", address, port);
+    println!(
+        "l2cap client connected to {} on port {}",
+        args.address, args.port
+    );
 
     let (reader, mut writer) = tokio::io::split(stream);
 
