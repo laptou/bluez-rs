@@ -1,8 +1,8 @@
 mod client;
-mod stream;
 pub mod interface;
 pub mod result;
+mod stream;
 
+pub use client::*;
 pub use result::{Error, Result};
 pub use stream::ManagementStream;
-pub use client::*;

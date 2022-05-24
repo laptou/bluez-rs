@@ -1,11 +1,11 @@
 //! This example just gets all of the available controllers
 //! on the system and spits out information about them.
 //!
-//! Copyright (c) 2020 Ibiyemi Abiodun
+//! Copyright (c) 2022 Ibiyemi Abiodun
 
 extern crate bluez;
 
-use bluez::management::client::*;
+use bluez::management::ManagementClient;
 
 #[tokio::main]
 pub async fn main() -> Result<(), anyhow::Error> {

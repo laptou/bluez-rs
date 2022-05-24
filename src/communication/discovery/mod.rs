@@ -1,26 +1,18 @@
-use std::{
-    collections::HashMap,
-    ffi::OsString,
-    fmt::Debug,
-    os::unix::prelude::{OsStrExt, OsStringExt},
-};
+use std::{collections::HashMap, fmt::Debug};
 
 use crate::util::BufExtBlueZ;
-use crate::{
-    Address,
-    AddressType, communication::{Uuid128, Uuid16, Uuid32},
-};
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-use num_traits::FromPrimitive;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use crate::{communication::Uuid16, Address, AddressType};
+use bytes::{Buf, BufMut, BytesMut};
+
+use crate::address::Protocol;
 use error::{Error, ErrorCode};
 use serialization::{DataElement, Pdu, PduId, ToBuf};
-use crate::address::Protocol;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use super::{stream::BluetoothStream, Uuid};
 
-mod serialization;
 mod error;
+mod serialization;
 
 pub const SDP_PSM: u16 = 0x0001;
 pub const SDP_BROWSE_ROOT: Uuid16 = Uuid16(0x1002);

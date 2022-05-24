@@ -1,9 +1,9 @@
+use crate::communication::{Uuid128, Uuid16, Uuid32};
+use crate::util::BufExtBlueZ;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use num_traits::FromPrimitive;
 use std::ffi::OsString;
 use std::os::unix::ffi::{OsStrExt, OsStringExt};
-use crate::communication::{Uuid128, Uuid16, Uuid32};
-use crate::util::BufExtBlueZ;
 
 pub trait ToBuf {
     fn to_buf<B: BufMut>(&self, buf: &mut B);

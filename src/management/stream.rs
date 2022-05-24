@@ -2,12 +2,12 @@ use std::os::unix::net::UnixStream as StdUnixStream;
 
 use std::u16;
 
+use crate::address::Protocol;
 use bytes::*;
 use libc;
 use std::os::unix::io::{FromRawFd, RawFd};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
-use crate::address::Protocol;
 
 use crate::management::interface::{Request, Response};
 use crate::management::Error;
@@ -83,4 +83,3 @@ impl ManagementStream {
         Response::parse(Buf::chain(&header[..], &body[..]))
     }
 }
-

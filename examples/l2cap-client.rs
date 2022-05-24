@@ -9,9 +9,9 @@ use std::io::BufRead;
 use anyhow::Context;
 use bluez::communication::stream::BluetoothStream;
 
-use bluez::Protocol;
 use bluez::Address;
 use bluez::AddressType;
+use bluez::Protocol;
 use clap::Parser;
 use tokio::io::BufReader;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
