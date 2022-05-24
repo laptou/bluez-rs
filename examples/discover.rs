@@ -8,13 +8,12 @@ extern crate bluez;
 use std::time::Duration;
 
 use anyhow::{bail, Context};
-use bluez::management::client::*;
-use bluez::management::interface::controller::*;
-use bluez::management::interface::event::Event;
+use bluez::management::*;
+use bluez::management::interface::*;
 use tokio::time::sleep;
 
 #[tokio::main(flavor = "current_thread")]
-pub async fn main() -> Result<(), anyhow::Error> {
+pub async fn main() -> std::result::Result<(), anyhow::Error> {
     let mut client = ManagementClient::new().unwrap();
 
     let controllers = client.get_controller_list().await?;

@@ -4,5 +4,6 @@ pub mod result;
 mod stream;
 
 pub use client::*;
-pub use result::{Error, Result};
+pub(crate) use result::Result;
+pub use result::Error;
 pub use stream::ManagementStream;
