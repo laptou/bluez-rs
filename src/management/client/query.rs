@@ -2,7 +2,7 @@ use crate::AddressType;
 use std::collections::HashMap;
 
 use crate::management::interface::ControllerInfoExt;
-use crate::util::BufExtBlueZ;
+use crate::util::BufExt;
 
 use super::*;
 

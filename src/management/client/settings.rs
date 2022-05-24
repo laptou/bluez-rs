@@ -7,7 +7,7 @@ use crate::management::Result;
 use crate::Address;
 
 use super::*;
-use crate::util::BufExtBlueZ;
+use crate::util::BufExt;
 
 // use some consts for common callback patterns
 fn settings_callback(_: Controller, param: Option<Bytes>) -> Result<ControllerSettings> {

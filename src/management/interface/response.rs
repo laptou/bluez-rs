@@ -6,9 +6,12 @@ use crate::management::client::ConnectionParams;
 use crate::management::interface::controller::Controller;
 use crate::management::interface::event::Event;
 use crate::management::Error;
-use crate::util::BufExtBlueZ;
+use crate::util::BufExt;
 use crate::Address;
 
+/// A response from the BlueZ management API. This can be a response to a
+/// command that was issued, or an event that was sent in response to an outside
+/// stimulus.
 pub struct Response {
     pub event: Event,
     pub controller: Controller,

@@ -8,7 +8,7 @@ use num_traits::FromPrimitive;
 
 use crate::Address;
 
-pub(crate) trait BufExtBlueZ: Buf {
+pub(crate) trait BufExt: Buf {
     fn get_address(&mut self) -> Address {
         Address::from(self.get_array_u8())
     }
@@ -88,7 +88,7 @@ pub(crate) trait BufExtBlueZ: Buf {
     }
 }
 
-impl<T: Buf> BufExtBlueZ for T {}
+impl<T: Buf> BufExt for T {}
 
 pub(crate) fn check_error(value: libc::c_int) -> Result<libc::c_int, std::io::Error> {
     if value < 0 {

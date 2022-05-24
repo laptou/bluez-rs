@@ -1,3 +1,5 @@
+//! IO structures related to communicating with remote Bluetooth devices.
+
 use std::io::Error;
 use std::mem::MaybeUninit;
 use std::os::unix::net::UnixStream as StdUnixStream;
@@ -20,12 +22,17 @@ union SockAddr {
     rc: bluez_sys::sockaddr_rc,
 }
 
+
+/// A Bluetooth socket which can accept connections from remote Bluetooth
+/// devices. You can accept new connections using the
+/// [`accept`](`BluetoothListener::accept`) method.
 pub struct BluetoothListener {
     inner: AsyncFd<RawFd>,
     proto: Protocol,
 }
 
 impl BluetoothListener {
+    /// Creates a new `BluetoothListener` bound to the specified address, port, and protocol.
     pub fn bind(
         proto: Protocol,
         addr: Address,
@@ -103,6 +110,9 @@ impl BluetoothListener {
         })
     }
 
+    /// Accepts a new incoming connection to this listener. Upon success,
+    /// returns the connection, the address of the remote device, and the remote
+    /// port.
     pub async fn accept(&self) -> Result<(BluetoothStream, (Address, u16)), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
@@ -142,6 +152,7 @@ impl BluetoothListener {
         Ok((sock, addr))
     }
 
+    /// Returns the address and port that this listener is listening on.
     pub fn local_addr(&self) -> Result<(Address, u16), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
@@ -174,6 +185,9 @@ impl AsRawFd for BluetoothListener {
     }
 }
 
+/// A structure representing an active Bluetooth connection. This socket can be
+/// connected directly using [`BluetoothStream::connect`], or it can be accepted
+/// from a [`BluetoothListener`].
 #[derive(Debug)]
 pub struct BluetoothStream {
     inner: UnixStream,
@@ -181,6 +195,7 @@ pub struct BluetoothStream {
 }
 
 impl BluetoothStream {
+    /// Connects to a remote Bluetooth device.
     pub async fn connect(
         proto: Protocol,
         addr: Address,
@@ -257,6 +272,7 @@ impl BluetoothStream {
         })
     }
 
+    /// Sets the maximum transmission unit (MTU) of this Bluetooth connection.
     pub fn set_mtu(&mut self, mtu: u16) -> std::io::Result<()> {
         let mut options = std::mem::MaybeUninit::<bluez_sys::l2cap_options>::uninit();
         let mut len = std::mem::size_of::<bluez_sys::l2cap_options>() as libc::socklen_t;
@@ -289,6 +305,7 @@ impl BluetoothStream {
         Ok(())
     }
 
+    /// Gets the local address and port of this Bluetooth connection.
     pub fn local_addr(&self) -> Result<(Address, u16), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
@@ -314,6 +331,7 @@ impl BluetoothStream {
         Ok(addr)
     }
 
+    /// Gets the remote address and port of this Bluetooth connection.
     pub fn peer_addr(&self) -> Result<(Address, u16), std::io::Error> {
         let mut addr: SockAddr = unsafe { std::mem::zeroed() };
         let mut addr_len = match self.proto {
@@ -339,10 +357,12 @@ impl BluetoothStream {
         Ok(addr)
     }
 
+    /// Splits this stream into a borrowed reading half and a borrowed writing half.
     pub fn split(&mut self) -> (ReadHalf, WriteHalf) {
         self.inner.split()
     }
 
+    /// Splits this stream into a owned reading half and a owned writing half.
     pub fn into_split(self) -> (OwnedReadHalf, OwnedWriteHalf) {
         self.inner.into_split()
     }

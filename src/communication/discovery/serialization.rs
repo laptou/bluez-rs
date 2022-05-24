@@ -1,5 +1,6 @@
 use crate::communication::{Uuid128, Uuid16, Uuid32};
-use crate::util::BufExtBlueZ;
+use crate::util::BufExt;
+
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use num_traits::FromPrimitive;
 use std::ffi::OsString;

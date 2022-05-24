@@ -71,7 +71,6 @@ impl<'a> ManagementClient<'a> {
         Ok(response)
     }
 
-    #[inline]
     async fn exec_command<F: FnOnce(Controller, Option<Bytes>) -> Result<T>, T>(
         &mut self,
         opcode: Command,

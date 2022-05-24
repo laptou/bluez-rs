@@ -1,15 +1,14 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use crate::util::BufExtBlueZ;
-use crate::{communication::Uuid16, Address, AddressType};
-use bytes::{Buf, BufMut, BytesMut};
-
+use super::{stream::BluetoothStream, Uuid};
 use crate::address::Protocol;
+use crate::util::BufExt;
+use crate::{communication::Uuid16, Address, AddressType};
 use error::{Error, ErrorCode};
 use serialization::{DataElement, Pdu, PduId, ToBuf};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use super::{stream::BluetoothStream, Uuid};
+use bytes::{Buf, BufMut, BytesMut};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 mod error;
 mod serialization;

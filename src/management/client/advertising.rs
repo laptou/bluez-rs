@@ -1,5 +1,5 @@
 use super::*;
-use crate::util::BufExtBlueZ;
+use crate::util::BufExt;
 use enumflags2::{bitflags, BitFlags};
 
 impl<'a> ManagementClient<'a> {
