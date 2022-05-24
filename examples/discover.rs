@@ -1,15 +1,15 @@
 //! This example powers on the first available controller
 //! and then starts searching for devices.
 //!
-//! Copyright (c) 2020 Ibiyemi Abiodun
+//! Copyright (c) 2022 Ibiyemi Abiodun
 
 extern crate bluez;
 
 use std::time::Duration;
 
 use anyhow::{bail, Context};
-use bluez::management::*;
 use bluez::management::interface::*;
+use bluez::management::*;
 use tokio::time::sleep;
 
 #[tokio::main(flavor = "current_thread")]
