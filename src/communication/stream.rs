@@ -13,7 +13,7 @@ use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf, ReadHalf, WriteHalf};
 use tokio::net::UnixStream;
 
 use crate::util::check_error;
-use crate::{socket::*, Address, AddressType};
+use crate::{Address, AddressType, Protocol};
 
 union SockAddr {
     l2: bluez_sys::sockaddr_l2,

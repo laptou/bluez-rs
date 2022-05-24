@@ -9,7 +9,7 @@ use std::io::BufRead;
 use anyhow::Context;
 use bluez::communication::stream::BluetoothStream;
 
-use bluez::socket::Protocol;
+use bluez::Protocol;
 use bluez::Address;
 use bluez::AddressType;
 use clap::Parser;

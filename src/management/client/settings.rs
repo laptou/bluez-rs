@@ -1,7 +1,7 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 
-use crate::management::interface::controller::{Controller, ControllerSettings};
+use crate::management::interface::{Controller, ControllerSettings};
 use crate::management::interface::Command;
 use crate::management::Result;
 use crate::Address;

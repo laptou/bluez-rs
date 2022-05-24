@@ -10,9 +10,7 @@ use crate::Address;
 
 pub(crate) trait BufExtBlueZ: Buf {
     fn get_address(&mut self) -> Address {
-        let mut arr = [0u8; 6];
-        self.copy_to_slice(&mut arr[..]);
-        Address::from(arr)
+        Address::from(self.get_array_u8())
     }
 
     fn get_array_u8<const N: usize>(&mut self) -> [u8; N] {

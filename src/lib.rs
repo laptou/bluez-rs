@@ -112,7 +112,6 @@ pub use address::*;
 
 pub mod communication;
 pub mod management;
-pub mod socket;
 
 mod address;
 mod util;

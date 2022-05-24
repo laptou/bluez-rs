@@ -7,10 +7,10 @@ use libc;
 use std::os::unix::io::{FromRawFd, RawFd};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
+use crate::address::Protocol;
 
 use crate::management::interface::{Request, Response};
 use crate::management::Error;
-use crate::socket::*;
 
 #[derive(Debug)]
 pub struct ManagementStream(
@@ -82,39 +82,5 @@ impl ManagementStream {
         // make buffer by chaining header and body
         Response::parse(Buf::chain(&header[..], &body[..]))
     }
-
-    // fn pin_get_inner(self: Pin<&mut Self>) -> Pin<&mut UnixStream> {
-    //     unsafe { self.map_unchecked_mut(|s| &mut s.0) }
-    // }
 }
 
-// impl AsyncWrite for ManagementStream {
-//     fn poll_write(
-//         self: Pin<&mut Self>,
-//         cx: &mut Context<'_>,
-//         buf: &[u8],
-//     ) -> Poll<Result<usize, std::io::Error>> {
-//         AsyncWrite::poll_write(self.pin_get_inner(), cx, buf)
-//     }
-
-//     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), std::io::Error>> {
-//         AsyncWrite::poll_flush(self.pin_get_inner(), cx)
-//     }
-
-//     fn poll_shutdown(
-//         self: Pin<&mut Self>,
-//         cx: &mut Context<'_>,
-//     ) -> Poll<Result<(), std::io::Error>> {
-//         AsyncWrite::poll_shutdown(self.pin_get_inner(), cx)
-//     }
-// }
-
-// impl AsyncRead for ManagementStream {
-//     fn poll_read(
-//         self: Pin<&mut Self>,
-//         cx: &mut Context<'_>,
-//         buf: &mut tokio::io::ReadBuf<'_>,
-//     ) -> Poll<std::io::Result<()>> {
-//         AsyncRead::poll_read(self.pin_get_inner(), cx, buf)
-//     }
-// }

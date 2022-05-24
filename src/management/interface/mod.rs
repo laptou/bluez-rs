@@ -5,9 +5,9 @@ pub use self::event::*;
 pub use self::request::*;
 pub use self::response::*;
 
-pub mod class;
-pub mod command;
-pub mod controller;
-pub mod event;
-pub mod request;
-pub mod response;
+mod class;
+mod command;
+mod controller;
+mod event;
+mod request;
+mod response;
