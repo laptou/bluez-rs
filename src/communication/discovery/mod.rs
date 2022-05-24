@@ -174,9 +174,9 @@ impl<B: Buf> From<&mut B> for ServiceAttributeResponse {
 }
 
 #[derive(Debug)]
-pub struct SdpClient(BluetoothStream);
+pub struct ServiceDiscoveryClient(BluetoothStream);
 
-impl SdpClient {
+impl ServiceDiscoveryClient {
     async fn send(&mut self, req: Pdu) -> Result<(), Error> {
         let mut buf = BytesMut::new();
         req.to_buf(&mut buf);

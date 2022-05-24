@@ -6,7 +6,7 @@ extern crate bluez;
 
 use anyhow::Context;
 use bluez::communication::discovery::{
-    SdpClient, ServiceAttributeId, ServiceAttributeRange, SDP_BROWSE_ROOT,
+    ServiceDiscoveryClient, ServiceAttributeId, ServiceAttributeRange, SDP_BROWSE_ROOT,
 };
 use bluez::Address;
 use clap::Parser;
@@ -22,7 +22,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
 
     let address = args.address;
 
-    let mut client = SdpClient::connect(address)
+    let mut client = ServiceDiscoveryClient::connect(address)
         .await
         .context("could not connect to device")?;
 
