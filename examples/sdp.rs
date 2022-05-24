@@ -1,6 +1,6 @@
-//! This example allows you to chat over L2CAP with another bluetooth device.
+//! This example allows you to query a device for service discovery.
 //!
-//! Copyright (c) 2021 Ibiyemi Abiodun
+//! Copyright (c) 2022 Ibiyemi Abiodun
 
 extern crate bluez;
 
@@ -9,28 +9,26 @@ use bluez::communication::discovery::{
     SdpClient, ServiceAttributeId, ServiceAttributeRange, SDP_BROWSE_ROOT,
 };
 use bluez::Address;
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+struct Args {
+    address: Address,
+}
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> Result<(), anyhow::Error> {
-    // print!("enter sdp server address: ");
-    // stdout().flush()?;
-    // let mut line = String::new();
-    // stdin().read_line(&mut line)?;
+    let args = Args::parse();
 
-    let octets = "94:DB:56:C0:18:1A"
-        .trim()
-        .split(':')
-        .map(|octet| u8::from_str_radix(octet, 16))
-        .rev()
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let address = Address::from_slice(&octets[..]);
+    let address = args.address;
 
     let mut client = SdpClient::connect(address)
         .await
         .context("could not connect to device")?;
 
     println!("connected to device");
+
+    // get a list of services that are available on this device by querying the browse root
 
     let response = client
         .service_search(vec![SDP_BROWSE_ROOT.into()], 30)
@@ -43,10 +41,14 @@ pub async fn main() -> Result<(), anyhow::Error> {
             service_handle
         );
 
+        // get all of the attributes for each service that was revealed
+
         let mut response = client
             .service_attribute(service_handle, u16::MAX, vec![ServiceAttributeRange::ALL])
             .await
             .context("service attribute request failed")?;
+
+        // pretty-print information about each service
 
         response
             .attributes

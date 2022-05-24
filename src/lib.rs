@@ -98,7 +98,7 @@
 //! [`ManagementClient::get_controller_info`](crate::management::ManagementClient::get_controller_info),
 //! will usually work. However, commands that try to change any settings, such as
 //! [`ManagementClient::set_powered`](crate::management::ManagementClient::set_powered) will fail with
-//! 'permission denied' errors if your process does not have the `CAP_NET_RAW` capability.
+//! 'permission denied' errors if your process does not have the `CAP_NET_ADMIN` capability.
 //!
 //! [process]: crate::management::ManagementClient::process
 //! [sample]: https://github.com/laptou/bluez-rs/tree/master/src/example/discover.rs
