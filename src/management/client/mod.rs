@@ -7,6 +7,12 @@ pub use load::*;
 pub use oob::*;
 pub use params::*;
 pub use settings::*;
+pub use interact::*;
+pub use query::*;
+pub use class::*;
+pub use discovery::*;
+
+use tokio::sync::mpsc;
 
 use crate::management::interface::*;
 use crate::management::stream::ManagementStream;
@@ -23,99 +29,56 @@ mod params;
 mod query;
 mod settings;
 
-pub struct ManagementClient<'a> {
-    socket: ManagementStream,
-    handler: Option<ManagementEventHandler<'a>>,
-}
+async fn exec_command(
+    socket: &mut ManagementStream,
+    opcode: Command,
+    controller: Controller,
+    param: Option<Bytes>,
+    mut event_tx: Option<mpsc::Sender<Response>>,
+) -> Result<(Controller, Option<Bytes>)> {
+    let param = param.unwrap_or(Bytes::new());
 
-pub type ManagementEventHandler<'a> = Box<dyn (FnMut(Controller, &Event)) + Send + 'a>;
-
-impl<'a> ManagementClient<'a> {
-    pub fn new() -> Result<Self> {
-        Ok(ManagementClient {
-            socket: ManagementStream::open()?,
-            handler: None,
+    // send request
+    socket
+        .send(Request {
+            opcode,
+            controller,
+            param,
         })
-    }
+        .await?;
 
-    pub fn new_with_handler(handler: ManagementEventHandler<'a>) -> Result<Self> {
-        Ok(ManagementClient {
-            socket: ManagementStream::open()?,
-            handler: Some(handler),
-        })
-    }
+    // loop until we receive a relevant response
+    // which is either command complete or command status
+    // with the same opcode as the command that we sent
+    loop {
+        let response = socket.receive().await?;
 
-    /// Sets a handler that will be called every time this client processes
-    /// an event. CommandComplete and CommandStatus events will NOT reach this handler;
-    /// instead their contents can be accessed as the return value of the method
-    /// that you called.
-    pub fn set_handler(&mut self, handler: Option<ManagementEventHandler<'a>>) {
-        self.handler = handler;
-    }
-
-    /// Tells the client to check if any new data has been sent in by the kernel.
-    /// If you do not call this method, you will not recieve any events except
-    /// when you happen to issue a command.
-    pub async fn process(&mut self) -> Result<Response> {
-        let response = self.socket.receive().await?;
-
-        match &response.event {
-            Event::CommandStatus { .. } | Event::CommandComplete { .. } => (),
-            _ => {
-                if let Some(handler) = &mut self.handler {
-                    (handler)(response.controller, &response.event)
+        match response.event {
+            Event::CommandComplete {
+                status,
+                param,
+                opcode: evt_opcode,
+            } if opcode == evt_opcode => {
+                return match status {
+                    CommandStatus::Success => Ok((response.controller, Some(param))),
+                    _ => Err(Error::CommandError { opcode, status }),
                 }
             }
-        }
 
-        Ok(response)
-    }
-
-    async fn exec_command<F: FnOnce(Controller, Option<Bytes>) -> Result<T>, T>(
-        &mut self,
-        opcode: Command,
-        controller: Controller,
-        param: Option<Bytes>,
-        callback: F,
-    ) -> Result<T> {
-        let param = param.unwrap_or_default();
-
-        // send request
-        self.socket
-            .send(Request {
-                opcode,
-                controller,
-                param,
-            })
-            .await?;
-
-        // loop until we receive a relevant response
-        // which is either command complete or command status
-        // with the same opcode as the command that we sent
-        loop {
-            let response = self.process().await?;
-
-            match response.event {
-                Event::CommandComplete {
-                    status,
-                    param,
-                    opcode: evt_opcode,
-                } if opcode == evt_opcode => {
-                    return match status {
-                        CommandStatus::Success => callback(response.controller, Some(param)),
-                        _ => Err(Error::CommandError { opcode, status }),
-                    }
+            Event::CommandStatus {
+                status,
+                opcode: evt_opcode,
+            } if opcode == evt_opcode => {
+                return match status {
+                    CommandStatus::Success => Ok((response.controller, None)),
+                    _ => Err(Error::CommandError { opcode, status }),
                 }
-                Event::CommandStatus {
-                    status,
-                    opcode: evt_opcode,
-                } if opcode == evt_opcode => {
-                    return match status {
-                        CommandStatus::Success => callback(response.controller, None),
-                        _ => Err(Error::CommandError { opcode, status }),
-                    }
+            }
+
+            _ => {
+                if let Some(event_tx) = &mut event_tx {
+                    let _ = event_tx.send(response).await;
                 }
-                _ => (),
             }
         }
     }
