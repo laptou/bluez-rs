@@ -3,14 +3,14 @@ use std::ffi::CString;
 use bytes::*;
 
 pub use advertising::*;
+pub use class::*;
+pub use discovery::*;
+pub use interact::*;
 pub use load::*;
 pub use oob::*;
 pub use params::*;
-pub use settings::*;
-pub use interact::*;
 pub use query::*;
-pub use class::*;
-pub use discovery::*;
+pub use settings::*;
 
 use tokio::sync::mpsc;
 

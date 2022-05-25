@@ -498,7 +498,7 @@ pub async fn set_io_capability(
     let mut param = BytesMut::with_capacity(1);
     param.put_u8(io_capability as u8);
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::SetIOCapability,
         controller,
@@ -539,7 +539,7 @@ pub async fn set_device_id(
     param.put_u16_le(product);
     param.put_u16_le(version);
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::SetDeviceID,
         controller,
@@ -565,7 +565,7 @@ pub async fn set_scan_parameters(
     param.put_u16_le(interval);
     param.put_u16_le(window);
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::SetScanParameters,
         controller,
@@ -854,7 +854,7 @@ pub async fn set_appearance(
     let mut param = BytesMut::with_capacity(2);
     param.put_u16_le(appearance);
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::SetAppearance,
         controller,
@@ -876,7 +876,7 @@ pub async fn set_phy_config(
     let mut param = BytesMut::with_capacity(4);
     param.put_u32_le(selected_phys.bits());
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::SetPhyConfig,
         controller,
@@ -947,7 +947,7 @@ pub async fn set_default_runtime_config(
         param.put_slice(value);
     }
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::SetDefaultSystemConfig,
         controller,
@@ -983,7 +983,7 @@ pub async fn set_default_system_config(
         param.put_slice(value);
     }
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::SetDefaultSystemConfig,
         controller,

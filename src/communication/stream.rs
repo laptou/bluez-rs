@@ -22,7 +22,6 @@ union SockAddr {
     rc: bluez_sys::sockaddr_rc,
 }
 
-
 /// A Bluetooth socket which can accept connections from remote Bluetooth
 /// devices. You can accept new connections using the
 /// [`accept`](`BluetoothListener::accept`) method.

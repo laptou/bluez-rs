@@ -35,7 +35,7 @@ pub async fn load_link_keys(
         param.put_u8(key.pin_length);
     }
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::LoadLinkKeys,
         controller,
@@ -79,7 +79,7 @@ pub async fn load_long_term_keys(
         param.put_slice(&key.value[..]);
     }
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::LoadLongTermKeys,
         controller,
@@ -118,7 +118,7 @@ pub async fn load_identity_resolving_keys(
         param.put_slice(&key.value[..]);
     }
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::LoadIdentityResolvingKeys,
         controller,
@@ -160,7 +160,7 @@ pub async fn load_connection_parameters(
         param.put_u16_le(cxn_param.supervision_timeout);
     }
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::LoadConnectionParameters,
         controller,
@@ -193,7 +193,7 @@ pub async fn load_blocked_keys(
         param.put_slice(&key.value[..]);
     }
 
-    let (_, param) = exec_command(
+    let (_, _param) = exec_command(
         socket,
         Command::LoadBlockedKeys,
         controller,

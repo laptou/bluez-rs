@@ -6,7 +6,7 @@ extern crate bluez;
 
 use anyhow::Context;
 use bluez::communication::discovery::{
-    ServiceDiscoveryClient, ServiceAttributeId, ServiceAttributeRange, SDP_BROWSE_ROOT,
+    ServiceAttributeId, ServiceAttributeRange, ServiceDiscoveryClient, SDP_BROWSE_ROOT,
 };
 use bluez::Address;
 use clap::Parser;

@@ -416,14 +416,8 @@ pub async fn get_phy_config(
     controller: Controller,
     event_tx: Option<mpsc::Sender<Response>>,
 ) -> Result<PhyConfig> {
-    let (_, param) = exec_command(
-        socket,
-        Command::GetPhyConfig,
-        controller,
-        None,
-        event_tx,
-    )
-    .await?;
+    let (_, param) =
+        exec_command(socket, Command::GetPhyConfig, controller, None, event_tx).await?;
 
     let mut param = param.ok_or(Error::NoData)?;
     Ok(PhyConfig {
