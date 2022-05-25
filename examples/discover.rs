@@ -8,6 +8,7 @@ extern crate bluez;
 use anyhow::{bail, Context};
 use bluez::management::interface::*;
 use bluez::management::*;
+use enumflags2::BitFlag;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> std::result::Result<(), anyhow::Error> {
@@ -41,6 +42,9 @@ pub async fn main() -> std::result::Result<(), anyhow::Error> {
             .await
             .context("powering on bluetooth controlled failed")?;
     }
+
+    // stop discovery if it is active
+    let _ = stop_discovery(&mut mgmt, controller, AddressTypeFlag::BREDR.into(), None).await;
 
     // scan for some devices
     // to do this we'll need to listen for the Device Found event
