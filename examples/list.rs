@@ -5,19 +5,24 @@
 
 extern crate bluez;
 
-use bluez::management::ManagementClient;
+use anyhow::Context;
+use bluez::management::*;
 
 #[tokio::main]
 pub async fn main() -> Result<(), anyhow::Error> {
-    let mut client = ManagementClient::new().unwrap();
+    let mut mgmt = ManagementStream::open().context("failed to open management socket")?;
 
-    let version = client.get_mgmt_version().await?;
+    let version = get_mgmt_version(&mut mgmt, None)
+        .await
+        .context("failed to get management api version")?;
     println!(
         "management version: {}.{}",
         version.version, version.revision
     );
 
-    let controllers = client.get_ext_controller_list().await?;
+    let controllers = get_ext_controller_list(&mut mgmt, None)
+        .await
+        .context("failed to get list of bluetooth controllers")?;
 
     println!("\navailable controllers:");
 
@@ -26,7 +31,9 @@ pub async fn main() -> Result<(), anyhow::Error> {
             "\t{:?} ({:?}, {:?})",
             controller, controller_type, controller_bus
         );
-        let info = client.get_controller_info(controller).await?;
+        let info = get_controller_info(&mut mgmt, controller, None)
+            .await
+            .context("failed to get info about controller")?;
 
         println!("\t\tname: {:?}", info.name);
         println!("\t\tshort name: {:?}", info.short_name);

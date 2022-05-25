@@ -5,23 +5,20 @@
 
 extern crate bluez;
 
-use std::time::Duration;
-
 use anyhow::{bail, Context};
 use bluez::management::interface::*;
 use bluez::management::*;
-use tokio::time::sleep;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> std::result::Result<(), anyhow::Error> {
-    let mut client = ManagementClient::new().unwrap();
+    let mut mgmt = ManagementStream::open().context("failed to connect to mgmt api")?;
 
-    let controllers = client.get_controller_list().await?;
+    let controllers = get_controller_list(&mut mgmt, None).await?;
 
     let mut active_controller = None;
 
     for controller in controllers {
-        if let Ok(info) = client.get_controller_info(controller).await {
+        if let Ok(info) = get_controller_info(&mut mgmt, controller, None).await {
             if info.supported_settings.contains(ControllerSetting::Powered) {
                 active_controller = Some((controller, info));
                 break;
@@ -40,8 +37,7 @@ pub async fn main() -> std::result::Result<(), anyhow::Error> {
 
     if !info.current_settings.contains(ControllerSetting::Powered) {
         println!("powering on bluetooth controller {}", controller);
-        client
-            .set_powered(controller, true)
+        set_powered(&mut mgmt, controller, true, None)
             .await
             .context("powering on bluetooth controlled failed")?;
     }
@@ -49,15 +45,14 @@ pub async fn main() -> std::result::Result<(), anyhow::Error> {
     // scan for some devices
     // to do this we'll need to listen for the Device Found event
 
-    client
-        .start_discovery(controller, AddressTypeFlag::BREDR.into())
+    start_discovery(&mut mgmt, controller, AddressTypeFlag::BREDR.into(), None)
         .await
         .context("starting discovery failed")?;
 
     // just wait for discovery forever
     loop {
         // process() blocks until there is a response to be had
-        let response = client.process().await.context("processing events failed")?;
+        let response = mgmt.receive().await.context("receiving events failed")?;
 
         match response.event {
             Event::DeviceFound {
@@ -82,14 +77,15 @@ pub async fn main() -> std::result::Result<(), anyhow::Error> {
 
                 // if discovery ended, turn it back on
                 if !discovering {
-                    client
-                        .start_discovery(
-                            controller,
-                            AddressTypeFlag::BREDR
-                                | AddressTypeFlag::LEPublic
-                                | AddressTypeFlag::LERandom,
-                        )
-                        .await?;
+                    start_discovery(
+                        &mut mgmt,
+                        controller,
+                        AddressTypeFlag::BREDR
+                            | AddressTypeFlag::LEPublic
+                            | AddressTypeFlag::LERandom,
+                        None,
+                    )
+                    .await?;
                 }
             }
             _ => (),

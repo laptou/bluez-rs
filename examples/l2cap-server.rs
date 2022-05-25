@@ -32,13 +32,13 @@ pub async fn main() -> Result<(), anyhow::Error> {
         }
     });
 
-    let mut mgmt = ManagementClient::new()?;
-    let controllers = mgmt.get_controller_list().await?;
+    let mut mgmt = ManagementStream::open()?;
+    let controllers = get_controller_list(&mut mgmt, None).await?;
     if controllers.len() < 1 {
         panic!("there are no bluetooth controllers on this device")
     }
 
-    let controller_info = mgmt.get_controller_info(controllers[0]).await?;
+    let controller_info = get_controller_info(&mut mgmt, controllers[0], None).await?;
 
     let listener = BluetoothListener::bind(
         Protocol::L2CAP,
