@@ -8,7 +8,6 @@ extern crate bluez;
 use anyhow::{bail, Context};
 use bluez::management::interface::*;
 use bluez::management::*;
-use enumflags2::BitFlag;
 
 #[tokio::main(flavor = "current_thread")]
 pub async fn main() -> std::result::Result<(), anyhow::Error> {
