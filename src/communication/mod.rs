@@ -7,6 +7,8 @@ use std::fmt::Debug;
 pub mod discovery;
 pub mod stream;
 
+pub use stream::*;
+
 /// A unique ID. This can be 16, 32, or 128 bits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Uuid {
