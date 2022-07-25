@@ -1,1 +1,6 @@
 language: rust
+before_install:
+ - sudo apt-get -y install libbluetooth-dev 
+addons:
+  apt:
+    update: true

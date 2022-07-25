@@ -1,25 +1,28 @@
 //! This example just gets all of the available controllers
 //! on the system and spits out information about them.
 //!
-//! Copyright (c) 2020 Ibiyemi Abiodun
+//! Copyright (c) 2022 Ibiyemi Abiodun
 
 extern crate bluez;
 
-use std::error::Error;
+use anyhow::Context;
+use bluez::management::*;
 
-use bluez::management::client::*;
+#[tokio::main]
+pub async fn main() -> Result<(), anyhow::Error> {
+    let mut mgmt = ManagementStream::open().context("failed to open management socket")?;
 
-#[async_std::main]
-pub async fn main() -> Result<(), Box<dyn Error>> {
-    let mut client = ManagementClient::new().unwrap();
-
-    let version = client.get_mgmt_version().await?;
+    let version = get_mgmt_version(&mut mgmt, None)
+        .await
+        .context("failed to get management api version")?;
     println!(
         "management version: {}.{}",
         version.version, version.revision
     );
 
-    let controllers = client.get_ext_controller_list().await?;
+    let controllers = get_ext_controller_list(&mut mgmt, None)
+        .await
+        .context("failed to get list of bluetooth controllers")?;
 
     println!("\navailable controllers:");
 
@@ -28,7 +31,9 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             "\t{:?} ({:?}, {:?})",
             controller, controller_type, controller_bus
         );
-        let info = client.get_controller_info(controller).await?;
+        let info = get_controller_info(&mut mgmt, controller, None)
+            .await
+            .context("failed to get info about controller")?;
 
         println!("\t\tname: {:?}", info.name);
         println!("\t\tshort name: {:?}", info.short_name);

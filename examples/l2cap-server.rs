@@ -1,81 +1,91 @@
 //! This example allows you to chat over L2CAP with another bluetooth device.
 //!
-//! Copyright (c) 2021 Ibiyemi Abiodun
+//! Copyright (c) 2022 Ibiyemi Abiodun
 
 extern crate bluez;
 
-use std::error::Error;
-use std::sync::Arc;
+use std::{io::BufRead, sync::Arc};
 
-use async_std::io::stdin;
-use bluez::communication::socket::BluetoothListener;
-use bluez::management::client::*;
-use bluez::socket::BtProto;
-use smol::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
-use smol::Async;
+use anyhow::Context;
+use bluez::communication::stream::BluetoothListener;
+use bluez::management::*;
+use bluez::AddressType;
+use bluez::Protocol;
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    spawn,
+    sync::Mutex,
+};
 
-#[async_std::main]
-pub async fn main() -> Result<(), Box<dyn Error>> {
-    let mut mgmt = ManagementClient::new()?;
-    let controllers = mgmt.get_controller_list().await?;
+#[tokio::main(worker_threads = 2)]
+pub async fn main() -> Result<(), anyhow::Error> {
+    let (input_tx, input_rx) = tokio::sync::mpsc::channel(16);
+
+    std::thread::spawn(move || {
+        let stdin = std::io::stdin();
+        let mut stdin = stdin.lock();
+
+        loop {
+            let mut line = String::new();
+            stdin.read_line(&mut line).unwrap();
+            input_tx.blocking_send(line).unwrap();
+        }
+    });
+
+    let mut mgmt = ManagementStream::open()?;
+    let controllers = get_controller_list(&mut mgmt, None).await?;
     if controllers.len() < 1 {
         panic!("there are no bluetooth controllers on this device")
     }
 
-    let controller_info = mgmt.get_controller_info(controllers[0]).await?;
+    let controller_info = get_controller_info(&mut mgmt, controllers[0], None).await?;
 
-    let listener = BluetoothListener::bind(BtProto::L2CAP, controller_info.address, AddressType::BREDR, 0)?;
+    let listener = BluetoothListener::bind(
+        Protocol::L2CAP,
+        controller_info.address,
+        AddressType::BREDR,
+        0,
+    )?;
     let (addr, port) = listener.local_addr()?;
 
     println!("l2cap server listening at {} on port {}", addr, port);
 
-    let listener = Async::new(listener)?;
+    let input_rx = Arc::new(Mutex::new(input_rx));
 
     loop {
-        let (sock, (addr, port)) = listener.read_with(|l| l.accept()).await?;
+        let (stream, (addr, port)) = listener.accept().await?;
 
-        println!("l2cap server got connection from {} on port {}", addr, port);
+        println!("l2cap client connected from {} on port {}", addr, port);
 
-        let sock = Arc::new(Async::new(sock)?);
+        let (reader, mut writer) = stream.into_split();
 
-        let read_task = smol::spawn({
-            let sock = sock.clone();
-            async move {
-                let mut reader = BufReader::new(sock.as_ref());
-                let mut line = String::new();
+        let read_task = spawn(async move {
+            let mut line = String::new();
+            let mut reader = BufReader::new(reader);
 
-                loop {
-                    reader.read_line(&mut line).await?;
-                    println!("> {}", line);
-                    line.clear();
-                }
-
-                std::io::Result::Ok(())
+            while reader.read_line(&mut line).await.unwrap() > 0 {
+                println!("> {}", line);
+                line.clear();
             }
         });
 
-        let write_task = smol::spawn({
-            let sock = sock.clone();
+        let input_rx = input_rx.clone();
 
-            async move {
-                let mut writer = BufWriter::new(sock.as_ref());
-                let mut line = String::new();
-                let stdin = stdin();
+        let write_task = spawn(async move {
+            let mut input_rx = input_rx.lock().await;
 
-                loop {
-                    stdin.read_line(&mut line).await?;
-                    writer.write(line.as_bytes()).await?;
-                    writer.flush().await?;
-                    println!("< {}", line);
-                    line.clear();
-                }
+            loop {
+                let line = input_rx.recv().await.context("stdin ended").unwrap();
 
-                std::io::Result::Ok(())
+                println!("< {}", line);
+                writer.write_all(line.as_bytes()).await.unwrap();
+                println!("<< {}", line);
             }
         });
 
-        let (res1, res2) = futures::join!(read_task, write_task);
-        res1?;
-        res2?;
+        read_task.await?;
+        write_task.abort();
+
+        println!("l2cap client disconnected, listening again");
     }
 }

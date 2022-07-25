@@ -1,87 +1,78 @@
 //! This example allows you to chat over L2CAP with another bluetooth device.
 //!
-//! Copyright (c) 2021 Ibiyemi Abiodun
+//! Copyright (c) 2022 Ibiyemi Abiodun
 
 extern crate bluez;
 
-use std::error::Error;
-use std::sync::Arc;
+use std::io::BufRead;
 
-use async_std::io::{stdin, stdout};
-use bluez::communication::socket::{BluetoothListener, BluetoothStream};
-use bluez::management::client::*;
+use anyhow::Context;
+use bluez::communication::stream::BluetoothStream;
+
 use bluez::Address;
-use bluez::socket::BtProto;
-use futures::AsyncReadExt;
-use smol::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
-use smol::Async;
+use bluez::AddressType;
+use bluez::Protocol;
+use clap::Parser;
+use tokio::io::BufReader;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+use tokio::spawn;
 
-#[async_std::main]
-pub async fn main() -> Result<(), Box<dyn Error>> {
-    print!("enter l2cap server address: ");
-    stdout().flush().await?;
-    let mut line = String::new();
-    stdin().read_line(&mut line).await?;
+#[derive(Parser, Debug)]
+struct Args {
+    address: Address,
+    port: u16,
+}
 
-    let octets = line
-        .trim()
-        .split(':')
-        .map(|octet| u8::from_str_radix(octet, 16))
-        .rev()
-        .collect::<Result<Vec<_>, _>>()?;
+#[tokio::main(worker_threads = 2)]
+pub async fn main() -> Result<(), anyhow::Error> {
+    let (input_tx, mut input_rx) = tokio::sync::mpsc::channel(16);
 
-    let address = Address::from_slice(&octets[..]);
+    std::thread::spawn(move || -> anyhow::Result<()> {
+        let stdin = std::io::stdin();
+        let mut stdin = stdin.lock();
 
-    print!("enter l2cap server port: ");
-    stdout().flush().await?;
-    let mut line = String::new();
-    stdin().read_line(&mut line).await?;
-
-    let port = line.trim().parse()?;
-
-    let stream = BluetoothStream::connect(BtProto::L2CAP, address, AddressType::BREDR, port)?;
-
-    println!("l2cap client connected to {} on port {}", address, port);
-
-    let stream = Arc::new(Async::new(stream)?);
-
-    let read_task = smol::spawn({
-        let sock = stream.clone();
-        async move {
-            let mut reader = BufReader::new(sock.as_ref());
+        loop {
             let mut line = String::new();
-            loop {
-                reader.read_line(&mut line).await?;
-                println!("> {}", line);
-                line.clear();
-            }
-
-            std::io::Result::Ok(())
+            stdin.read_line(&mut line)?;
+            input_tx.blocking_send(line)?;
         }
     });
 
-    let write_task = smol::spawn({
-        let sock = stream.clone();
+    let args = Args::parse();
 
-        async move {
-            let mut writer = BufWriter::new(sock.as_ref());
-            let mut line = String::new();
-            let stdin = stdin();
-            loop {
-                stdin.read_line(&mut line).await?;
-                writer.write(line.as_bytes()).await?;
-                writer.flush().await?;
-                println!("< {}", line);
-                line.clear();
-            }
+    let stream =
+        BluetoothStream::connect(Protocol::L2CAP, args.address, AddressType::BREDR, args.port)
+            .await?;
 
-            std::io::Result::Ok(())
+    println!(
+        "l2cap client connected to {} on port {}",
+        args.address, args.port
+    );
+
+    // note: using tokio::io::split for this use-case does not work, because that method
+    // uses a lock internally, whereas this one does not
+    let (reader, mut writer) = stream.into_split();
+
+    let read_task = spawn(async move {
+        let mut line = String::new();
+        let mut reader = BufReader::new(reader);
+
+        while reader.read_line(&mut line).await.unwrap() > 0 {
+            println!("> {}", line);
+            line.clear();
         }
     });
 
-    let (res1, res2) = futures::join!(read_task, write_task);
-    res1?;
-    res2?;
+    let write_task = spawn(async move {
+        loop {
+            let line = input_rx.recv().await.context("stdin ended").unwrap();
+            writer.write_all(line.as_bytes()).await.unwrap();
+            println!("< {}", line);
+        }
+    });
+
+    read_task.await?;
+    write_task.abort();
 
     Ok(())
 }

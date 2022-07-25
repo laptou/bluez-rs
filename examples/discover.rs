@@ -1,58 +1,60 @@
 //! This example powers on the first available controller
 //! and then starts searching for devices.
 //!
-//! Copyright (c) 2020 Ibiyemi Abiodun
+//! Copyright (c) 2022 Ibiyemi Abiodun
 
 extern crate bluez;
 
-use std::error::Error;
+use anyhow::{bail, Context};
+use bluez::management::interface::*;
+use bluez::management::*;
 
-use async_std::task::block_on;
+#[tokio::main(flavor = "current_thread")]
+pub async fn main() -> std::result::Result<(), anyhow::Error> {
+    let mut mgmt = ManagementStream::open().context("failed to connect to mgmt api")?;
 
-use bluez::management::client::*;
-use bluez::management::interface::controller::*;
-use bluez::management::interface::event::Event;
+    let controllers = get_controller_list(&mut mgmt, None).await?;
 
-#[async_std::main]
-pub async fn main() -> Result<(), Box<dyn Error>> {
-    let mut client = ManagementClient::new().unwrap();
+    let mut active_controller = None;
 
-    let controllers = client.get_controller_list().await?;
-
-    // find the first controller we can power on
-    let (controller, info) = controllers
-        .into_iter()
-        .filter_map(|controller| {
-            let info = block_on(client.get_controller_info(controller)).ok()?;
-
+    for controller in controllers {
+        if let Ok(info) = get_controller_info(&mut mgmt, controller, None).await {
             if info.supported_settings.contains(ControllerSetting::Powered) {
-                Some((controller, info))
+                active_controller = Some((controller, info));
+                break;
             } else {
-                None
+                bail!("controller is not powered");
             }
-        })
-        .nth(0)
-        .expect("no usable controllers found");
+        }
+    }
+
+    let (controller, info) = match active_controller {
+        Some(active_controller) => active_controller,
+        None => bail!("no available bluetooth controllers"),
+    };
+
+    println!("using controller {}", controller);
 
     if !info.current_settings.contains(ControllerSetting::Powered) {
         println!("powering on bluetooth controller {}", controller);
-        client.set_powered(controller, true).await?;
+        set_powered(&mut mgmt, controller, true, None)
+            .await
+            .context("powering on bluetooth controlled failed")?;
     }
+
+    // stop discovery if it is active
+    let _ = stop_discovery(&mut mgmt, controller, AddressTypeFlag::BREDR.into(), None).await;
 
     // scan for some devices
     // to do this we'll need to listen for the Device Found event
 
-    client
-        .start_discovery(
-            controller,
-            AddressTypeFlag::BREDR | AddressTypeFlag::LEPublic | AddressTypeFlag::LERandom,
-        )
-        .await?;
+    start_discovery(&mut mgmt, controller, AddressTypeFlag::BREDR.into(), None)
+        .await
+        .context("starting discovery failed")?;
 
     // just wait for discovery forever
     loop {
-        // process() blocks until there is a response to be had
-        let response = client.process().await?;
+        let response = mgmt.receive().await.context("receiving events failed")?;
 
         match response.event {
             Event::DeviceFound {
@@ -63,7 +65,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 ..
             } => {
                 println!(
-                    "[{:?}] found device {} ({:?})",
+                    "[{}] found device {} ({:?})",
                     controller, address, address_type
                 );
                 println!("\tflags: {:?}", flags);
@@ -77,14 +79,15 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
                 // if discovery ended, turn it back on
                 if !discovering {
-                    client
-                        .start_discovery(
-                            controller,
-                            AddressTypeFlag::BREDR
-                                | AddressTypeFlag::LEPublic
-                                | AddressTypeFlag::LERandom,
-                        )
-                        .await?;
+                    start_discovery(
+                        &mut mgmt,
+                        controller,
+                        AddressTypeFlag::BREDR
+                            | AddressTypeFlag::LEPublic
+                            | AddressTypeFlag::LERandom,
+                        None,
+                    )
+                    .await?;
                 }
             }
             _ => (),

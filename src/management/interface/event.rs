@@ -3,6 +3,7 @@ use std::ffi::CString;
 use bytes::Bytes;
 use enumflags2::BitFlags;
 
+use crate::address::AddressType;
 use crate::management::client::*;
 use crate::management::interface::class::{DeviceClass, ServiceClasses};
 use crate::management::interface::controller::ControllerSettings;
@@ -440,24 +441,25 @@ pub enum Event {
     ///
     /// The event will only be sent to management sockets other than the
     /// one through which the change was triggered.
-    ExperimentalFeatureChanged {
-        uuid: [u8; 16],
-        flags: u32,
-    },
+    ExperimentalFeatureChanged { uuid: [u8; 16], flags: u32 },
 
     /// This event indicates the change of default system parameter values.
     ///
     /// The event will only be sent to management sockets other than the
-    /// one through which the change was trigged. In addition it will
-    /// only be sent to sockets that have issues the Read Default System
-    /// Configuration command.
-    DefaultSystemConfigChanged { params: HashMap<SystemConfigParameterType, Vec<u8>> },
+    ///	one through which the change was trigged. In addition it will
+    ///	only be sent to sockets that have issues the Read Default System
+    ///	Configuration command.
+    DefaultSystemConfigChanged {
+        params: HashMap<SystemConfigParameterType, Vec<u8>>,
+    },
 
-    /// This event indicates the change of default runtime parameter values.
+    ///	This event indicates the change of default runtime parameter values.
     ///
-    /// The event will only be sent to management sockets other than the
-    /// one through which the change was trigged. In addition it will
-    /// only be sent to sockets that have issues the Read Default Runtime
-    /// Configuration command.
-    DefaultRuntimeConfigChanged { params: HashMap<RuntimeConfigParameterType, Vec<u8>> },
+    ///	The event will only be sent to management sockets other than the
+    ///	one through which the change was trigged. In addition it will
+    ///	only be sent to sockets that have issues the Read Default Runtime
+    ///	Configuration command.
+    DefaultRuntimeConfigChanged {
+        params: HashMap<RuntimeConfigParameterType, Vec<u8>>,
+    },
 }

@@ -1,8 +1,8 @@
 use std::hash::Hash;
 
-use enumflags2::{BitFlags, bitflags};
+use enumflags2::{bitflags, BitFlags};
 
-use crate::Address;
+use crate::{Address, AddressType};
 
 // all of these structs are defined as packed structs here
 // https://elixir.bootlin.com/linux/latest/source/include/net/bluetooth/mgmt.h
@@ -13,14 +13,6 @@ use crate::Address;
 // be a little slower and definitely more verbose but also nice and easy to use from
 // the Rust side, which is the point of this library
 // plus the Nomicon discourages it https://doc.rust-lang.org/nomicon/other-reprs.html
-
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
-pub enum AddressType {
-    BREDR = 0,
-    LEPublic = 1,
-    LERandom = 2,
-}
 
 /// Used to represent the version of the BlueZ management
 /// interface that is in use.

@@ -8,15 +8,13 @@ use num_traits::FromPrimitive;
 
 use crate::Address;
 
-pub(crate) trait BufExtBlueZ: Buf {
+pub(crate) trait BufExt: Buf {
     fn get_address(&mut self) -> Address {
-        let mut arr = [0u8; 6];
-        self.copy_to_slice(&mut arr[..]);
-        Address::from(arr)
+        Address::from(self.get_array_u8())
     }
 
-    fn get_u8x16(&mut self) -> [u8; 16] {
-        let mut arr = [0u8; 16];
+    fn get_array_u8<const N: usize>(&mut self) -> [u8; N] {
+        let mut arr = [0u8; N];
         self.copy_to_slice(&mut arr[..]);
         arr
     }
@@ -79,7 +77,7 @@ pub(crate) trait BufExtBlueZ: Buf {
     ///   ...
     /// ```
     ///
-    fn get_tlv_map<T : FromPrimitive + Eq + Hash>(&mut self) -> HashMap<T, Vec<u8>> {
+    fn get_tlv_map<T: FromPrimitive + Eq + Hash>(&mut self) -> HashMap<T, Vec<u8>> {
         let mut parameters = HashMap::new();
         while self.has_remaining() {
             let parameter_type: T = self.get_primitive_u16_le();
@@ -90,7 +88,7 @@ pub(crate) trait BufExtBlueZ: Buf {
     }
 }
 
-impl<T: Buf> BufExtBlueZ for T {}
+impl<T: Buf> BufExt for T {}
 
 pub(crate) fn check_error(value: libc::c_int) -> Result<libc::c_int, std::io::Error> {
     if value < 0 {

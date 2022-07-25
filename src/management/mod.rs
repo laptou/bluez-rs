@@ -1,6 +1,10 @@
-pub mod client;
+mod client;
 pub mod interface;
 pub mod result;
-pub mod socket;
+mod stream;
 
-pub use result::{Error, Result};
+pub use client::*;
+pub use interface::*;
+pub use result::Error;
+pub(crate) use result::Result;
+pub use stream::ManagementStream;

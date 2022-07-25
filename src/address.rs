@@ -1,8 +1,10 @@
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 use bytes::Buf;
 
-#[repr(C, packed)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Default)]
 pub struct Address {
     bytes: [u8; 6],
@@ -50,6 +52,18 @@ impl From<Address> for [u8; 6] {
     }
 }
 
+impl Into<bluez_sys::bdaddr_t> for Address {
+    fn into(self) -> bluez_sys::bdaddr_t {
+        bluez_sys::bdaddr_t { b: self.bytes }
+    }
+}
+
+impl From<bluez_sys::bdaddr_t> for Address {
+    fn from(bdaddr: bluez_sys::bdaddr_t) -> Self {
+        Address { bytes: bdaddr.b }
+    }
+}
+
 impl AsRef<[u8]> for Address {
     fn as_ref(&self) -> &[u8] {
         &self.bytes
@@ -69,4 +83,64 @@ impl Display for Address {
             self.bytes[0]
         )
     }
+}
+
+impl FromStr for Address {
+    type Err = AddressParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut it = s
+            .split(':')
+            .map(|octet| u8::from_str_radix(octet, 16))
+            .rev();
+
+        let bytes = [
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+            it.next()
+                .ok_or(AddressParseError::NotEnoughOctets)?
+                .or(Err(AddressParseError::InvalidOctet))?,
+        ];
+
+        Ok(Self { bytes })
+    }
+}
+
+#[derive(Error, Debug, Clone, Copy)]
+pub enum AddressParseError {
+    #[error("the string contained an invalid octet")]
+    InvalidOctet,
+    #[error("the string contained less than six octets")]
+    NotEnoughOctets,
+    #[error("the string contained more than six octets")]
+    TooManyOctets,
+}
+
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, FromPrimitive)]
+pub enum AddressType {
+    BREDR = 0,
+    LEPublic = 1,
+    LERandom = 2,
+}
+
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, FromPrimitive, ToPrimitive)]
+pub enum Protocol {
+    L2CAP = bluez_sys::BTPROTO_L2CAP,
+    HCI = bluez_sys::BTPROTO_HCI,
+    RFCOMM = bluez_sys::BTPROTO_RFCOMM,
 }

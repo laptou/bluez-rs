@@ -3,6 +3,7 @@ use bytes::*;
 use crate::management::interface::command::Command;
 use crate::management::interface::controller::Controller;
 
+/// A command that is ready to be sent to the management API.
 #[derive(Debug)]
 pub struct Request {
     pub opcode: Command,

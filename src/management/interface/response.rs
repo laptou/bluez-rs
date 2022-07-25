@@ -6,9 +6,12 @@ use crate::management::client::ConnectionParams;
 use crate::management::interface::controller::Controller;
 use crate::management::interface::event::Event;
 use crate::management::Error;
-use crate::util::BufExtBlueZ;
+use crate::util::BufExt;
 use crate::Address;
 
+/// A response from the BlueZ management API. This can be a response to a
+/// command that was issued, or an event that was sent in response to an outside
+/// stimulus.
 pub struct Response {
     pub event: Event,
     pub controller: Controller,
@@ -66,7 +69,7 @@ impl Response {
                     address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     key_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
-                    value: buf.get_u8x16(),
+                    value: buf.get_array_u8(),
                     pin_length: buf.get_u8(),
                 },
                 0x000A => Event::NewLongTermKey {
@@ -78,7 +81,7 @@ impl Response {
                     encryption_size: buf.get_u8(),
                     encryption_diversifier: buf.get_u16_le(),
                     random_number: buf.get_u64_le(),
-                    value: buf.get_u8x16(),
+                    value: buf.get_array_u8(),
                 },
                 0x000B => Event::DeviceConnected {
                     address: Address::from_buf(&mut buf),
@@ -156,14 +159,14 @@ impl Response {
                     random_address: buf.get_address(),
                     address: buf.get_address(),
                     address_type: buf.get_primitive_u8(),
-                    value: buf.get_u8x16(),
+                    value: buf.get_array_u8(),
                 },
                 0x0019 => Event::NewSignatureResolvingKey {
                     store_hint: buf.get_bool(),
                     address: buf.get_address(),
                     address_type: buf.get_primitive_u8(),
                     key_type: buf.get_primitive_u8(),
-                    value: buf.get_u8x16(),
+                    value: buf.get_array_u8(),
                 },
                 0x001A => Event::DeviceAdded {
                     address: buf.get_address(),
@@ -221,14 +224,14 @@ impl Response {
                     selected_phys: BitFlags::from_bits_truncate(buf.get_u32_le()),
                 },
                 0x0027 => Event::ExperimentalFeatureChanged {
-                    uuid: buf.get_u8x16(),
+                    uuid: buf.get_array_u8(),
                     flags: buf.get_u32_le(),
                 },
                 0x0028 => Event::DefaultSystemConfigChanged {
-                    params: buf.get_tlv_map()
+                    params: buf.get_tlv_map(),
                 },
                 0x0029 => Event::DefaultRuntimeConfigChanged {
-                    params: buf.get_tlv_map()
+                    params: buf.get_tlv_map(),
                 },
                 _ => return Err(Error::UnknownEventCode { evt_code }),
             },
