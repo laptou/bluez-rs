@@ -54,7 +54,6 @@ pub async fn main() -> std::result::Result<(), anyhow::Error> {
 
     // just wait for discovery forever
     loop {
-        // process() blocks until there is a response to be had
         let response = mgmt.receive().await.context("receiving events failed")?;
 
         match response.event {
