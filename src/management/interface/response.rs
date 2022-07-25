@@ -69,7 +69,7 @@ impl Response {
                     address: Address::from_buf(&mut buf),
                     address_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
                     key_type: FromPrimitive::from_u8(buf.get_u8()).ok_or(Error::InvalidData)?,
-                    value: buf.get_u8x16(),
+                    value: buf.get_array_u8(),
                     pin_length: buf.get_u8(),
                 },
                 0x000A => Event::NewLongTermKey {
