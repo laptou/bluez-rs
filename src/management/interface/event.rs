@@ -441,10 +441,7 @@ pub enum Event {
     ///
     /// The event will only be sent to management sockets other than the
     /// one through which the change was triggered.
-    ExperimentalFeatureChanged {
-        uuid: [u8; 16],
-        flags: u32,
-    },
+    ExperimentalFeatureChanged { uuid: [u8; 16], flags: u32 },
 
     /// This event indicates the change of default system parameter values.
     ///

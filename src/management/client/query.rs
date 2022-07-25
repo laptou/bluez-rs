@@ -118,15 +118,9 @@ pub async fn get_connections(
     controller: Controller,
     event_tx: Option<mpsc::Sender<Response>>,
 ) -> Result<Vec<(Address, AddressType)>> {
-    let (_, param) = exec_command(
-        socket,
-        Command::GetConnections,
-        controller,
-        None,
-        event_tx,
-    )
-    .await?;
-    
+    let (_, param) =
+        exec_command(socket, Command::GetConnections, controller, None, event_tx).await?;
+
     let mut param = param.ok_or(Error::NoData)?;
     let count = param.get_u16_le() as usize;
     let mut connections = Vec::with_capacity(count);
