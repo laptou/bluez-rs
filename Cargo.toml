@@ -33,3 +33,5 @@ name = "discover"
 
 [[example]]
 name = "list"
+
+[workspace]
