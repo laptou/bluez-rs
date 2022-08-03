@@ -21,7 +21,7 @@ bytes = "1.0"
 bitvec = "1.0"
 futures = "0.3"
 tokio = { version = "1.0", features = ["net", "io-util"] }
-bluez-sys = { path = "sys" }
+bluez-sys = { path = "sys", version = "0.4.0" }
 
 [dev-dependencies]
 anyhow = "1.0"
