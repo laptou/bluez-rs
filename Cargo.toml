@@ -20,13 +20,13 @@ enumflags2_derive = "0.7"
 bytes = "1.0"
 bitvec = "1.0"
 futures = "0.3"
-tokio = { version = "1.0", features = ["net", "io-util"] }
+tokio = { version = "1.20", features = ["net", "io-util"] }
 bluez-sys = { path = "sys", version = "0.4.0" }
 
 [dev-dependencies]
 anyhow = "1.0"
 clap = { version = "3.1.18", features = ["derive"] }
-tokio = { version = "1.0", features = ["macros", "rt", "rt-multi-thread", "io-std", "time", "sync"] }
+tokio = { version = "1.20", features = ["macros", "rt", "rt-multi-thread", "io-std", "time", "sync"] }
 
 [[example]]
 name = "discover"
